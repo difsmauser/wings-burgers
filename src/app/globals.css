@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/*
+ * Paleta de colores cálidos para Wings & Burgers
+ * Basada en tonos naranjas, rojos, amarillos y marrones
+ * asociados a la gastronomía (Requisito 18.1)
+ */
+@theme {
+  --color-brand-50: #fef9f0;
+  --color-brand-100: #fdefd8;
+  --color-brand-200: #fbd9a5;
+  --color-brand-300: #f8be6d;
+  --color-brand-400: #f59e32;
+  --color-brand-500: #f38012;
+  --color-brand-600: #e46508;
+  --color-brand-700: #bd4c09;
+  --color-brand-800: #963c0f;
+  --color-brand-900: #793310;
+
+  --color-fire-50: #fef2f2;
+  --color-fire-100: #fee2e2;
+  --color-fire-200: #fecaca;
+  --color-fire-300: #fca5a5;
+  --color-fire-400: #f87171;
+  --color-fire-500: #ef4444;
+  --color-fire-600: #dc2626;
+  --color-fire-700: #b91c1c;
+  --color-fire-800: #991b1b;
+  --color-fire-900: #7f1d1d;
+
+  --color-golden-50: #fffbeb;
+  --color-golden-100: #fef3c7;
+  --color-golden-200: #fde68a;
+  --color-golden-300: #fcd34d;
+  --color-golden-400: #fbbf24;
+  --color-golden-500: #f59e0b;
+  --color-golden-600: #d97706;
+  --color-golden-700: #b45309;
+  --color-golden-800: #92400e;
+  --color-golden-900: #78350f;
+
+  --color-wood-50: #fdf8f1;
+  --color-wood-100: #f5e6d3;
+  --color-wood-200: #ebd0a7;
+  --color-wood-300: #ddb374;
+  --color-wood-400: #d19647;
+  --color-wood-500: #c07d2e;
+  --color-wood-600: #a56324;
+  --color-wood-700: #894c20;
+  --color-wood-800: #6f3d1f;
+  --color-wood-900: #5c331c;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-50 text-wood-900 antialiased;
+  }
+}
+
+@layer utilities {
+  /* Fade-in animation for modality selector and page transitions (Req 18.4: 150-400ms) */
+  .animate-fade-in {
+    animation: fadeIn 300ms ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Hide scrollbar for horizontal category filter scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

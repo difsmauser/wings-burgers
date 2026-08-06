@@ -1,0 +1,1 @@
+export { GenerarCorte } from './GenerarCorte';

@@ -1,0 +1,466 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "3. Checkpoint - Verificar capa de dominio": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794379
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799804715
+      }
+    ],
+    "5. Checkpoint - Verificar domain services y property tests": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794493
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799805364
+      }
+    ],
+    "7. Checkpoint - Verificar capa de aplicación": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794623
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799806113
+      }
+    ],
+    "10. Checkpoint - Verificar backend completo": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794723
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799806896
+      }
+    ],
+    "11.2 Implementar páginas de Productos y Precios": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794813
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799811595
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809917065
+      }
+    ],
+    "11.3 Implementar páginas de Gastos y Cortes": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799794911
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799812322
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809917669
+      }
+    ],
+    "11.4 Implementar páginas de Inventario y Clientes": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795009
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799813105
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809918486
+      }
+    ],
+    "12.1 Crear layout y panel de pedidos del vendedor": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795109
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799813924
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809919573
+      }
+    ],
+    "12.2 Implementar captura de pedidos y envío de cuenta": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795209
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809927774
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810246231
+      }
+    ],
+    "13.1 Crear layout y visualización del menú": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795308
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809928569
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810246982
+      }
+    ],
+    "13.2 Implementar personalización y confirmación de pedido": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795402
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810255366
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855099802
+      }
+    ],
+    "13.3 Implementar flujo de pago del cliente": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795508
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810256166
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855100261
+      }
+    ],
+    "13.4 Implementar rastreo de pedido en tiempo real": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795599
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810257091
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855101159
+      }
+    ],
+    "14.1 Crear interfaz del repartidor con mapa y entregas": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795692
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855110891
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954000669
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954010482
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785959271188
+      }
+    ],
+    "15. Checkpoint - Verificar módulos UI": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795788
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954000825
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785963479657
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785967521781
+      }
+    ],
+    "16.1 Implementar sistema QR y acceso por mesa": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795880
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855111706
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954000941
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954011294
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785959271797
+      }
+    ],
+    "16.2 Configurar PWA con service workers": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799795982
+      },
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855112616
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001042
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954012092
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785959272622
+      }
+    ],
+    "16.4 Implementar sistema de notificaciones completo": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799796088
+      },
+      {
+        "executionId": "695e41dd-38ec-4116-905c-616044775513",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785867123579
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001158
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785959287157
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785961971495
+      }
+    ],
+    "17.1 Wiring completo: conectar todos los módulos y configurar inyección de dependencias": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799796179
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001251
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785961980483
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785963465837
+      }
+    ],
+    "17.2 Configurar despliegue en Vercel": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799796283
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001355
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785963480541
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785967522457
+      }
+    ],
+    "17.3 Write integration tests end-to-end de flujos principales": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799796381
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001487
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785963481297
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785967523506
+      }
+    ],
+    "18. Checkpoint final - Verificar sistema completo": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785799796464
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785954001592
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785967528446
+      },
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1786025983062
+      }
+    ],
+    "11. Implementar Módulo Administrador (UI)": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785809918640
+      }
+    ],
+    "12. Implementar Módulo Vendedor (UI)": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785810246377
+      }
+    ],
+    "13. Implementar Módulo Cliente (UI)": [
+      {
+        "executionId": "134ce5b6-e961-48d2-b3f7-cf2d61448797",
+        "chatSessionId": "sess_01683353-7c2a-4daf-8afd-7c06b804f833",
+        "timestamp": 1785855101294
+      }
+    ],
+    "14. Implementar Módulo Repartidor (UI)": [
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785959271305
+      }
+    ],
+    "16. Implementar funcionalidades transversales": [
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785961971605
+      }
+    ],
+    "17. Integración final y despliegue": [
+      {
+        "executionId": "5de1f319-251b-4cf4-b19b-825f2ef0d2d5",
+        "chatSessionId": "sess_5cfe0415-e295-43c1-81b0-3019c072b70f",
+        "timestamp": 1785967523624
+      }
+    ]
+  }
+}

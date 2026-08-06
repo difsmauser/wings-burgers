@@ -1,0 +1,13 @@
+export { DomainError } from './DomainError';
+export { ValidacionError } from './ValidacionError';
+export { PrecioFueraDeRangoError } from './PrecioFueraDeRangoError';
+export { PrecioDecimalesInvalidosError } from './PrecioDecimalesInvalidosError';
+export { TelefonoInvalidoError } from './TelefonoInvalidoError';
+export { ArchivoInvalidoError } from './ArchivoInvalidoError';
+export { ProductoNoDisponibleError } from './ProductoNoDisponibleError';
+export { TransicionEstadoInvalidaError } from './TransicionEstadoInvalidaError';
+export { LimiteEntregasExcedidoError } from './LimiteEntregasExcedidoError';
+export { PedidoMaximoItemsError } from './PedidoMaximoItemsError';
+export { RecursoNoEncontradoError } from './RecursoNoEncontradoError';
+export { ServicioExternoError } from './ServicioExternoError';
+export { PagoFallidoError } from './PagoFallidoError';

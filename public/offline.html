@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#EA580C">
+  <title>Sin conexión - Wings & Burgers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #FFF7ED;
+      color: #1F2937;
+      padding: 1rem;
+    }
+    .container {
+      text-align: center;
+      max-width: 400px;
+    }
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #EA580C;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #6B7280;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .retry-btn {
+      display: inline-block;
+      background: #EA580C;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .retry-btn:hover {
+      background: #C2410C;
+    }
+    .brand {
+      margin-top: 2rem;
+      font-size: 0.875rem;
+      color: #9CA3AF;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon" aria-hidden="true">📶</div>
+    <h1>Sin conexión</h1>
+    <p>
+      No tienes conexión a internet. El menú que visitaste recientemente
+      puede estar disponible en caché.
+    </p>
+    <button class="retry-btn" onclick="window.location.reload()">
+      Reintentar
+    </button>
+    <p class="brand">Wings & Burgers</p>
+  </div>
+</body>
+</html>

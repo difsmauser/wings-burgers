@@ -1,0 +1,40 @@
+{
+  "name": "las-alitas",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión Wings & Burgers",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/node": "^26.0.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.2",
+    "leaflet": "^1.9.4",
+    "next": "^14.2.35",
+    "next-pwa": "^5.6.0",
+    "postcss": "^8.5.16",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.21",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "16.3.0",
+    "fast-check": "^4.8.0",
+    "vitest": "^4.1.9"
+  }
+}
