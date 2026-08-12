@@ -17,7 +17,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function DemoPage() {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://wings-burgers-mocha.vercel.app';
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] p-6 sm:p-10">
