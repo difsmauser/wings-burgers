@@ -50,19 +50,23 @@ export const supabaseClient: SupabaseClient = new Proxy({} as SupabaseClient, {
 });
 
 /**
- * Crea un cliente Supabase para uso server-side con permisos elevados.
- * Solo usar en API Routes o server components.
+ * Crea un cliente Supabase para uso server-side.
+ * Usa service_role_key si existe (bypassa RLS), si no usa anon key.
+ * Para producción en Vercel, ambas keys deben estar configuradas.
  */
 export function createServerClient(): SupabaseClient {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY es requerida para operaciones server-side.');
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = serviceRoleKey || anonKey;
+
+  if (!key) {
+    throw new Error('Se requiere SUPABASE_SERVICE_ROLE_KEY o NEXT_PUBLIC_SUPABASE_ANON_KEY para operaciones server-side.');
   }
   if (!supabaseUrl) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL es requerida para operaciones server-side.');
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
+  return createClient(supabaseUrl, key, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

@@ -467,13 +467,16 @@ export default function MenuPage() {
   const [qrEstado, setQrEstado] = useState<QrEstado>(qrCodigo ? 'validando' : 'idle');
   const [qrMesaInfo, setQrMesaInfo] = useState<QrMesaInfo | null>(null);
 
+  // Track if user explicitly clicked "Cambiar" to prevent auto-restore
+  const [userReset, setUserReset] = useState(false);
+
   // Restore modalidad from CarritoContext (persisted in localStorage)
   // This ensures navigating back from /pedido skips the welcome screen
   useEffect(() => {
-    if (carritoModalidad && !modalidad) {
+    if (carritoModalidad && !modalidad && !userReset) {
       setModalidadLocal(carritoModalidad);
     }
-  }, [carritoModalidad, modalidad]);
+  }, [carritoModalidad, modalidad, userReset]);
 
   // If QR mesa is already in context (from localStorage), mark as valid without re-fetching
   // This handles returning to /menu after navigating to /pedido
@@ -508,8 +511,14 @@ export default function MenuPage() {
     setModalidadLocal(m);
     if (m) {
       setModalidadContext(m);
+      setUserReset(false);
     }
   }, [setModalidadContext]);
+
+  const handleCambiar = useCallback(() => {
+    setModalidadLocal(null);
+    setUserReset(true);
+  }, []);
 
   /**
    * Validates QR code against the API (Req 8.1, 8.4).
@@ -668,7 +677,7 @@ export default function MenuPage() {
           <div className="mt-3 w-16 h-0.5 bg-gradient-to-r from-brand-400 to-fire-500 rounded-full" />
         </div>
         <button
-          onClick={() => setModalidad(null)}
+          onClick={handleCambiar}
           className="
             min-w-[44px] min-h-[44px] flex items-center justify-center
             px-4 py-2 rounded-xl text-sm font-medium
