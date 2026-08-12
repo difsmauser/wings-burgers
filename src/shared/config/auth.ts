@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 /**
  * Roles del sistema Wings & Burgers.
  */
-export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor';
+export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja';
 
 /**
  * Información del usuario autenticado.
@@ -122,9 +122,11 @@ export const PUBLIC_ROUTES = [
  * Las rutas del grupo (cliente) son públicas (cualquier usuario autenticado o anónimo).
  */
 export const ROLE_ROUTES: Record<string, Rol[]> = {
-  '/(admin)': ['admin'],
+  '/admin': ['admin'],
   '/(vendedor)': ['admin', 'vendedor'],
   '/(repartidor)': ['admin', 'repartidor'],
+  '/mesero': ['admin', 'vendedor'],
+  '/caja': ['admin', 'caja'],
 };
 
 /**
