@@ -45,6 +45,8 @@ export async function GET(
       observaciones: data.observaciones,
       estadoPago: data.estado_pago,
       metodoPago: data.metodo_pago,
+      meseroId: data.mesero_id,
+      meseroNombre: data.mesero_nombre,
       clienteId: data.cliente_id,
       creadoEn: data.creado_en,
       actualizadoEn: data.actualizado_en,
@@ -83,10 +85,12 @@ export async function PUT(
     const pedidoRepo = container.getPedidoRepository();
 
     // Handle estado_pago and metodo_pago updates (for Caja module)
-    if (body.estadoPago || body.metodoPago) {
+    if (body.estadoPago || body.metodoPago || body.meseroId !== undefined || body.meseroNombre !== undefined) {
       const updateFields: Record<string, unknown> = {};
       if (body.estadoPago) updateFields.estado_pago = body.estadoPago;
       if (body.metodoPago) updateFields.metodo_pago = body.metodoPago;
+      if (body.meseroId !== undefined) updateFields.mesero_id = body.meseroId;
+      if (body.meseroNombre !== undefined) updateFields.mesero_nombre = body.meseroNombre;
 
       // Direct update via the repository's underlying client
       // Since the PedidoMapper.toPartialDb doesn't handle these fields,
@@ -124,13 +128,14 @@ export async function PUT(
         recibido: EstadoPedido.RECIBIDO,
         en_preparacion: EstadoPedido.EN_PREPARACION,
         empacado: EstadoPedido.EMPACADO,
+        listo_para_servir: EstadoPedido.LISTO_PARA_SERVIR,
         servido: EstadoPedido.SERVIDO,
         en_camino: EstadoPedido.EN_CAMINO,
         entregado: EstadoPedido.ENTREGADO,
       };
 
-      // Also handle listo -> map to SERVIDO for local orders
-      const estadoKey = body.estado === 'listo' ? 'servido' : body.estado;
+      // Also handle listo -> map to LISTO_PARA_SERVIR for local orders (cocina marks listo)
+      const estadoKey = body.estado === 'listo' ? 'listo_para_servir' : body.estado;
       const nuevoEstado = estadoMap[estadoKey];
 
       if (!nuevoEstado) {

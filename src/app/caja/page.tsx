@@ -217,29 +217,99 @@ export default function CajaPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Pedidos en Mesa */}
+          {/* Pedidos en Mesa — grouped by mesaZona */}
           <div>
             <h2 className="text-sm font-bold text-white mb-3">🍽️ Pedidos en Mesa ({pedidosMesa.length})</h2>
             {pedidosMesa.length === 0 ? (
               <div className="rounded-xl bg-[#16161f] border border-white/5 p-6 text-center"><p className="text-gray-500 text-xs">Sin pedidos pendientes</p></div>
             ) : (
-              <div className="space-y-2">
-                {pedidosMesa.map(p => (
-                  <div key={p.id} className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <span className="text-xs font-bold text-white">#{p.numero}</span>
-                        <span className="text-[10px] text-gray-500 ml-2 capitalize">{p.modalidad === 'retiro' ? '🛍️ Llevar' : '🍽️ Mesa'}</span>
-                        {p.mesaZona && <span className="text-[10px] text-brand-400 ml-1">{p.mesaZona}</span>}
+              <div className="space-y-3">
+                {/* Group by mesaZona for accumulated billing */}
+                {(() => {
+                  const groups: Record<string, PedidoCaja[]> = {};
+                  pedidosMesa.forEach(p => {
+                    const key = p.mesaZona || `individual-${p.id}`;
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(p);
+                  });
+
+                  return Object.entries(groups).map(([mesa, pedidosGrupo]) => {
+                    const totalGrupo = pedidosGrupo.reduce((s, p) => s + p.total, 0);
+                    const isMesa = mesa && !mesa.startsWith('individual-');
+
+                    return (
+                      <div key={mesa} className="rounded-xl bg-[#16161f] border border-white/5 p-3">
+                        {/* Mesa header with total */}
+                        {isMesa && pedidosGrupo.length > 1 && (
+                          <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5">
+                            <span className="text-xs font-bold text-brand-400">📍 {mesa.split(' - ')[0]}</span>
+                            <span className="text-sm font-bold text-white">Total: ${totalGrupo.toFixed(0)}</span>
+                          </div>
+                        )}
+
+                        {/* Individual orders within the group */}
+                        <div className="space-y-2">
+                          {pedidosGrupo.map(p => (
+                            <div key={p.id} className={pedidosGrupo.length > 1 ? 'pl-2 border-l-2 border-brand-400/20' : ''}>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <div>
+                                  <span className="text-xs font-bold text-white">#{p.numero}</span>
+                                  <span className="text-[10px] text-gray-500 ml-2 capitalize">{p.modalidad === 'retiro' ? '🛍️ Llevar' : '🍽️ Mesa'}</span>
+                                  {p.mesaZona && pedidosGrupo.length <= 1 && <span className="text-[10px] text-brand-400 ml-1">{p.mesaZona}</span>}
+                                </div>
+                                <span className="text-sm font-bold text-brand-400">${p.total.toFixed(0)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Payment buttons — pay all orders in group at once */}
+                        {isMesa && pedidosGrupo.length > 1 ? (
+                          <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
+                            <button
+                              onClick={async () => {
+                                setProcesandoId(pedidosGrupo[0].id);
+                                for (const p of pedidosGrupo) {
+                                  await marcarPagado(p.id, 'efectivo');
+                                }
+                                setProcesandoId(null);
+                                // Liberar mesa
+                                const mesaObj = mesas.find(m => mesa.startsWith(m.nombre));
+                                if (mesaObj) await liberarMesa(mesaObj.id);
+                                fetchData();
+                              }}
+                              disabled={procesandoId !== null}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all"
+                            >
+                              💵 Todo Efectivo (${totalGrupo.toFixed(0)})
+                            </button>
+                            <button
+                              onClick={async () => {
+                                setProcesandoId(pedidosGrupo[0].id);
+                                for (const p of pedidosGrupo) {
+                                  await marcarPagado(p.id, 'transferencia');
+                                }
+                                setProcesandoId(null);
+                                const mesaObj = mesas.find(m => mesa.startsWith(m.nombre));
+                                if (mesaObj) await liberarMesa(mesaObj.id);
+                                fetchData();
+                              }}
+                              disabled={procesandoId !== null}
+                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all"
+                            >
+                              📱 Todo Transfer (${totalGrupo.toFixed(0)})
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2 mt-2">
+                            <button onClick={() => marcarPagado(pedidosGrupo[0].id, 'efectivo')} disabled={procesandoId === pedidosGrupo[0].id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all">💵 Efectivo</button>
+                            <button onClick={() => marcarPagado(pedidosGrupo[0].id, 'transferencia')} disabled={procesandoId === pedidosGrupo[0].id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all">📱 Transfer</button>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm font-bold text-brand-400">${p.total.toFixed(0)}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => marcarPagado(p.id, 'efectivo')} disabled={procesandoId === p.id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all">💵 Efectivo</button>
-                      <button onClick={() => marcarPagado(p.id, 'transferencia')} disabled={procesandoId === p.id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all">📱 Transfer</button>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>

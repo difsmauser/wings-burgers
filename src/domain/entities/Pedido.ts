@@ -64,7 +64,8 @@ const TASA_IMPUESTOS = 0;
 const TRANSICIONES_VALIDAS: Record<EstadoPedido, EstadoPedido[]> = {
   [EstadoPedido.RECIBIDO]: [EstadoPedido.EN_PREPARACION],
   [EstadoPedido.EN_PREPARACION]: [EstadoPedido.EMPACADO],
-  [EstadoPedido.EMPACADO]: [EstadoPedido.SERVIDO, EstadoPedido.EN_CAMINO],
+  [EstadoPedido.EMPACADO]: [EstadoPedido.LISTO_PARA_SERVIR, EstadoPedido.EN_CAMINO],
+  [EstadoPedido.LISTO_PARA_SERVIR]: [EstadoPedido.SERVIDO],
   [EstadoPedido.SERVIDO]: [],
   [EstadoPedido.EN_CAMINO]: [EstadoPedido.ENTREGADO],
   [EstadoPedido.ENTREGADO]: [],
@@ -293,7 +294,7 @@ export class Pedido {
     // Validar coherencia con modalidad en la transición desde EMPACADO
     if (this.estado === EstadoPedido.EMPACADO) {
       if (
-        nuevoEstado === EstadoPedido.SERVIDO &&
+        nuevoEstado === EstadoPedido.LISTO_PARA_SERVIR &&
         this.modalidad !== ModalidadServicio.LOCAL
       ) {
         throw new TransicionEstadoInvalidaError(this.estado, nuevoEstado);

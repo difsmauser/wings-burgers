@@ -136,6 +136,13 @@ export default function DemoPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Meseros (CRUD + asignación)</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-brand-400">{baseUrl}/admin/meseros</code>
+                    <CopyButton text={`${baseUrl}/admin/meseros`} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-white/5">
                   <span className="text-gray-400">Inventario (stock + alertas)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/admin/inventario</code>
@@ -202,7 +209,7 @@ export default function DemoPage() {
             {/* Cocina */}
             <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-white">👨‍🍳 Módulo Cocina / Mesero</h3>
+                <h3 className="text-sm font-bold text-white">👨‍🍳 Módulo Cocina</h3>
                 <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">Requiere login</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs mb-3">
@@ -222,15 +229,33 @@ export default function DemoPage() {
                 </div>
               </div>
               <div className="space-y-1 text-xs">
-                <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Pedidos (status en tiempo real)</span>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-gray-400">Pedidos (prepara y marca listo)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/pedidos</code>
                     <CopyButton text={`${baseUrl}/pedidos`} />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Mesero */}
+            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-white">🧑‍🍳 Módulo Mesero</h3>
+                <span className="text-[10px] text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">Sin login (nombre)</span>
+              </div>
+              <p className="text-[10px] text-gray-500 mb-3">El mesero se registra con su nombre. Recibe pedidos listos de cocina, los entrega y cobra.</p>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Panel del mesero (asignación + cobro)</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-brand-400">{baseUrl}/mesero</code>
+                    <CopyButton text={`${baseUrl}/mesero`} />
+                  </div>
+                </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-gray-400">Captura de pedido (mesero)</span>
+                  <span className="text-gray-400">Captura de pedido (tomar orden)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/pedidos/captura</code>
                     <CopyButton text={`${baseUrl}/pedidos/captura`} />
@@ -287,16 +312,47 @@ export default function DemoPage() {
           <div className="space-y-4">
             <div className="p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
               <p className="text-xs font-bold text-yellow-400 mb-1">🟡 Flujo 1: Cliente en Mesa (QR)</p>
-              <p className="text-[11px] text-gray-400">Escanea QR → Elige &quot;Comer aquí&quot; o &quot;Para llevar&quot; → Pide → Cocina prepara → Caja cobra → Mesa libre</p>
+              <p className="text-[11px] text-gray-400">Escanea QR → Elige modalidad → Pide → Cocina prepara → Mesero toma pedido listo → Mesero entrega a mesa → Mesero cobra (transfer = libera / efectivo = mesa → caja → cambio → libera)</p>
             </div>
             <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-500/5">
               <p className="text-xs font-bold text-blue-400 mb-1">🔵 Flujo 2: Mesero toma orden</p>
-              <p className="text-[11px] text-gray-400">Mesero captura → Cocina prepara → Caja cobra (sin WhatsApp)</p>
+              <p className="text-[11px] text-gray-400">Mesero captura (/pedidos/captura) → Cocina prepara → Se auto-asigna al mismo mesero → Mesero entrega → Mesero cobra</p>
             </div>
             <div className="p-3 rounded-lg border border-green-500/20 bg-green-500/5">
               <p className="text-xs font-bold text-green-400 mb-1">🟢 Flujo 3: Domicilio (Redes Sociales)</p>
               <p className="text-[11px] text-gray-400">QR desde redes → Solo domicilio → Cocina → Empaqueta → Repartidor → Cliente rastrea GPS</p>
             </div>
+          </div>
+
+          {/* State machine diagram */}
+          <div className="mt-4 p-3 rounded-lg bg-white/[0.02] border border-white/5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Máquina de estados (Local/Retiro):</p>
+            <p className="text-[11px] text-gray-300 font-mono">recibido → en_preparacion → empacado → listo_para_servir → servido</p>
+            <p className="text-[10px] text-gray-500 mt-1">Cocina: recibido → empacado | Mesero: listo_para_servir → servido + cobro</p>
+          </div>
+        </div>
+
+        {/* Migración DB */}
+        <div className="rounded-xl bg-[#16161f] border border-white/5 p-6">
+          <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider mb-4">🗄️ Migración de Base de Datos</h2>
+          <p className="text-xs text-gray-400 mb-3">Ejecutar en Supabase SQL Editor para habilitar el módulo de mesero:</p>
+          <div className="bg-[#0d0d14] rounded-lg p-3 border border-white/5 font-mono text-xs text-green-400 space-y-1">
+            <p>-- Columnas en pedido para asignación de mesero</p>
+            <p>ALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_id TEXT DEFAULT NULL;</p>
+            <p>ALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_nombre TEXT DEFAULT NULL;</p>
+            <p className="mt-2">-- Tabla de meseros (CRUD desde admin)</p>
+            <p>CREATE TABLE IF NOT EXISTS mesero (</p>
+            <p>&nbsp;&nbsp;id UUID PRIMARY KEY DEFAULT gen_random_uuid(),</p>
+            <p>&nbsp;&nbsp;nombre TEXT NOT NULL,</p>
+            <p>&nbsp;&nbsp;telefono TEXT,</p>
+            <p>&nbsp;&nbsp;pin TEXT,</p>
+            <p>&nbsp;&nbsp;activo BOOLEAN DEFAULT TRUE,</p>
+            <p>&nbsp;&nbsp;created_at TIMESTAMPTZ DEFAULT now()</p>
+            <p>);</p>
+          </div>
+          <div className="flex items-center gap-2 mt-3">
+            <CopyButton text={`ALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_id TEXT DEFAULT NULL;\nALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_nombre TEXT DEFAULT NULL;\n\nCREATE TABLE IF NOT EXISTS mesero (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  nombre TEXT NOT NULL,\n  telefono TEXT,\n  pin TEXT,\n  activo BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMPTZ DEFAULT now()\n);`} />
+            <span className="text-[10px] text-gray-500">Copiar SQL completo</span>
           </div>
         </div>
 
@@ -308,13 +364,17 @@ export default function DemoPage() {
               'Menú digital con imágenes',
               'Pedido por QR en mesa',
               'Pedido a domicilio desde redes',
+              'Múltiples pedidos por mesa',
               'Captura de pedido por mesero',
               'Cocina con status en tiempo real',
+              'Módulo mesero independiente',
+              'Asignación de pedidos a mesero',
+              'Flujo de cobro (efectivo/transfer)',
               'Notificación sonora de pedidos',
               'Mapa visual de mesas (drag)',
               'QR imprimible por mesa',
               'Caja independiente con cobros',
-              'Efectivo y transferencia',
+              'Cobro grupal por mesa',
               'Inventario con alertas',
               'Gastos por categoría',
               'Cortes financieros',

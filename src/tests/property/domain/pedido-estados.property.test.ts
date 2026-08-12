@@ -26,7 +26,8 @@ import { Precio } from '@/domain/value-objects';
 const TRANSICIONES_VALIDAS_LOCAL: Record<EstadoPedido, EstadoPedido[]> = {
   [EstadoPedido.RECIBIDO]: [EstadoPedido.EN_PREPARACION],
   [EstadoPedido.EN_PREPARACION]: [EstadoPedido.EMPACADO],
-  [EstadoPedido.EMPACADO]: [EstadoPedido.SERVIDO],
+  [EstadoPedido.EMPACADO]: [EstadoPedido.LISTO_PARA_SERVIR],
+  [EstadoPedido.LISTO_PARA_SERVIR]: [EstadoPedido.SERVIDO],
   [EstadoPedido.SERVIDO]: [],
   [EstadoPedido.EN_CAMINO]: [EstadoPedido.ENTREGADO],
   [EstadoPedido.ENTREGADO]: [],
@@ -36,6 +37,7 @@ const TRANSICIONES_VALIDAS_DOMICILIO: Record<EstadoPedido, EstadoPedido[]> = {
   [EstadoPedido.RECIBIDO]: [EstadoPedido.EN_PREPARACION],
   [EstadoPedido.EN_PREPARACION]: [EstadoPedido.EMPACADO],
   [EstadoPedido.EMPACADO]: [EstadoPedido.EN_CAMINO],
+  [EstadoPedido.LISTO_PARA_SERVIR]: [EstadoPedido.SERVIDO],
   [EstadoPedido.SERVIDO]: [],
   [EstadoPedido.EN_CAMINO]: [EstadoPedido.ENTREGADO],
   [EstadoPedido.ENTREGADO]: [],
@@ -57,9 +59,12 @@ function secuenciaParaAlcanzar(
       return [EstadoPedido.EN_PREPARACION];
     case EstadoPedido.EMPACADO:
       return [EstadoPedido.EN_PREPARACION, EstadoPedido.EMPACADO];
+    case EstadoPedido.LISTO_PARA_SERVIR:
+      if (modalidad !== ModalidadServicio.LOCAL) return [];
+      return [EstadoPedido.EN_PREPARACION, EstadoPedido.EMPACADO, EstadoPedido.LISTO_PARA_SERVIR];
     case EstadoPedido.SERVIDO:
       if (modalidad !== ModalidadServicio.LOCAL) return [];
-      return [EstadoPedido.EN_PREPARACION, EstadoPedido.EMPACADO, EstadoPedido.SERVIDO];
+      return [EstadoPedido.EN_PREPARACION, EstadoPedido.EMPACADO, EstadoPedido.LISTO_PARA_SERVIR, EstadoPedido.SERVIDO];
     case EstadoPedido.EN_CAMINO:
       if (modalidad !== ModalidadServicio.DOMICILIO) return [];
       return [EstadoPedido.EN_PREPARACION, EstadoPedido.EMPACADO, EstadoPedido.EN_CAMINO];

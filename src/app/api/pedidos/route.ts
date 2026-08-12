@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
       observaciones: p.observaciones,
       estadoPago: p.estado_pago,
       metodoPago: p.metodo_pago,
+      meseroId: p.mesero_id,
+      meseroNombre: p.mesero_nombre,
       clienteId: p.cliente_id,
       creadoEn: p.creado_en,
       actualizadoEn: p.actualizado_en,
@@ -98,12 +100,27 @@ export async function POST(request: NextRequest) {
         const supabase = createServerClient();
         // mesaZona format is "Mesa 1 - Interior" → extract "Mesa 1" part
         const mesaNombre = body.mesaZona.split(' - ')[0];
+        // Only mark as occupied if not already occupied (don't overwrite pedido_activo_id for multi-order)
         await supabase
           .from('mesa')
-          .update({ estado: 'ocupada', pedido_activo_id: pedido.id })
-          .ilike('nombre', mesaNombre);
+          .update({ estado: 'ocupada' })
+          .ilike('nombre', mesaNombre)
+          .in('estado', ['disponible', 'ocupada']);
       } catch {
         // Non-critical: don't fail the order if mesa update fails
+      }
+    }
+
+    // If order was taken by a mesero (canal=MESERO), auto-assign that mesero
+    if (canal === 'MESERO' && body.meseroNombre) {
+      try {
+        const supabase = createServerClient();
+        await supabase
+          .from('pedido')
+          .update({ mesero_id: body.meseroNombre, mesero_nombre: body.meseroNombre })
+          .eq('id', pedido.id);
+      } catch {
+        // Non-critical
       }
     }
 

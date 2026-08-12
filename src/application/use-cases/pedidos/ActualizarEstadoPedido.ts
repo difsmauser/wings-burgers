@@ -76,6 +76,7 @@ function reconstruirPedido(data: {
     recibido: EstadoPedido.RECIBIDO,
     en_preparacion: EstadoPedido.EN_PREPARACION,
     empacado: EstadoPedido.EMPACADO,
+    listo_para_servir: EstadoPedido.LISTO_PARA_SERVIR,
     servido: EstadoPedido.SERVIDO,
     en_camino: EstadoPedido.EN_CAMINO,
     entregado: EstadoPedido.ENTREGADO,

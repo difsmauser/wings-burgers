@@ -27,6 +27,7 @@ const ESTADO_LABELS: Record<string, string> = {
   recibido: 'Recibido',
   en_preparacion: 'En Preparación',
   empacado: 'Empaquetado',
+  listo_para_servir: 'Listo p/ Mesero',
   listo: 'Listo',
   en_ruta: 'En Ruta',
   entregado: 'Entregado',
@@ -38,6 +39,7 @@ const ESTADO_COLORS: Record<string, string> = {
   recibido: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   en_preparacion: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
   empacado: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  listo_para_servir: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   listo: 'bg-green-500/10 text-green-400 border-green-500/20',
   en_ruta: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
   en_camino: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
@@ -54,12 +56,12 @@ const CANAL_BADGES: Record<string, { label: string; color: string }> = {
 // ========== Helper Functions ==========
 
 function getNextStatus(current: string, modalidad: string): string | null {
-  // For LOCAL/RETIRO: recibido → en_preparacion → empacado → listo (stop)
+  // For LOCAL/RETIRO: recibido → en_preparacion → empacado → listo (cocina done, goes to mesero)
   if (modalidad === 'local' || modalidad === 'retiro') {
     if (current === 'recibido') return 'en_preparacion';
     if (current === 'en_preparacion') return 'empacado';
     if (current === 'empacado') return 'listo';
-    return null; // 'listo' is the end for local/retiro
+    return null; // Cocina's job ends here — mesero picks up
   }
 
   // For DOMICILIO: recibido → en_preparacion → empacado → en_camino → entregado
@@ -87,7 +89,7 @@ export default function PedidosCocinaPage() {
 
   const fetchPedidos = useCallback(async () => {
     try {
-      const estados = ['recibido', 'en_preparacion', 'empacado', 'en_camino', 'listo', 'entregado', 'servido'];
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'en_camino', 'listo', 'entregado', 'servido'];
       const results = await Promise.all(
         estados.map(async (estado) => {
           const res = await fetch(`/api/pedidos?estado=${estado}`);
@@ -190,15 +192,16 @@ export default function PedidosCocinaPage() {
     }
   };
 
-  // Active orders (not entregado/servido, and not listo-for-local/retiro)
+  // Active orders (not entregado/servido, and not listo_para_servir/listo-for-local/retiro)
   const pedidosActivos = pedidos.filter(p =>
-    !['entregado', 'servido', 'cancelado'].includes(p.estado) &&
+    !['entregado', 'servido', 'cancelado', 'listo_para_servir'].includes(p.estado) &&
     !(p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
   );
 
   const pedidosCompletados = pedidos.filter(p =>
     p.estado === 'entregado' ||
     p.estado === 'servido' ||
+    p.estado === 'listo_para_servir' ||
     (p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
   );
 
@@ -257,8 +260,8 @@ export default function PedidosCocinaPage() {
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ESTADO_COLORS[pedido.estado] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
                       {ESTADO_LABELS[pedido.estado] || pedido.estado}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${canal.color}`}>
-                      {pedido.canal === 'QR' && pedido.mesaZona ? `🟡 ${pedido.mesaZona.split(' - ')[0]}` : canal.label}
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${pedido.mesaZona ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : canal.color}`}>
+                      {pedido.mesaZona ? `🟡 ${pedido.mesaZona.split(' - ')[0]}` : canal.label}
                     </span>
                   </div>
 

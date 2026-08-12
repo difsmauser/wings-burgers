@@ -16,6 +16,8 @@ export interface PedidoRecord {
   observaciones: string | null;
   metodo_pago: string | null;
   estado_pago: string;
+  mesero_id: string | null;
+  mesero_nombre: string | null;
   creado_en: string;
   actualizado_en: string;
 }
@@ -73,6 +75,8 @@ export class PedidoMapper {
       observaciones: record.observaciones ?? undefined,
       estadoPago: record.estado_pago ?? 'pendiente',
       metodoPago: record.metodo_pago ?? undefined,
+      meseroId: record.mesero_id ?? undefined,
+      meseroNombre: record.mesero_nombre ?? undefined,
       creadoEn: new Date(record.creado_en),
       actualizadoEn: new Date(record.actualizado_en),
     };
@@ -101,6 +105,8 @@ export class PedidoMapper {
       observaciones: pedido.observaciones ?? null,
       metodo_pago: null,
       estado_pago: 'pendiente',
+      mesero_id: pedido.meseroId ?? null,
+      mesero_nombre: pedido.meseroNombre ?? null,
     };
   }
 
@@ -130,6 +136,8 @@ export class PedidoMapper {
     if (datos.total !== undefined) result.total = datos.total;
     if (datos.observaciones !== undefined) result.observaciones = datos.observaciones ?? null;
     if (datos.clienteId !== undefined) result.cliente_id = datos.clienteId || null;
+    if (datos.meseroId !== undefined) result.mesero_id = datos.meseroId || null;
+    if (datos.meseroNombre !== undefined) result.mesero_nombre = datos.meseroNombre || null;
 
     return result;
   }

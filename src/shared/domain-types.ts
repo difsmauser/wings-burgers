@@ -15,6 +15,7 @@ export type EstadoPedido =
   | 'recibido'
   | 'en_preparacion'
   | 'empacado'
+  | 'listo_para_servir'
   | 'servido'
   | 'en_camino'
   | 'entregado'
@@ -55,6 +56,8 @@ export interface Pedido {
   observaciones?: string;
   estadoPago?: string;
   metodoPago?: string;
+  meseroId?: string;
+  meseroNombre?: string;
   creadoEn: Date;
   actualizadoEn: Date;
 }

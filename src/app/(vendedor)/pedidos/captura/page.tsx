@@ -84,12 +84,16 @@ export default function CapturaPage() {
     setError(null);
 
     try {
+      // Get mesero name from localStorage if available
+      const meseroNombreStored = typeof window !== 'undefined' ? localStorage.getItem('alaburguer-mesero-nombre') : null;
+
       const payload = {
         nombre: nombreCliente.trim() || 'Cliente en sucursal',
         telefono: '0000000000', // Mesero orders don't need real phone
         modalidad,
         canal: 'MESERO',
         mesaZona: mesaZona.trim() || undefined,
+        meseroNombre: meseroNombreStored || undefined,
         items: items.map(i => ({
           productoId: i.productoId,
           nombre: i.nombre,

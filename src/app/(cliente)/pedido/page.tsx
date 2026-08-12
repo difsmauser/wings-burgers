@@ -253,25 +253,25 @@ function ItemCarritoCard({
   const hasOpciones = item.opcionesDisponibles.length > 0;
 
   return (
-    <article className="bg-[#14141c] rounded-xl border border-white/5 overflow-hidden hover:border-brand-400/20 transition-all duration-200">
+    <article className="bg-[#12121a] rounded-2xl border border-white/[0.06] overflow-hidden hover:border-brand-400/30 transition-all duration-300 shadow-[0_0_15px_rgba(0,0,0,0.3)] hover:shadow-[0_0_20px_rgba(var(--brand-rgb,245,158,11),0.08)]">
       {/* Header row: product info + quantity + line total */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-white truncate">
+            <h3 className="text-sm sm:text-base font-bold text-white/95 tracking-tight truncate">
               {item.nombre}
             </h3>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-400/80 mt-1">
               {formatPrecio(item.precioUnitario)} c/u
               {item.personalizaciones.length > 0 && (
-                <span className="text-brand-400 ml-1">
+                <span className="text-brand-400/90 ml-1.5 font-medium">
                   (+{formatPrecio(item.personalizaciones.reduce((a, p) => a + p.precioExtra, 0))} extras)
                 </span>
               )}
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-sm sm:text-base font-bold text-brand-400">
+            <p className="text-sm sm:text-base font-black text-brand-400 drop-shadow-[0_0_6px_rgba(var(--brand-rgb,245,158,11),0.3)]">
               {formatPrecio(lineTotal)}
             </p>
           </div>
@@ -329,7 +329,7 @@ function ItemCarritoCard({
 
       {/* Expanded: Personalization options + comment field */}
       {expanded && (
-        <div className="px-4 pb-4 border-t border-white/5 pt-3">
+        <div className="px-4 pb-4 border-t border-white/[0.04] pt-3 bg-[#0e0e16]/50">
           {hasOpciones && (
             <PersonalizacionSelector
               opciones={item.opcionesDisponibles}
@@ -379,32 +379,31 @@ function CarritoVacio({ menuHref }: { menuHref: string }) {
 }
 
 /**
- * Real-time order status tracker that polls the API for status updates.
- * Shows a step-by-step progress bar with different steps based on modalidad.
+ * Single order status tracker that polls the API.
  */
-function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null; modalidad: string | null }) {
+function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string; modalidad: string | null; numero?: string }) {
   const [estado, setEstado] = useState<string>('recibido');
   const [polling, setPolling] = useState(true);
 
-  // Status steps based on modalidad
   const pasos = modalidad === 'DOMICILIO'
     ? [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Tu pedido está listo para salir' },
-        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'Tu pedido va en camino' },
-        { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
+        { key: 'recibido', label: 'Recibido', icon: '📋' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦' },
+        { key: 'en_camino', label: 'En camino', icon: '🛵' },
+        { key: 'entregado', label: 'Entregado', icon: '✅' },
       ]
     : [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Casi listo...' },
-        { key: 'listo', label: 'Listo', icon: '✅', desc: modalidad === 'RETIRO' ? '¡Pasa a recoger!' : '¡Llega a tu mesa!' },
+        { key: 'recibido', label: 'Recibido', icon: '📋' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦' },
+        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️' },
+        { key: 'listo', label: 'Listo', icon: '✅' },
       ];
 
-  // Map API states to our step keys
   const mapEstado = (apiEstado: string): string => {
     if (apiEstado === 'servido' || apiEstado === 'listo') return 'listo';
+    if (apiEstado === 'listo_para_servir') return 'en_camino_mesa';
     if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
     if (apiEstado === 'en_camino') return 'en_camino';
     if (apiEstado === 'entregado') return 'entregado';
@@ -420,18 +419,239 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
         const res = await fetch(`/api/pedidos/${pedidoId}`);
         if (res.ok) {
           const json = await res.json();
-          // Handle both response formats: { data: { estado } } or { estado }
           const pedidoData = json?.data || json;
           const nuevoEstado = mapEstado(pedidoData?.estado || 'recibido');
           setEstado(nuevoEstado);
 
-          // Stop polling if final state reached
           if (nuevoEstado === 'entregado' || nuevoEstado === 'listo') {
             setPolling(false);
           }
         }
       } catch {
-        // Silently ignore fetch errors; will retry on next interval
+        // Silently retry on next interval
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoId, polling]);
+
+  const currentIdx = pasos.findIndex(p => p.key === estado);
+
+  return (
+    <div className="rounded-lg bg-[#0d0d14] border border-white/5 p-3">
+      {/* Order number + compact progress */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold text-white">
+          {numero ? `#${numero}` : 'Pedido'}
+        </span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+          estado === 'listo' || estado === 'entregado'
+            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+            : 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+        }`}>
+          {pasos[currentIdx >= 0 ? currentIdx : 0]?.label}
+        </span>
+      </div>
+
+      {/* Compact progress bar */}
+      <div className="flex items-center gap-1">
+        {pasos.map((paso, idx) => (
+          <div
+            key={paso.key}
+            className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
+              idx <= currentIdx ? 'bg-brand-400' : 'bg-white/5'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Polling indicator */}
+      {polling && (
+        <div className="mt-2 flex items-center gap-1.5 text-[9px] text-gray-500">
+          <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
+          Actualizando
+        </div>
+      )}
+      {!polling && (
+        <p className="mt-2 text-[10px] text-green-400 font-medium">
+          {estado === 'entregado' ? '✅ Entregado' : '✅ Listo'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Multi-order tracker for mesa sessions.
+ * Shows ALL active orders for the current mesa, with individual progress.
+ */
+function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
+  pedidoIds: string[];
+  modalidad: string | null;
+  mesaZona: string | null;
+}) {
+  const [pedidosMesa, setPedidosMesa] = useState<Array<{
+    id: string;
+    numero: string;
+    estado: string;
+    total: number;
+    items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      try {
+        // If we have mesaZona, fetch ALL orders for this mesa
+        if (mesaZona) {
+          const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(mesaZona)}`);
+          if (res.ok) {
+            const json = await res.json();
+            const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
+            setPedidosMesa(activos);
+          }
+        } else {
+          // Fallback: fetch each pedido individually
+          const results = await Promise.all(
+            pedidoIds.map(async (id) => {
+              const res = await fetch(`/api/pedidos/${id}`);
+              if (res.ok) {
+                const json = await res.json();
+                return json?.data || json;
+              }
+              return null;
+            })
+          );
+          setPedidosMesa(results.filter(Boolean));
+        }
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPedidos();
+    const interval = setInterval(fetchPedidos, 5000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mesaZona, pedidoIds.length]);
+
+  if (loading) {
+    return (
+      <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-5 text-center">
+        <div className="animate-spin h-5 w-5 border-2 border-brand-400 border-t-transparent rounded-full mx-auto" />
+      </div>
+    );
+  }
+
+  if (pedidosMesa.length === 0) return null;
+
+  const totalMesa = pedidosMesa.reduce((sum, p) => sum + (p.total || 0), 0);
+  const todosListos = pedidosMesa.every(p =>
+    ['listo', 'servido', 'entregado'].includes(p.estado)
+  );
+
+  return (
+    <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-4 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          📋 Tus Pedidos
+          <span className="px-1.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold">
+            {pedidosMesa.length}
+          </span>
+        </h3>
+        <span className="text-sm font-bold text-brand-400">
+          Total: {formatPrecio(totalMesa)}
+        </span>
+      </div>
+
+      {/* Individual order trackers */}
+      <div className="space-y-2">
+        {pedidosMesa.map((pedido) => (
+          <SingleOrderTracker
+            key={pedido.id}
+            pedidoId={pedido.id}
+            modalidad={modalidad}
+            numero={pedido.numero}
+          />
+        ))}
+      </div>
+
+      {/* Summary */}
+      {todosListos && (
+        <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+          <p className="text-xs text-green-400 font-medium">
+            🎉 ¡Todos tus pedidos están listos!
+          </p>
+        </div>
+      )}
+
+      {!todosListos && (
+        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-gray-500">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          Actualizando en tiempo real
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Legacy single-order tracker for backward compatibility (non-mesa orders).
+ */
+function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null; modalidad: string | null }) {
+  const [estado, setEstado] = useState<string>('recibido');
+  const [polling, setPolling] = useState(true);
+
+  const pasos = modalidad === 'DOMICILIO'
+    ? [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Tu pedido está listo para salir' },
+        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'Tu pedido va en camino' },
+        { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
+      ]
+    : [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Casi listo...' },
+        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️', desc: 'Tu mesero va en camino a tu mesa' },
+        { key: 'listo', label: 'Listo', icon: '✅', desc: modalidad === 'RETIRO' ? '¡Pasa a recoger!' : '¡Buen provecho!' },
+      ];
+
+  const mapEstado = (apiEstado: string): string => {
+    if (apiEstado === 'servido' || apiEstado === 'listo') return 'listo';
+    if (apiEstado === 'listo_para_servir') return 'en_camino_mesa';
+    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
+    if (apiEstado === 'en_camino') return 'en_camino';
+    if (apiEstado === 'entregado') return 'entregado';
+    if (apiEstado === 'en_preparacion') return 'en_preparacion';
+    return 'recibido';
+  };
+
+  useEffect(() => {
+    if (!pedidoId || !polling) return;
+
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`/api/pedidos/${pedidoId}`);
+        if (res.ok) {
+          const json = await res.json();
+          const pedidoData = json?.data || json;
+          const nuevoEstado = mapEstado(pedidoData?.estado || 'recibido');
+          setEstado(nuevoEstado);
+
+          if (nuevoEstado === 'entregado' || nuevoEstado === 'listo') {
+            setPolling(false);
+          }
+        }
+      } catch {
+        // Silently retry on next interval
       }
     };
 
@@ -518,22 +738,22 @@ function ResumenPedido({
   total: number;
 }) {
   return (
-    <div className="bg-[#14141c] rounded-xl border border-white/5 p-4 mt-4">
-      <h3 className="text-sm font-semibold text-white mb-3">Resumen</h3>
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between text-gray-400">
+    <div className="bg-[#12121a] rounded-2xl border border-white/[0.06] p-5 mt-4 shadow-[0_0_20px_rgba(0,0,0,0.4)]">
+      <h3 className="text-sm font-bold text-white/90 mb-3 tracking-tight">Resumen</h3>
+      <div className="space-y-2.5 text-sm">
+        <div className="flex justify-between text-gray-400/80">
           <span>Subtotal</span>
-          <span>{formatPrecio(subtotal)}</span>
+          <span className="font-medium">{formatPrecio(subtotal)}</span>
         </div>
         {impuestos > 0 && (
-          <div className="flex justify-between text-gray-400">
+          <div className="flex justify-between text-gray-400/80">
             <span>IVA (16%)</span>
-            <span>{formatPrecio(impuestos)}</span>
+            <span className="font-medium">{formatPrecio(impuestos)}</span>
           </div>
         )}
-        <div className="border-t border-white/5 pt-2 flex justify-between font-bold text-white text-base">
+        <div className="border-t border-white/[0.06] pt-3 flex justify-between font-black text-white text-base">
           <span>Total</span>
-          <span className="text-brand-400">{formatPrecio(total)}</span>
+          <span className="text-brand-400 drop-shadow-[0_0_8px_rgba(var(--brand-rgb,245,158,11),0.3)]">{formatPrecio(total)}</span>
         </div>
       </div>
     </div>
@@ -572,19 +792,32 @@ export default function PedidoPage() {
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [pedidoId, setPedidoId] = useState<string | null>(() => {
+
+  // Multi-order support: store array of pedido IDs for the mesa session
+  const [pedidoIds, setPedidoIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('alaburguer-pedido-id');
+      try {
+        const stored = localStorage.getItem('alaburguer-pedido-ids');
+        if (stored) return JSON.parse(stored);
+        // Backward compat: migrate single pedidoId
+        const single = localStorage.getItem('alaburguer-pedido-id');
+        if (single) return [single];
+      } catch { /* ignore */ }
     }
-    return null;
+    return [];
   });
 
-  // Persist pedidoId to localStorage
+  // Legacy single pedidoId for backward compat (last confirmed order)
+  const pedidoId = pedidoIds.length > 0 ? pedidoIds[pedidoIds.length - 1] : null;
+
+  // Persist pedidoIds to localStorage
   useEffect(() => {
-    if (pedidoId) {
-      localStorage.setItem('alaburguer-pedido-id', pedidoId);
+    if (pedidoIds.length > 0) {
+      localStorage.setItem('alaburguer-pedido-ids', JSON.stringify(pedidoIds));
+      // Also keep the legacy key for backward compat
+      localStorage.setItem('alaburguer-pedido-id', pedidoIds[pedidoIds.length - 1]);
     }
-  }, [pedidoId]);
+  }, [pedidoIds]);
 
   /**
    * Handles order confirmation by calling POST /api/pedidos.
@@ -649,7 +882,10 @@ export default function PedidoPage() {
       }
 
       const responseData = await response.json();
-      setPedidoId(responseData?.data?.id || null);
+      const newPedidoId = responseData?.data?.id || null;
+      if (newPedidoId) {
+        setPedidoIds(prev => [...prev, newPedidoId]);
+      }
       confirmarPedido();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -702,8 +938,17 @@ export default function PedidoPage() {
         )}
       </div>
 
-      {/* Real-time status tracker */}
-      {confirmado && <PedidoStatusTracker pedidoId={pedidoId} modalidad={modalidad} />}
+      {/* Real-time status tracker — multi-order for mesa, single for non-mesa */}
+      {confirmado && qrMesa && (
+        <MesaOrdersTracker
+          pedidoIds={pedidoIds}
+          modalidad={modalidad}
+          mesaZona={qrMesa.mesaZona}
+        />
+      )}
+      {confirmado && !qrMesa && (
+        <PedidoStatusTracker pedidoId={pedidoId} modalidad={modalidad} />
+      )}
 
       {/* Cart items list */}
       <div className="space-y-3 mt-4">
@@ -725,11 +970,11 @@ export default function PedidoPage() {
 
       {/* Client Data Form */}
       {!confirmado && (
-        <div className="bg-[#14141c] rounded-xl border border-white/5 p-4 mt-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Tus Datos</h3>
+        <div className="bg-[#12121a] rounded-2xl border border-white/[0.06] p-5 mt-4 shadow-[0_0_15px_rgba(0,0,0,0.3)]">
+          <h3 className="text-sm font-bold text-white/90 mb-4 tracking-tight">Tus Datos</h3>
           <div className="space-y-3">
             <div>
-              <label htmlFor="nombre" className="block text-xs font-medium text-gray-400 mb-1">
+              <label htmlFor="nombre" className="block text-xs font-semibold text-gray-400/80 mb-1.5">
                 Nombre *
               </label>
               <input
@@ -739,11 +984,11 @@ export default function PedidoPage() {
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Tu nombre"
                 required
-                className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400/30 transition-all duration-200"
               />
             </div>
             <div>
-              <label htmlFor="telefono" className="block text-xs font-medium text-gray-400 mb-1">
+              <label htmlFor="telefono" className="block text-xs font-semibold text-gray-400/80 mb-1.5">
                 {modalidad === 'DOMICILIO'
                   ? 'Teléfono (para contactarte) *'
                   : 'Teléfono (para enviarte tu ticket) *'}
@@ -756,12 +1001,12 @@ export default function PedidoPage() {
                 placeholder="5512345678"
                 required
                 maxLength={10}
-                className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+                className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400/30 transition-all duration-200"
               />
             </div>
             {modalidad === 'DOMICILIO' && (
               <div>
-                <label htmlFor="direccion" className="block text-xs font-medium text-gray-400 mb-1">
+                <label htmlFor="direccion" className="block text-xs font-semibold text-gray-400/80 mb-1.5">
                   Dirección de entrega *
                 </label>
                 <input
@@ -771,7 +1016,7 @@ export default function PedidoPage() {
                   onChange={(e) => setDireccion(e.target.value)}
                   placeholder="Calle, número, colonia, referencias"
                   required
-                  className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+                  className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400/30 transition-all duration-200"
                 />
               </div>
             )}
@@ -798,14 +1043,13 @@ export default function PedidoPage() {
             onClick={handleConfirmar}
             disabled={enviando || items.length === 0}
             className={`
-              w-full min-h-[44px] py-4 rounded-xl font-bold text-base
-              text-white shadow-lg
-              transition-all duration-200 motion-reduce:transition-none
-              focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+              w-full min-h-[52px] py-4 rounded-2xl font-black text-base tracking-tight
+              shadow-xl transition-all duration-300 motion-reduce:transition-none
+              focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]
               ${
                 enviando || items.length === 0
-                  ? 'bg-gray-700 cursor-not-allowed'
-                  : 'bg-brand-500 hover:bg-brand-600 active:scale-[0.98] motion-reduce:active:scale-100'
+                  ? 'bg-gray-800 text-gray-500 cursor-not-allowed shadow-none'
+                  : 'bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 text-black hover:shadow-[0_0_30px_rgba(var(--brand-rgb,245,158,11),0.3)] active:scale-[0.97] motion-reduce:active:scale-100'
               }
             `}
             aria-label="Confirmar pedido"
@@ -819,7 +1063,7 @@ export default function PedidoPage() {
                 Confirmando...
               </span>
             ) : (
-              `Confirmar Pedido - ${formatPrecio(total)}`
+              `Confirmar Pedido — ${formatPrecio(total)}`
             )}
           </button>
         </div>
@@ -830,7 +1074,7 @@ export default function PedidoPage() {
         <div className="mt-6 mb-4">
           <Link
             href={qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu'}
-            onClick={() => { limpiarCarrito(); localStorage.removeItem('alaburguer-pedido-id'); setPedidoId(null); }}
+            onClick={() => { limpiarCarrito(); }}
             className="
               block w-full min-h-[44px] py-3 rounded-xl font-medium text-sm text-center
               text-brand-400 bg-brand-50/10 border border-brand-400/20
@@ -838,7 +1082,7 @@ export default function PedidoPage() {
               focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
             "
           >
-            Hacer nuevo pedido
+            {qrMesa ? '➕ Pedir algo más a esta mesa' : 'Hacer nuevo pedido'}
           </Link>
         </div>
       )}

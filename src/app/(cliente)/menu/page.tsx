@@ -252,9 +252,10 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
   return (
     <article
       className={`
-        bg-[#14141c] rounded-2xl border border-white/5 overflow-hidden
+        bg-[#12121a] rounded-2xl border border-white/[0.06] overflow-hidden
         transition-all duration-300 motion-reduce:transition-none
         group hover:border-brand-400/30 hover:shadow-[0_8px_40px_-8px_rgba(245,166,35,0.15)]
+        shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)]
         ${!producto.disponible ? 'opacity-60' : ''}
       `}
       aria-label={`${producto.nombre} - ${precioFormateado}${!producto.disponible ? ' - No disponible' : ''}`}
