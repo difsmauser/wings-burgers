@@ -1,8 +1,8 @@
 /**
- * Configuración central de la aplicación Wings & Burgers
+ * Configuración central de la aplicación A-la Burguer
  */
 export const APP_CONFIG = {
-  name: 'Wings & Burgers',
-  description: 'Sistema de Gestión para Alitas y Hamburguesas',
+  name: 'A-la Burguer',
+  description: 'Sistema de Gestión para A-la Burguer',
   version: '1.0.0',
 } as const;

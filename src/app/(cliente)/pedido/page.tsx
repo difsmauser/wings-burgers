@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   useCarrito,
@@ -8,6 +8,7 @@ import {
   PersonalizacionSeleccionada,
   OpcionPersonalizacionProducto,
 } from '../_context/CarritoContext';
+import { useQrMesa } from '../_context/QrMesaContext';
 
 /**
  * Formats a number as Mexican Peso currency.
@@ -74,7 +75,7 @@ function PersonalizacionSelector({
     <div className="mt-3 space-y-3">
       {opciones.map((grupo) => (
         <div key={grupo.nombre}>
-          <p className="text-xs font-semibold text-wood-700 mb-1.5">{grupo.nombre}</p>
+          <p className="text-xs font-semibold text-gray-400 mb-1.5">{grupo.nombre}</p>
           <div className="flex flex-wrap gap-2">
             {grupo.opciones.map((opcion) => {
               const isSelected = seleccionadas.some(
@@ -95,7 +96,7 @@ function PersonalizacionSelector({
                     ${
                       isSelected
                         ? 'bg-brand-500 text-white border-brand-500'
-                        : 'bg-white text-wood-700 border-wood-200 hover:border-brand-300'
+                        : 'bg-white/5 text-gray-400 border-white/10 hover:border-brand-300'
                     }
                   `}
                   aria-pressed={isSelected}
@@ -103,7 +104,7 @@ function PersonalizacionSelector({
                 >
                   <span>{opcion.nombre}</span>
                   {extra > 0 && (
-                    <span className={`ml-1 text-[10px] ${isSelected ? 'text-brand-100' : 'text-brand-500'}`}>
+                    <span className={`ml-1 text-[10px] ${isSelected ? 'text-brand-100' : 'text-brand-400'}`}>
                       +{formatPrecio(extra)}
                     </span>
                   )}
@@ -135,7 +136,7 @@ function ComentarioInput({
 
   return (
     <div className="mt-3">
-      <label className="block text-xs font-semibold text-wood-700 mb-1">
+      <label className="block text-xs font-semibold text-gray-400 mb-1">
         Comentarios especiales
       </label>
       <div className="relative">
@@ -147,17 +148,17 @@ function ComentarioInput({
           rows={2}
           placeholder="Ej: Sin cebolla, bien cocido..."
           className={`
-            w-full px-3 py-2 text-sm rounded-lg border border-wood-200
-            bg-white text-wood-800 placeholder-wood-400
-            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500
+            w-full px-3 py-2 text-sm rounded-lg border border-white/10
+            bg-white/5 text-white placeholder:text-gray-600
+            focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50
             resize-none transition-colors duration-150
-            ${disabled ? 'opacity-60 cursor-not-allowed bg-wood-50' : ''}
+            ${disabled ? 'opacity-60 cursor-not-allowed bg-white/5' : ''}
           `}
           aria-label="Comentarios especiales para este producto"
         />
         <span
           className={`absolute bottom-2 right-2 text-[10px] ${
-            remaining < 30 ? 'text-fire-500' : 'text-wood-400'
+            remaining < 30 ? 'text-fire-500' : 'text-gray-500'
           }`}
           aria-live="polite"
         >
@@ -190,8 +191,8 @@ function ControlCantidad({
         disabled={disabled}
         className={`
           min-w-[44px] min-h-[44px] flex items-center justify-center
-          rounded-full border border-wood-200 text-wood-600
-          hover:bg-fire-50 hover:border-fire-300 hover:text-fire-600
+          rounded-full border border-white/10 text-gray-400
+          hover:bg-fire-500/10 hover:border-fire-500/20 hover:text-fire-400
           transition-colors duration-150 motion-reduce:transition-none
           focus:outline-none focus:ring-2 focus:ring-brand-500
           ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
@@ -206,7 +207,7 @@ function ControlCantidad({
           <span className="text-lg font-bold">−</span>
         )}
       </button>
-      <span className="min-w-[28px] text-center text-sm font-semibold text-wood-800" aria-label={`Cantidad: ${cantidad}`}>
+      <span className="min-w-[28px] text-center text-sm font-semibold text-white" aria-label={`Cantidad: ${cantidad}`}>
         {cantidad}
       </span>
       <button
@@ -215,8 +216,8 @@ function ControlCantidad({
         disabled={disabled}
         className={`
           min-w-[44px] min-h-[44px] flex items-center justify-center
-          rounded-full border border-brand-200 text-brand-600
-          hover:bg-brand-50 hover:border-brand-400
+          rounded-full border border-brand-400/30 text-brand-400
+          hover:bg-brand-500/10 hover:border-brand-400/40
           transition-colors duration-150 motion-reduce:transition-none
           focus:outline-none focus:ring-2 focus:ring-brand-500
           ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
@@ -252,25 +253,25 @@ function ItemCarritoCard({
   const hasOpciones = item.opcionesDisponibles.length > 0;
 
   return (
-    <article className="bg-white rounded-xl shadow-sm border border-wood-100 overflow-hidden">
+    <article className="bg-[#14141c] rounded-xl border border-white/5 overflow-hidden hover:border-brand-400/20 transition-all duration-200">
       {/* Header row: product info + quantity + line total */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-wood-800 truncate">
+            <h3 className="text-sm sm:text-base font-semibold text-white truncate">
               {item.nombre}
             </h3>
-            <p className="text-xs text-wood-500 mt-0.5">
+            <p className="text-xs text-gray-400 mt-0.5">
               {formatPrecio(item.precioUnitario)} c/u
               {item.personalizaciones.length > 0 && (
-                <span className="text-brand-500 ml-1">
+                <span className="text-brand-400 ml-1">
                   (+{formatPrecio(item.personalizaciones.reduce((a, p) => a + p.precioExtra, 0))} extras)
                 </span>
               )}
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-sm sm:text-base font-bold text-brand-600">
+            <p className="text-sm sm:text-base font-bold text-brand-400">
               {formatPrecio(lineTotal)}
             </p>
           </div>
@@ -292,7 +293,7 @@ function ItemCarritoCard({
               onClick={() => setExpanded(!expanded)}
               className="
                 min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium
-                text-brand-600 bg-brand-50 hover:bg-brand-100
+                text-brand-400 bg-brand-500/10 hover:bg-brand-500/20
                 transition-colors duration-150 motion-reduce:transition-none
                 focus:outline-none focus:ring-2 focus:ring-brand-500
               "
@@ -310,7 +311,7 @@ function ItemCarritoCard({
             {item.personalizaciones.map((p, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-brand-100 text-brand-700"
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-brand-500/10 text-brand-400"
               >
                 {p.opcion}
               </span>
@@ -320,7 +321,7 @@ function ItemCarritoCard({
 
         {/* Comment summary (when collapsed) */}
         {!expanded && item.comentario && (
-          <p className="mt-1 text-[11px] text-wood-500 italic truncate">
+          <p className="mt-1 text-[11px] text-gray-400 italic truncate">
             &quot;{item.comentario}&quot;
           </p>
         )}
@@ -328,7 +329,7 @@ function ItemCarritoCard({
 
       {/* Expanded: Personalization options + comment field */}
       {expanded && (
-        <div className="px-4 pb-4 border-t border-wood-100 pt-3">
+        <div className="px-4 pb-4 border-t border-white/5 pt-3">
           {hasOpciones && (
             <PersonalizacionSelector
               opciones={item.opcionesDisponibles}
@@ -352,18 +353,18 @@ function ItemCarritoCard({
 /**
  * Empty cart state component.
  */
-function CarritoVacio() {
+function CarritoVacio({ menuHref }: { menuHref: string }) {
   return (
     <div className="text-center py-16 px-4">
       <span className="text-6xl block mb-4" aria-hidden="true">🛒</span>
-      <h2 className="text-xl font-bold text-wood-800 mb-2">
+      <h2 className="text-xl font-bold text-white mb-2">
         Tu carrito está vacío
       </h2>
-      <p className="text-sm text-wood-500 mb-6">
+      <p className="text-sm text-gray-400 mb-6">
         Agrega productos desde el menú para armar tu pedido.
       </p>
       <Link
-        href="/menu"
+        href={menuHref}
         className="
           inline-flex items-center min-h-[44px] px-6 py-3 rounded-xl
           bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm
@@ -378,29 +379,128 @@ function CarritoVacio() {
 }
 
 /**
- * Confirmation success state after order is confirmed.
+ * Real-time order status tracker that polls the API for status updates.
+ * Shows a step-by-step progress bar with different steps based on modalidad.
  */
-function ConfirmacionExitosa() {
+function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null; modalidad: string | null }) {
+  const [estado, setEstado] = useState<string>('recibido');
+  const [polling, setPolling] = useState(true);
+
+  // Status steps based on modalidad
+  const pasos = modalidad === 'DOMICILIO'
+    ? [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Tu pedido está listo para salir' },
+        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'Tu pedido va en camino' },
+        { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
+      ]
+    : [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Casi listo...' },
+        { key: 'listo', label: 'Listo', icon: '✅', desc: modalidad === 'RETIRO' ? '¡Pasa a recoger!' : '¡Llega a tu mesa!' },
+      ];
+
+  // Map API states to our step keys
+  const mapEstado = (apiEstado: string): string => {
+    if (apiEstado === 'servido' || apiEstado === 'listo') return 'listo';
+    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
+    if (apiEstado === 'en_camino') return 'en_camino';
+    if (apiEstado === 'entregado') return 'entregado';
+    if (apiEstado === 'en_preparacion') return 'en_preparacion';
+    return 'recibido';
+  };
+
+  useEffect(() => {
+    if (!pedidoId || !polling) return;
+
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`/api/pedidos/${pedidoId}`);
+        if (res.ok) {
+          const json = await res.json();
+          // Handle both response formats: { data: { estado } } or { estado }
+          const pedidoData = json?.data || json;
+          const nuevoEstado = mapEstado(pedidoData?.estado || 'recibido');
+          setEstado(nuevoEstado);
+
+          // Stop polling if final state reached
+          if (nuevoEstado === 'entregado' || nuevoEstado === 'listo') {
+            setPolling(false);
+          }
+        }
+      } catch {
+        // Silently ignore fetch errors; will retry on next interval
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoId, polling]);
+
+  const currentIdx = pasos.findIndex(p => p.key === estado);
+  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
+
   return (
-    <div className="text-center py-8 px-4 bg-green-50 rounded-xl border border-green-200 mt-4">
-      <span className="text-5xl block mb-3" aria-hidden="true">✅</span>
-      <h3 className="text-lg font-bold text-green-800 mb-1">
-        Pedido Confirmado
-      </h3>
-      <p className="text-sm text-green-600">
-        Tu pedido ha sido enviado. Puedes seguir su estado en la sección de Rastreo.
-      </p>
-      <Link
-        href="/rastreo"
-        className="
-          inline-flex items-center mt-4 min-h-[44px] px-5 py-2.5 rounded-lg
-          bg-green-600 hover:bg-green-700 text-white font-medium text-sm
-          transition-colors duration-150 motion-reduce:transition-none
-          focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2
-        "
-      >
-        Ver estado del pedido
-      </Link>
+    <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-5 animate-fade-in">
+      {/* Current status message */}
+      <div className="text-center mb-6">
+        <span className="text-4xl block mb-2" aria-hidden="true">{currentPaso.icon}</span>
+        <h3 className="text-base font-bold text-white">{currentPaso.label}</h3>
+        <p className="text-xs text-gray-400 mt-1">{currentPaso.desc}</p>
+      </div>
+
+      {/* Progress steps */}
+      <div className="flex items-center justify-between relative px-2">
+        {/* Background line */}
+        <div className="absolute top-4 left-4 right-4 h-0.5 bg-white/5" />
+        {/* Progress line */}
+        <div
+          className="absolute top-4 left-4 h-0.5 bg-brand-400 transition-all duration-1000"
+          style={{ width: `${Math.max(0, (currentIdx / (pasos.length - 1)) * 100)}%`, maxWidth: 'calc(100% - 32px)' }}
+        />
+
+        {pasos.map((paso, idx) => {
+          const isCompleted = idx <= currentIdx;
+          const isCurrent = idx === currentIdx;
+          return (
+            <div key={paso.key} className="flex flex-col items-center relative z-10">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-500 ${
+                isCurrent ? 'bg-brand-500 text-black ring-4 ring-brand-500/20 scale-110' :
+                isCompleted ? 'bg-brand-500/80 text-black' :
+                'bg-[#0d0d14] border border-white/10 text-gray-600'
+              }`}>
+                {isCompleted ? (idx === currentIdx ? paso.icon : '✓') : (idx + 1)}
+              </div>
+              <span className={`text-[9px] mt-1.5 font-medium ${isCurrent ? 'text-brand-400' : isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
+                {paso.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Polling indicator */}
+      {polling && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-500">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          Actualizando en tiempo real
+        </div>
+      )}
+
+      {/* Final state message */}
+      {!polling && (
+        <div className="mt-4 text-center">
+          <p className="text-xs text-green-400 font-medium">
+            {modalidad === 'DOMICILIO' ? '¡Tu pedido ha sido entregado! Buen provecho 🎉' :
+             modalidad === 'RETIRO' ? '¡Tu pedido está listo! Pasa a recogerlo 🎉' :
+             '¡Tu pedido está listo! Llegará a tu mesa en un momento 🎉'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -418,20 +518,22 @@ function ResumenPedido({
   total: number;
 }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-wood-100 p-4 mt-4">
-      <h3 className="text-sm font-semibold text-wood-800 mb-3">Resumen</h3>
+    <div className="bg-[#14141c] rounded-xl border border-white/5 p-4 mt-4">
+      <h3 className="text-sm font-semibold text-white mb-3">Resumen</h3>
       <div className="space-y-2 text-sm">
-        <div className="flex justify-between text-wood-600">
+        <div className="flex justify-between text-gray-400">
           <span>Subtotal</span>
           <span>{formatPrecio(subtotal)}</span>
         </div>
-        <div className="flex justify-between text-wood-600">
-          <span>IVA (16%)</span>
-          <span>{formatPrecio(impuestos)}</span>
-        </div>
-        <div className="border-t border-wood-100 pt-2 flex justify-between font-bold text-wood-800 text-base">
+        {impuestos > 0 && (
+          <div className="flex justify-between text-gray-400">
+            <span>IVA (16%)</span>
+            <span>{formatPrecio(impuestos)}</span>
+          </div>
+        )}
+        <div className="border-t border-white/5 pt-2 flex justify-between font-bold text-white text-base">
           <span>Total</span>
-          <span className="text-brand-600">{formatPrecio(total)}</span>
+          <span className="text-brand-400">{formatPrecio(total)}</span>
         </div>
       </div>
     </div>
@@ -463,8 +565,26 @@ export default function PedidoPage() {
     total,
   } = useCarrito();
 
+  const { qrMesa } = useQrMesa();
+
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nombre, setNombre] = useState('');
+  const [telefono, setTelefono] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [pedidoId, setPedidoId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('alaburguer-pedido-id');
+    }
+    return null;
+  });
+
+  // Persist pedidoId to localStorage
+  useEffect(() => {
+    if (pedidoId) {
+      localStorage.setItem('alaburguer-pedido-id', pedidoId);
+    }
+  }, [pedidoId]);
 
   /**
    * Handles order confirmation by calling POST /api/pedidos.
@@ -474,9 +594,33 @@ export default function PedidoPage() {
     setEnviando(true);
     setError(null);
 
+    if (!nombre.trim()) {
+      setError('Ingresa tu nombre');
+      setEnviando(false);
+      return;
+    }
+    if (!telefono.trim() || telefono.replace(/\D/g, '').length < 10) {
+      setError('Ingresa un teléfono válido (10 dígitos)');
+      setEnviando(false);
+      return;
+    }
+    if (modalidad === 'DOMICILIO' && !direccion.trim()) {
+      setError('Ingresa tu dirección para entrega a domicilio');
+      setEnviando(false);
+      return;
+    }
+
     try {
+      // Determine canal based on context
+      const canal = modalidad === 'DOMICILIO' ? 'QR_REDES' : 'QR';
+
       const payload = {
+        nombre,
+        telefono,
         modalidad: modalidad || 'LOCAL',
+        canal,
+        mesaZona: qrMesa?.mesaZona || undefined,
+        direccion: modalidad === 'DOMICILIO' ? direccion : undefined,
         items: items.map((item) => ({
           productoId: item.productoId,
           nombre: item.nombre,
@@ -504,6 +648,8 @@ export default function PedidoPage() {
         );
       }
 
+      const responseData = await response.json();
+      setPedidoId(responseData?.data?.id || null);
       confirmarPedido();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -516,7 +662,7 @@ export default function PedidoPage() {
   if (items.length === 0 && !confirmado) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <CarritoVacio />
+        <CarritoVacio menuHref={qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu'} />
       </div>
     );
   }
@@ -526,14 +672,16 @@ export default function PedidoPage() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-wood-800">
-            Mi Pedido
+          <h2 className="text-xl sm:text-2xl font-bold text-white">
+            {qrMesa ? `${qrMesa.mesaZona}` : 'Mi Pedido'}
           </h2>
-          <p className="text-xs sm:text-sm text-wood-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
             {items.length} {items.length === 1 ? 'producto' : 'productos'}
             {modalidad && (
               <span className="ml-2">
-                {modalidad === 'LOCAL' ? '🏠 Local' : '🛵 Domicilio'}
+                {modalidad === 'LOCAL' && '🍽️ Local'}
+                {modalidad === 'RETIRO' && '🛍️ Para llevar'}
+                {modalidad === 'DOMICILIO' && '🛵 Domicilio'}
               </span>
             )}
           </p>
@@ -544,7 +692,7 @@ export default function PedidoPage() {
             onClick={limpiarCarrito}
             className="
               min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium
-              text-fire-600 bg-fire-50 hover:bg-fire-100
+              text-fire-400 bg-fire-500/10 hover:bg-fire-500/20 border border-fire-500/20
               transition-colors duration-150 motion-reduce:transition-none
               focus:outline-none focus:ring-2 focus:ring-fire-500
             "
@@ -554,8 +702,8 @@ export default function PedidoPage() {
         )}
       </div>
 
-      {/* Confirmed banner */}
-      {confirmado && <ConfirmacionExitosa />}
+      {/* Real-time status tracker */}
+      {confirmado && <PedidoStatusTracker pedidoId={pedidoId} modalidad={modalidad} />}
 
       {/* Cart items list */}
       <div className="space-y-3 mt-4">
@@ -575,10 +723,66 @@ export default function PedidoPage() {
       {/* Order Summary */}
       <ResumenPedido subtotal={subtotal} impuestos={impuestos} total={total} />
 
+      {/* Client Data Form */}
+      {!confirmado && (
+        <div className="bg-[#14141c] rounded-xl border border-white/5 p-4 mt-4">
+          <h3 className="text-sm font-semibold text-white mb-3">Tus Datos</h3>
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="nombre" className="block text-xs font-medium text-gray-400 mb-1">
+                Nombre *
+              </label>
+              <input
+                id="nombre"
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                placeholder="Tu nombre"
+                required
+                className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+              />
+            </div>
+            <div>
+              <label htmlFor="telefono" className="block text-xs font-medium text-gray-400 mb-1">
+                {modalidad === 'DOMICILIO'
+                  ? 'Teléfono (para contactarte) *'
+                  : 'Teléfono (para enviarte tu ticket) *'}
+              </label>
+              <input
+                id="telefono"
+                type="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value.replace(/[^\d]/g, '').slice(0, 10))}
+                placeholder="5512345678"
+                required
+                maxLength={10}
+                className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+              />
+            </div>
+            {modalidad === 'DOMICILIO' && (
+              <div>
+                <label htmlFor="direccion" className="block text-xs font-medium text-gray-400 mb-1">
+                  Dirección de entrega *
+                </label>
+                <input
+                  id="direccion"
+                  type="text"
+                  value={direccion}
+                  onChange={(e) => setDireccion(e.target.value)}
+                  placeholder="Calle, número, colonia, referencias"
+                  required
+                  className="w-full px-3 py-2.5 rounded-lg border border-white/10 bg-white/5 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400/50 transition-all duration-200"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Error message */}
       {error && (
         <div
-          className="mt-4 p-3 rounded-lg bg-fire-50 border border-fire-200 text-fire-700 text-sm"
+          className="mt-4 p-3 rounded-lg bg-fire-500/10 border border-fire-500/20 text-fire-400 text-sm"
           role="alert"
         >
           <p className="font-medium">Error</p>
@@ -600,7 +804,7 @@ export default function PedidoPage() {
               focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
               ${
                 enviando || items.length === 0
-                  ? 'bg-wood-300 cursor-not-allowed'
+                  ? 'bg-gray-700 cursor-not-allowed'
                   : 'bg-brand-500 hover:bg-brand-600 active:scale-[0.98] motion-reduce:active:scale-100'
               }
             `}
@@ -624,18 +828,18 @@ export default function PedidoPage() {
       {/* New order button after confirmation */}
       {confirmado && (
         <div className="mt-6 mb-4">
-          <button
-            type="button"
-            onClick={limpiarCarrito}
+          <Link
+            href={qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu'}
+            onClick={() => { limpiarCarrito(); localStorage.removeItem('alaburguer-pedido-id'); setPedidoId(null); }}
             className="
-              w-full min-h-[44px] py-3 rounded-xl font-medium text-sm
-              text-brand-600 bg-brand-50 border border-brand-200
-              hover:bg-brand-100 transition-colors duration-150
+              block w-full min-h-[44px] py-3 rounded-xl font-medium text-sm text-center
+              text-brand-400 bg-brand-50/10 border border-brand-400/20
+              hover:bg-brand-400/10 transition-colors duration-150
               focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
             "
           >
             Hacer nuevo pedido
-          </button>
+          </Link>
         </div>
       )}
     </div>

@@ -49,10 +49,12 @@ export interface Pedido {
   clienteId: string;
   items: ItemPedido[];
   estado: EstadoPedido;
-  modalidad: 'local' | 'domicilio';
+  modalidad: 'local' | 'retiro' | 'domicilio';
   total: number;
   mesaZona?: string;
   observaciones?: string;
+  estadoPago?: string;
+  metodoPago?: string;
   creadoEn: Date;
   actualizadoEn: Date;
 }

@@ -1,13 +1,13 @@
 {
-  "name": "Wings & Burgers",
-  "short_name": "W&B",
-  "description": "Sistema de gestión para Wings & Burgers - Pedidos, menú y entregas",
+  "name": "A-la Burguer",
+  "short_name": "A-la Burguer",
+  "description": "Sistema de gestión para A-la Burguer - Pedidos, menú y entregas",
   "start_url": "/menu",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#EA580C",
-  "background_color": "#FFF7ED",
+  "theme_color": "#F5A623",
+  "background_color": "#0a0a0f",
   "categories": ["food", "business"],
   "lang": "es-MX",
   "dir": "ltr",
@@ -68,14 +68,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Menú de Wings & Burgers"
+      "label": "Menú de A-la Burguer"
     },
     {
       "src": "/screenshots/menu-narrow.png",
       "sizes": "750x1334",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Menú móvil de Wings & Burgers"
+      "label": "Menú móvil de A-la Burguer"
     }
   ]
 }

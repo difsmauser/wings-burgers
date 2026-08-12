@@ -21,15 +21,15 @@ interface WhatsAppConfig {
 export const WHATSAPP_TEMPLATES = {
   /** Template para enviar la cuenta/resumen al cliente */
   cuentaCliente: (nombre: string, resumen: string, total: string): string =>
-    `🍗 *Wings & Burgers*\n\nHola ${nombre}, aquí tienes tu cuenta:\n\n${resumen}\n\n💰 *Total: $${total}*\n\n¡Gracias por tu preferencia!`,
+    `🍔 *A-la Burguer*\n\nHola ${nombre}, aquí tienes tu cuenta:\n\n${resumen}\n\n💰 *Total: $${total}*\n\n¡Gracias por tu preferencia!`,
 
   /** Template para confirmación de pedido */
   confirmacionPedido: (nombre: string, numeroPedido: string, modalidad: string): string =>
-    `🍗 *Wings & Burgers*\n\nHola ${nombre}, tu pedido #${numeroPedido} ha sido confirmado.\n\n📋 Modalidad: ${modalidad}\n\nTe notificaremos cuando esté listo. ¡Gracias!`,
+    `🍔 *A-la Burguer*\n\nHola ${nombre}, tu pedido #${numeroPedido} ha sido confirmado.\n\n📋 Modalidad: ${modalidad}\n\nTe notificaremos cuando esté listo. ¡Gracias!`,
 
   /** Template para cambio de estado del pedido */
   cambioEstado: (nombre: string, numeroPedido: string, nuevoEstado: string): string =>
-    `🍗 *Wings & Burgers*\n\nHola ${nombre}, tu pedido #${numeroPedido} ha cambiado de estado:\n\n📦 Nuevo estado: *${nuevoEstado}*`,
+    `🍔 *A-la Burguer*\n\nHola ${nombre}, tu pedido #${numeroPedido} ha cambiado de estado:\n\n📦 Nuevo estado: *${nuevoEstado}*`,
 };
 
 /**

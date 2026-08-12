@@ -61,10 +61,10 @@ describe('Pedido', () => {
       const pedido = crearPedidoBase();
       pedido.agregarItem(productoMock(100), 2);
 
-      // subtotal = 100 * 2 = 200, impuestos = 200 * 0.16 = 32, total = 232
+      // subtotal = 100 * 2 = 200, impuestos = 0.01 (mínimo, sin IVA), total = 200
       expect(pedido.subtotal.valor).toBe(200);
-      expect(pedido.impuestos.valor).toBe(32);
-      expect(pedido.total.valor).toBe(232);
+      expect(pedido.impuestos.valor).toBe(0.01);
+      expect(pedido.total.valor).toBe(200);
     });
 
     it('agrega personalizaciones al item', () => {
@@ -170,11 +170,11 @@ describe('Pedido', () => {
       );
 
       // subtotal = (150*2) + (100*1) = 400
-      // impuestos = 400 * 0.16 = 64
-      // total = 400 + 64 = 464
+      // impuestos = 0.01 (mínimo, sin IVA)
+      // total = 400
       expect(pedido.subtotal.valor).toBe(400);
-      expect(pedido.impuestos.valor).toBe(64);
-      expect(pedido.total.valor).toBe(464);
+      expect(pedido.impuestos.valor).toBe(0.01);
+      expect(pedido.total.valor).toBe(400);
     });
 
     it('establece valores mínimos cuando no hay items', () => {

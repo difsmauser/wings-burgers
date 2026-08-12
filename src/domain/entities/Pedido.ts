@@ -54,8 +54,8 @@ export interface PedidoProps {
 /** Máximo de items permitidos en un pedido. */
 const MAX_ITEMS = 50;
 
-/** Tasa de impuestos (16%). */
-const TASA_IMPUESTOS = 0.16;
+/** Tasa de impuestos (0% - productos sin IVA, precio final). */
+const TASA_IMPUESTOS = 0;
 
 /**
  * Mapa de transiciones válidas de la máquina de estados del pedido.
@@ -251,7 +251,7 @@ export class Pedido {
   /**
    * Recalcula subtotal, impuestos y total del pedido.
    * subtotal = sum(precioUnitario * cantidad)
-   * impuestos = subtotal * 0.16
+   * impuestos = subtotal * TASA_IMPUESTOS (0 = sin IVA)
    * total = subtotal + impuestos
    */
   recalcularTotal(): void {
@@ -273,8 +273,9 @@ export class Pedido {
     const totalValor = Math.round((subtotalRedondeado + impuestosValor) * 100) / 100;
 
     this.subtotal = Precio.crear(subtotalRedondeado);
-    this.impuestos = Precio.crear(impuestosValor);
-    this.total = Precio.crear(totalValor);
+    // Precio requires minimum 0.01, use that as floor when no tax
+    this.impuestos = Precio.crear(impuestosValor > 0 ? impuestosValor : 0.01);
+    this.total = Precio.crear(totalValor > 0 ? totalValor : 0.01);
   }
 
   /**

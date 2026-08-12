@@ -61,8 +61,30 @@ export async function PUT(
     // 3. Parsear body
     const body = await request.json();
 
-    // 4. Ejecutar caso de uso
     const container = getContainer();
+    const productoRepo = container.getProductoRepository();
+
+    // 4. Handle activo toggle directly via repository
+    if (body.activo !== undefined && Object.keys(body).length === 1) {
+      const producto = await productoRepo.actualizar(id, { activo: body.activo });
+      return NextResponse.json({ data: producto }, { status: 200 });
+    }
+
+    // 5. If imagenUrl is provided (from upload endpoint), update directly via repo
+    if (body.imagenUrl !== undefined) {
+      const updateFields: Record<string, unknown> = {};
+      if (body.nombre !== undefined) updateFields.nombre = body.nombre;
+      if (body.descripcion !== undefined) updateFields.descripcion = body.descripcion;
+      if (body.categoria !== undefined) updateFields.categoria = body.categoria;
+      if (body.precio !== undefined) updateFields.precio = body.precio;
+      updateFields.imagen = body.imagenUrl;
+      updateFields.actualizadoEn = new Date();
+
+      const producto = await productoRepo.actualizar(id, updateFields);
+      return NextResponse.json({ data: producto }, { status: 200 });
+    }
+
+    // 6. Otherwise use the EditarProducto use case for standard updates
     const editarProducto = container.getEditarProducto();
 
     const producto = await editarProducto.ejecutar(id, {

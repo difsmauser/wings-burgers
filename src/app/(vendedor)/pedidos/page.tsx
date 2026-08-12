@@ -1,144 +1,146 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import {
-  supabaseClient,
-  REALTIME_CHANNELS,
-} from '@/adapters/driven/persistence/supabase/SupabaseClient';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // ========== Types ==========
 
-type EstadoPedidoActivo =
-  | 'recibido'
-  | 'en_preparacion'
-  | 'empacado'
-  | 'en_camino';
-
-interface PedidoPanel {
+interface Pedido {
   id: string;
   numero: string;
-  clienteNombre: string;
-  modalidad: 'local' | 'domicilio';
-  estado: EstadoPedidoActivo;
-  items: { nombre: string; cantidad: number }[];
+  estado: string;
+  modalidad: string;
+  canal?: string;
+  clienteNombre?: string;
+  clienteTelefono?: string;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
   total: number;
   creadoEn: string;
-}
-
-interface AlertaNuevoPedido {
-  id: string;
-  pedidoNumero: string;
-  timestamp: number;
+  mesaZona?: string;
+  observaciones?: string;
 }
 
 // ========== Constants ==========
 
-/** Configuración de estados con etiqueta y color para el panel */
-const ESTADOS_CONFIG: Record<
-  EstadoPedidoActivo,
-  { label: string; color: string; bgColor: string; borderColor: string }
-> = {
-  recibido: {
-    label: 'Recibido',
-    color: 'text-fire-800',
-    bgColor: 'bg-fire-50',
-    borderColor: 'border-fire-300',
-  },
-  en_preparacion: {
-    label: 'En Preparación',
-    color: 'text-golden-800',
-    bgColor: 'bg-golden-50',
-    borderColor: 'border-golden-300',
-  },
-  empacado: {
-    label: 'Empacado',
-    color: 'text-brand-800',
-    bgColor: 'bg-brand-50',
-    borderColor: 'border-brand-300',
-  },
-  en_camino: {
-    label: 'En Camino',
-    color: 'text-green-800',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-300',
-  },
+const ESTADOS_FLOW = ['recibido', 'en_preparacion', 'empacado', 'listo', 'en_ruta', 'entregado'];
+
+const ESTADO_LABELS: Record<string, string> = {
+  recibido: 'Recibido',
+  en_preparacion: 'En Preparación',
+  empacado: 'Empaquetado',
+  listo: 'Listo',
+  en_ruta: 'En Ruta',
+  entregado: 'Entregado',
+  en_camino: 'En Camino',
+  servido: 'Servido',
 };
 
-/** Máximo tiempo que persiste la alerta de nuevo pedido (5 min) */
-const ALERTA_TIMEOUT_MS = 5 * 60 * 1000;
+const ESTADO_COLORS: Record<string, string> = {
+  recibido: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  en_preparacion: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  empacado: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  listo: 'bg-green-500/10 text-green-400 border-green-500/20',
+  en_ruta: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
+  en_camino: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
+  entregado: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+  servido: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+};
+
+const CANAL_BADGES: Record<string, { label: string; color: string }> = {
+  QR: { label: '🟡 QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+  QR_REDES: { label: '🟢 Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' },
+  MESERO: { label: '🔵 Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+};
+
+// ========== Helper Functions ==========
+
+function getNextStatus(current: string, modalidad: string): string | null {
+  // For LOCAL/RETIRO: recibido → en_preparacion → empacado → listo (stop)
+  if (modalidad === 'local' || modalidad === 'retiro') {
+    if (current === 'recibido') return 'en_preparacion';
+    if (current === 'en_preparacion') return 'empacado';
+    if (current === 'empacado') return 'listo';
+    return null; // 'listo' is the end for local/retiro
+  }
+
+  // For DOMICILIO: recibido → en_preparacion → empacado → en_camino → entregado
+  if (current === 'recibido') return 'en_preparacion';
+  if (current === 'en_preparacion') return 'empacado';
+  if (current === 'empacado') return 'en_camino';
+  if (current === 'en_camino') return 'entregado';
+  return null;
+}
+
+function parseCanal(observaciones?: string): string {
+  if (!observaciones) return 'QR';
+  const match = observaciones.match(/\[(QR|QR_REDES|MESERO)\]/);
+  return match ? match[1] : 'QR';
+}
 
 // ========== Component ==========
 
-export default function PedidosPanel() {
-  const [pedidos, setPedidos] = useState<PedidoPanel[]>([]);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [alertas, setAlertas] = useState<AlertaNuevoPedido[]>([]);
-  const [conexionActiva, setConexionActiva] = useState(true);
-
-  // Audio ref for notification sound
+export default function PedidosCocinaPage() {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [prevCount, setPrevCount] = useState(0);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const alertaTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  // ========== Cargar pedidos activos ==========
-  const cargarPedidos = useCallback(async () => {
+  const fetchPedidos = useCallback(async () => {
     try {
-      const estados: EstadoPedidoActivo[] = [
-        'recibido',
-        'en_preparacion',
-        'empacado',
-        'en_camino',
-      ];
-
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'en_camino', 'listo', 'entregado', 'servido'];
       const results = await Promise.all(
         estados.map(async (estado) => {
           const res = await fetch(`/api/pedidos?estado=${estado}`);
           if (!res.ok) return [];
           const json = await res.json();
           return (json.data || []).map((p: Record<string, unknown>) => ({
-            ...p,
-            estado,
+            id: p.id as string,
+            numero: p.numero as string,
+            estado: p.estado as string || estado,
+            modalidad: p.modalidad as string || 'local',
+            canal: parseCanal(p.observaciones as string | undefined),
+            clienteNombre: p.clienteNombre as string || '',
+            clienteTelefono: p.clienteTelefono as string || '',
+            items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
+            total: p.total as number || 0,
+            creadoEn: p.creadoEn as string || new Date().toISOString(),
+            mesaZona: p.mesaZona as string || '',
+            observaciones: p.observaciones as string || '',
           }));
         })
       );
 
-      const todosPedidos = results.flat() as PedidoPanel[];
+      const todosPedidos = results.flat() as Pedido[];
+      
+      // Sound notification on new orders
+      if (prevCount > 0 && todosPedidos.filter(p => p.estado === 'recibido').length > pedidos.filter(p => p.estado === 'recibido').length) {
+        reproducirSonido();
+      }
+      setPrevCount(todosPedidos.filter(p => p.estado === 'recibido').length);
       setPedidos(todosPedidos);
-      setError(null);
     } catch {
-      setError('Error al cargar pedidos activos');
+      // silent
     } finally {
-      setCargando(false);
+      setLoading(false);
     }
-  }, []);
+  }, [prevCount, pedidos]);
 
-  // ========== Sound notification using Web Audio API ==========
-  const reproducirSonidoNotificacion = useCallback(() => {
+  const reproducirSonido = useCallback(() => {
     try {
-      // Create AudioContext on first use (browser requirement)
       if (!audioContextRef.current) {
         audioContextRef.current = new (
           window.AudioContext ||
           (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         )();
       }
-
       const ctx = audioContextRef.current;
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
+      if (ctx.state === 'suspended') ctx.resume();
 
-      // Generate a pleasant notification tone (two-tone chime)
       const now = ctx.currentTime;
-
-      // First tone
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now); // A5
+      osc1.frequency.setValueAtTime(880, now);
       gain1.gain.setValueAtTime(0.3, now);
       gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       osc1.connect(gain1);
@@ -146,11 +148,10 @@ export default function PedidosPanel() {
       osc1.start(now);
       osc1.stop(now + 0.3);
 
-      // Second tone (higher pitch, slight delay)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1174.66, now + 0.15); // D6
+      osc2.frequency.setValueAtTime(1174.66, now + 0.15);
       gain2.gain.setValueAtTime(0, now);
       gain2.gain.setValueAtTime(0.3, now + 0.15);
       gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
@@ -159,508 +160,188 @@ export default function PedidosPanel() {
       osc2.start(now + 0.15);
       osc2.stop(now + 0.5);
     } catch {
-      // Audio not available - fail silently
+      // Audio not available
     }
   }, []);
 
-  // ========== Manage alert persistence (max 5 min) ==========
-  const agregarAlerta = useCallback(
-    (pedidoId: string, pedidoNumero: string) => {
-      const alerta: AlertaNuevoPedido = {
-        id: pedidoId,
-        pedidoNumero,
-        timestamp: Date.now(),
-      };
-
-      setAlertas((prev) => {
-        // Don't add duplicate alerts
-        if (prev.find((a) => a.id === pedidoId)) return prev;
-        return [...prev, alerta];
-      });
-
-      // Auto-dismiss after 5 minutes
-      const timer = setTimeout(() => {
-        setAlertas((prev) => prev.filter((a) => a.id !== pedidoId));
-        alertaTimersRef.current.delete(pedidoId);
-      }, ALERTA_TIMEOUT_MS);
-
-      alertaTimersRef.current.set(pedidoId, timer);
-    },
-    []
-  );
-
-  const reconocerAlerta = useCallback((pedidoId: string) => {
-    setAlertas((prev) => prev.filter((a) => a.id !== pedidoId));
-    const timer = alertaTimersRef.current.get(pedidoId);
-    if (timer) {
-      clearTimeout(timer);
-      alertaTimersRef.current.delete(pedidoId);
-    }
-  }, []);
-
-  const reconocerTodasAlertas = useCallback(() => {
-    setAlertas([]);
-    alertaTimersRef.current.forEach((timer) => clearTimeout(timer));
-    alertaTimersRef.current.clear();
-  }, []);
-
-  // ========== Subscribe to Supabase Realtime ==========
   useEffect(() => {
-    cargarPedidos();
+    fetchPedidos();
+    const interval = setInterval(fetchPedidos, 10000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Subscribe to the vendedor orders channel
-    const channel = supabaseClient
-      .channel(REALTIME_CHANNELS.PEDIDOS_VENDEDOR)
-      .on('broadcast', { event: 'nuevo_pedido' }, (payload) => {
-        const data = payload.payload as {
-          pedidoId?: string;
-          numero?: string;
-          clienteId?: string;
-          modalidad?: 'local' | 'domicilio';
-          items?: { nombre: string; cantidad: number }[];
-          total?: number;
-          creadoEn?: string;
-        };
+  const handleAdvanceStatus = async (pedido: Pedido) => {
+    const next = getNextStatus(pedido.estado, pedido.modalidad);
+    if (!next) return;
 
-        if (data.pedidoId && data.numero) {
-          // Add new order to the list
-          const nuevoPedido: PedidoPanel = {
-            id: data.pedidoId,
-            numero: data.numero,
-            clienteNombre: 'Cliente',
-            modalidad: data.modalidad || 'local',
-            estado: 'recibido',
-            items: data.items || [],
-            total: data.total || 0,
-            creadoEn: data.creadoEn || new Date().toISOString(),
-          };
-
-          setPedidos((prev) => {
-            // Avoid duplicates
-            if (prev.find((p) => p.id === nuevoPedido.id)) return prev;
-            return [nuevoPedido, ...prev];
-          });
-
-          // Trigger sound and visual alert
-          reproducirSonidoNotificacion();
-          agregarAlerta(data.pedidoId, data.numero);
-        }
-      })
-      .on('broadcast', { event: 'cambio_estado' }, (payload) => {
-        const data = payload.payload as {
-          pedidoId?: string;
-          nuevoEstado?: string;
-        };
-
-        if (data.pedidoId && data.nuevoEstado) {
-          const estadosActivos: string[] = [
-            'recibido',
-            'en_preparacion',
-            'empacado',
-            'en_camino',
-          ];
-
-          if (estadosActivos.includes(data.nuevoEstado)) {
-            // Update order state
-            setPedidos((prev) =>
-              prev.map((p) =>
-                p.id === data.pedidoId
-                  ? { ...p, estado: data.nuevoEstado as EstadoPedidoActivo }
-                  : p
-              )
-            );
-          } else {
-            // Order is no longer active (entregado, servido, etc.) - remove it
-            setPedidos((prev) => prev.filter((p) => p.id !== data.pedidoId));
-          }
-        }
-      })
-      .subscribe((status) => {
-        setConexionActiva(status === 'SUBSCRIBED');
-      });
-
-    channelRef.current = channel;
-
-    return () => {
-      if (channelRef.current) {
-        supabaseClient.removeChannel(channelRef.current);
-      }
-      alertaTimersRef.current.forEach((timer) => clearTimeout(timer));
-      alertaTimersRef.current.clear();
-    };
-  }, [cargarPedidos, reproducirSonidoNotificacion, agregarAlerta]);
-
-  // ========== Group orders by state ==========
-  const pedidosPorEstado = (
-    Object.keys(ESTADOS_CONFIG) as EstadoPedidoActivo[]
-  ).reduce(
-    (acc, estado) => {
-      acc[estado] = pedidos.filter((p) => p.estado === estado);
-      return acc;
-    },
-    {} as Record<EstadoPedidoActivo, PedidoPanel[]>
-  );
-
-  // ========== Format time ==========
-  const formatTiempo = (iso: string) => {
+    setUpdatingId(pedido.id);
     try {
-      const date = new Date(iso);
-      return date.toLocaleTimeString('es-MX', {
-        hour: '2-digit',
-        minute: '2-digit',
+      await fetch(`/api/pedidos/${pedido.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: next }),
       });
+      await fetchPedidos();
     } catch {
-      return '--:--';
+      // silent
+    } finally {
+      setUpdatingId(null);
     }
   };
 
-  // ========== Render ==========
-  return (
-    <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-wood-800">Panel de Pedidos</h2>
-          {/* Connection status indicator */}
-          <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
-              conexionActiva
-                ? 'bg-green-100 text-green-800'
-                : 'bg-fire-100 text-fire-800'
-            }`}
-            aria-label={conexionActiva ? 'Conectado en tiempo real' : 'Desconectado'}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                conexionActiva ? 'bg-green-500 animate-pulse' : 'bg-fire-500'
-              }`}
-            />
-            {conexionActiva ? 'En vivo' : 'Desconectado'}
-          </span>
+  // Active orders (not entregado/servido, and not listo-for-local/retiro)
+  const pedidosActivos = pedidos.filter(p =>
+    !['entregado', 'servido', 'cancelado'].includes(p.estado) &&
+    !(p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
+  );
+
+  const pedidosCompletados = pedidos.filter(p =>
+    p.estado === 'entregado' ||
+    p.estado === 'servido' ||
+    (p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">Cargando pedidos...</p>
         </div>
-        <Link
-          href="/pedidos/nuevo"
-          className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors flex items-center gap-2"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Nuevo Pedido
-        </Link>
       </div>
+    );
+  }
 
-      {/* New Order Alert Banner */}
-      {alertas.length > 0 && (
-        <div
-          className="mb-6 p-4 rounded-xl bg-fire-100 border-2 border-fire-400 shadow-lg animate-pulse"
-          role="alert"
-          aria-live="assertive"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-fire-500 flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="font-bold text-fire-900">
-                  {alertas.length === 1
-                    ? `Nuevo pedido #${alertas[0].pedidoNumero}`
-                    : `${alertas.length} nuevos pedidos`}
-                </p>
-                <p className="text-sm text-fire-700">
-                  {alertas.length === 1
-                    ? 'Toca para reconocer'
-                    : alertas.map((a) => `#${a.pedidoNumero}`).join(', ')}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={reconocerTodasAlertas}
-              className="px-4 py-2 bg-fire-600 text-white rounded-lg text-sm font-medium hover:bg-fire-700 transition-colors"
-              aria-label="Reconocer todas las alertas de nuevos pedidos"
-            >
-              Reconocer
-            </button>
+  return (
+    <div className="min-h-screen bg-[#0a0a0f] p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+              <span className="text-3xl">👨‍🍳</span>
+              Cocina / Pedidos
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              {pedidosActivos.length} pedidos activos &bull; Auto-refresco cada 10s
+            </p>
           </div>
-
-          {/* Individual alerts if multiple */}
-          {alertas.length > 1 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {alertas.map((alerta) => (
-                <button
-                  key={alerta.id}
-                  onClick={() => reconocerAlerta(alerta.id)}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-full text-xs font-medium text-fire-800 border border-fire-300 hover:bg-fire-50 transition-colors"
-                  aria-label={`Reconocer pedido #${alerta.pedidoNumero}`}
-                >
-                  #{alerta.pedidoNumero}
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <div
-          className="mb-6 p-3 rounded-lg bg-fire-50 border border-fire-300 text-fire-800 text-sm flex items-center gap-2"
-          role="alert"
-        >
-          <svg
-            className="w-5 h-5 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          <span>{error}</span>
           <button
-            onClick={() => {
-              setError(null);
-              cargarPedidos();
-            }}
-            className="ml-auto px-3 py-1 bg-fire-100 text-fire-800 rounded text-xs font-medium hover:bg-fire-200 transition-colors"
+            onClick={fetchPedidos}
+            className="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-200"
           >
-            Reintentar
+            🔄 Actualizar
           </button>
         </div>
-      )}
 
-      {/* Loading state */}
-      {cargando ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <svg
-              className="animate-spin h-8 w-8 text-brand-600 mx-auto mb-3"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
-            <p className="text-wood-500 text-sm">Cargando pedidos...</p>
+        {/* Active Orders */}
+        {pedidosActivos.length === 0 ? (
+          <div className="rounded-xl bg-[#16161f] border border-white/5 p-12 text-center">
+            <span className="text-5xl block mb-3">🎉</span>
+            <p className="text-gray-400">No hay pedidos pendientes</p>
           </div>
-        </div>
-      ) : (
-        <>
-          {/* Orders summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-            {(Object.keys(ESTADOS_CONFIG) as EstadoPedidoActivo[]).map(
-              (estado) => {
-                const config = ESTADOS_CONFIG[estado];
-                const count = pedidosPorEstado[estado].length;
-                return (
-                  <div
-                    key={estado}
-                    className={`p-3 rounded-xl border ${config.borderColor} ${config.bgColor}`}
-                  >
-                    <p className={`text-xs font-medium ${config.color} opacity-75`}>
-                      {config.label}
-                    </p>
-                    <p className={`text-2xl font-bold ${config.color}`}>
-                      {count}
-                    </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {pedidosActivos.map((pedido) => {
+              const nextStatus = getNextStatus(pedido.estado, pedido.modalidad);
+              const canal = CANAL_BADGES[pedido.canal || 'QR'] || CANAL_BADGES.QR;
+
+              return (
+                <div
+                  key={pedido.id}
+                  className="rounded-xl bg-[#16161f] border border-white/5 overflow-hidden hover:border-brand-400/20 transition-all duration-200"
+                >
+                  {/* Card header */}
+                  <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ESTADO_COLORS[pedido.estado] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
+                      {ESTADO_LABELS[pedido.estado] || pedido.estado}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${canal.color}`}>
+                      {pedido.canal === 'QR' && pedido.mesaZona ? `🟡 ${pedido.mesaZona.split(' - ')[0]}` : canal.label}
+                    </span>
                   </div>
-                );
-              }
-            )}
-          </div>
 
-          {/* Orders grouped by state */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-            {(Object.keys(ESTADOS_CONFIG) as EstadoPedidoActivo[]).map(
-              (estado) => {
-                const config = ESTADOS_CONFIG[estado];
-                const pedidosEnEstado = pedidosPorEstado[estado];
-
-                return (
-                  <div key={estado} className="flex flex-col">
-                    {/* Column header */}
-                    <div
-                      className={`px-4 py-2 rounded-t-xl border ${config.borderColor} ${config.bgColor}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3
-                          className={`text-sm font-bold ${config.color}`}
-                        >
-                          {config.label}
-                        </h3>
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.bgColor} ${config.color} border ${config.borderColor}`}
-                        >
-                          {pedidosEnEstado.length}
-                        </span>
-                      </div>
+                  {/* Card body */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-white">#{pedido.numero}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(pedido.creadoEn).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
 
-                    {/* Column content */}
-                    <div className="flex-1 bg-white rounded-b-xl border border-t-0 border-wood-200 p-2 space-y-2 min-h-[200px]">
-                      {pedidosEnEstado.length === 0 ? (
-                        <div className="flex items-center justify-center h-full min-h-[180px]">
-                          <p className="text-xs text-wood-400">
-                            Sin pedidos
-                          </p>
+                    {/* Client info */}
+                    {pedido.clienteNombre && (
+                      <p className="text-xs text-gray-400">
+                        👤 {pedido.clienteNombre}
+                        {pedido.mesaZona && <span className="ml-2 text-brand-400">📍 {pedido.mesaZona}</span>}
+                      </p>
+                    )}
+
+                    {/* Modalidad */}
+                    <p className="text-xs text-gray-500 capitalize">
+                      {pedido.modalidad === 'domicilio' ? '🛵 A domicilio' :
+                       pedido.modalidad === 'retiro' ? '🏪 Retiro en sucursal' :
+                       '🏠 Comer aquí'}
+                    </p>
+
+                    {/* Items */}
+                    <div className="space-y-1 pt-2 border-t border-white/5">
+                      {pedido.items?.slice(0, 4).map((item, i) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="text-gray-300">{item.cantidad}x {item.nombre}</span>
+                          <span className="text-gray-500">${(item.cantidad * item.precioUnitario).toFixed(0)}</span>
                         </div>
-                      ) : (
-                        pedidosEnEstado.map((pedido) => (
-                          <PedidoCard
-                            key={pedido.id}
-                            pedido={pedido}
-                            formatTiempo={formatTiempo}
-                            esNuevo={alertas.some(
-                              (a) => a.id === pedido.id
-                            )}
-                          />
-                        ))
+                      ))}
+                      {(pedido.items?.length || 0) > 4 && (
+                        <p className="text-[10px] text-gray-600">+{(pedido.items?.length || 0) - 4} más...</p>
                       )}
                     </div>
+
+                    {/* Total */}
+                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                      <span className="text-xs text-gray-500">Total</span>
+                      <span className="text-sm font-bold text-brand-400">${pedido.total?.toFixed(2)}</span>
+                    </div>
+
+                    {/* Next status button */}
+                    {nextStatus && (
+                      <button
+                        onClick={() => handleAdvanceStatus(pedido)}
+                        disabled={updatingId === pedido.id}
+                        className="w-full mt-2 px-4 py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-400 to-brand-500 shadow-lg shadow-brand-500/20 hover:shadow-xl disabled:opacity-50 transition-all duration-200 active:scale-[0.98]"
+                      >
+                        {updatingId === pedido.id ? 'Actualizando...' : `→ ${ESTADO_LABELS[nextStatus] || nextStatus}`}
+                      </button>
+                    )}
                   </div>
-                );
-              }
-            )}
+                </div>
+              );
+            })}
           </div>
-
-          {/* Empty state */}
-          {pedidos.length === 0 && !error && (
-            <div className="mt-8 bg-white rounded-xl border border-wood-200 p-12 text-center shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">📋</span>
-              </div>
-              <p className="text-wood-600 text-sm mb-4">
-                No hay pedidos activos en este momento
-              </p>
-              <Link
-                href="/pedidos/nuevo"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-colors"
-              >
-                Crear nuevo pedido
-              </Link>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ========== Pedido Card Component ==========
-
-function PedidoCard({
-  pedido,
-  formatTiempo,
-  esNuevo,
-}: {
-  pedido: PedidoPanel;
-  formatTiempo: (iso: string) => string;
-  esNuevo: boolean;
-}) {
-  return (
-    <div
-      className={`p-3 rounded-lg border transition-all ${
-        esNuevo
-          ? 'border-fire-400 bg-fire-50 shadow-md ring-2 ring-fire-200'
-          : 'border-wood-200 bg-white hover:shadow-sm'
-      }`}
-    >
-      {/* Order header */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-bold text-wood-800">
-          #{pedido.numero}
-        </span>
-        <span className="text-xs text-wood-500">
-          {formatTiempo(pedido.creadoEn)}
-        </span>
-      </div>
-
-      {/* Client and modality */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-xs text-wood-600 truncate">
-          {pedido.clienteNombre}
-        </span>
-        <span
-          className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-            pedido.modalidad === 'domicilio'
-              ? 'bg-brand-100 text-brand-800'
-              : 'bg-wood-100 text-wood-700'
-          }`}
-        >
-          {pedido.modalidad === 'domicilio' ? 'Domicilio' : 'Local'}
-        </span>
-      </div>
-
-      {/* Items summary */}
-      <div className="mb-2">
-        {pedido.items.slice(0, 3).map((item, idx) => (
-          <p key={idx} className="text-xs text-wood-600 truncate">
-            {item.cantidad}x {item.nombre}
-          </p>
-        ))}
-        {pedido.items.length > 3 && (
-          <p className="text-xs text-wood-400">
-            +{pedido.items.length - 3} más
-          </p>
         )}
-      </div>
 
-      {/* Total */}
-      <div className="flex items-center justify-between pt-2 border-t border-wood-100">
-        <span className="text-xs text-wood-500">Total</span>
-        <span className="text-sm font-bold text-brand-700">
-          ${pedido.total.toFixed(2)}
-        </span>
+        {/* Completed Today */}
+        {pedidosCompletados.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
+              Completados ({pedidosCompletados.length})
+            </h2>
+            <div className="rounded-xl bg-[#16161f] border border-white/5 divide-y divide-white/5">
+              {pedidosCompletados.slice(0, 10).map((p) => (
+                <div key={p.id} className="px-4 py-3 flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-400">✓</span>
+                    <span className="text-white font-medium">#{p.numero}</span>
+                    <span className="text-xs text-gray-500 capitalize">{p.modalidad}</span>
+                  </div>
+                  <span className="text-brand-400 font-medium">${p.total?.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

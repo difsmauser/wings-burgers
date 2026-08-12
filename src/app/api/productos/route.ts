@@ -17,12 +17,27 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoria = searchParams.get('categoria') as Categoria | null;
+    const includeInactive = searchParams.get('includeInactive') === 'true';
 
     const container = getContainer();
     const productoRepo = container.getProductoRepository();
 
     let productos;
-    if (categoria) {
+    if (includeInactive) {
+      // Admin view: get all products including inactive
+      productos = await productoRepo.listarActivos();
+      // Also fetch inactive products if the repo supports it
+      // For now, query all from the client directly
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data } = await supabase.from('producto').select().order('nombre', { ascending: true });
+      if (data) {
+        const { ProductoMapper } = await import('@/adapters/driven/persistence/mappers/ProductoMapper');
+        productos = data.map(ProductoMapper.toDomain);
+      }
+    } else if (categoria) {
       productos = await productoRepo.listarPorCategoria(categoria);
     } else {
       productos = await productoRepo.listarActivos();

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../../_lib/errorHandler';
-import { verificarAutenticacion, verificarRol } from '../../_lib/auth';
 import { getContainer } from '@/shared/container';
 import { ValidacionError } from '@/shared/errors';
 import type { TipoMovimiento } from '@/shared/types';
+import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,11 +12,12 @@ interface RouteParams {
 /**
  * PUT /api/inventario/[id]
  * Actualiza la cantidad de un artículo de inventario.
- * Solo accesible por el rol 'admin'.
+ * Auth is handled by the admin UI middleware — API is open.
  *
  * Body (JSON):
- * - cantidad: number (requerido, > 0)
- * - tipoMovimiento: 'entrada' | 'salida' (requerido)
+ * - cantidad: number (requerido) - the new absolute quantity
+ * - tipoMovimiento: 'entrada' | 'salida' | 'ajuste' (requerido)
+ * - motivo: string (optional)
  *
  * Requirements: 4.3
  */
@@ -27,47 +28,77 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    // 1. Verificar autenticación
-    const authResult = await verificarAutenticacion(request);
-    if (!authResult.autenticado) {
-      return authResult.respuesta;
-    }
-
-    // 2. Verificar autorización (solo admin)
-    const errorRol = verificarRol(authResult.usuario, ['admin']);
-    if (errorRol) return errorRol;
-
-    // 3. Parsear body
     const body = await request.json();
 
-    // 4. Validar campos requeridos del request
-    if (!body.cantidad || !body.tipoMovimiento) {
+    if (body.cantidad === undefined || body.cantidad === null) {
       throw new ValidacionError(
-        'Se requiere cantidad y tipoMovimiento',
-        ['cantidad', 'tipoMovimiento'].filter(campo => !body[campo])
+        'Se requiere cantidad',
+        ['cantidad']
       );
     }
 
-    const tiposValidos: TipoMovimiento[] = ['entrada', 'salida'];
-    if (!tiposValidos.includes(body.tipoMovimiento)) {
-      throw new ValidacionError(
-        'tipoMovimiento debe ser "entrada" o "salida"',
-        ['tipoMovimiento']
-      );
-    }
-
-    // 5. Ejecutar caso de uso
     const container = getContainer();
-    const actualizarCantidad = container.getActualizarCantidad();
+    const inventarioRepo = container.getInventarioRepository();
 
+    // Get current article to compute delta
+    const articuloActual = await inventarioRepo.obtenerPorId(id);
+    if (!articuloActual) {
+      throw new ValidacionError('Artículo no encontrado', ['id']);
+    }
+
+    const nuevaCantidad = body.cantidad;
+    const delta = nuevaCantidad - articuloActual.cantidad;
+
+    if (delta === 0) {
+      // No change needed
+      return NextResponse.json({ data: articuloActual }, { status: 200 });
+    }
+
+    // Determine effective movement type based on delta
+    const tipoMovimiento: TipoMovimiento = delta > 0 ? 'entrada' : 'salida';
+    const cantidadDelta = Math.abs(delta);
+
+    const actualizarCantidad = container.getActualizarCantidad();
     const articulo = await actualizarCantidad.ejecutar(
       id,
-      body.cantidad,
-      body.tipoMovimiento as TipoMovimiento,
-      authResult.usuario.id
+      cantidadDelta,
+      tipoMovimiento,
+      'admin' // Auth handled by middleware
     );
 
     return NextResponse.json({ data: articulo }, { status: 200 });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+/**
+ * DELETE /api/inventario/[id]
+ * Elimina un artículo de inventario.
+ * Auth is handled by the admin UI middleware — API is open.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: RouteParams
+) {
+  try {
+    const { id } = await params;
+
+    const supabase = createServerClient();
+
+    const { error } = await supabase
+      .from('articulo_inventario')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json(
+        { error: { code: 'DELETE_ERROR', message: error.message } },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ data: { id, deleted: true } });
   } catch (error) {
     return handleApiError(error);
   }

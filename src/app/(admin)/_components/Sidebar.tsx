@@ -20,7 +20,7 @@ export default function Sidebar() {
       {/* Logo / Title */}
       <div className="p-6 border-b border-wood-700">
         <h1 className="text-xl font-bold text-golden-300">
-          Wings & Burgers
+          A-la Burguer
         </h1>
         <p className="text-sm text-wood-300 mt-1">Panel de Administración</p>
       </div>
@@ -55,7 +55,7 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-wood-700">
         <p className="text-xs text-wood-400 text-center">
-          © {new Date().getFullYear()} Wings & Burgers
+          © {new Date().getFullYear()} A-la Burguer
         </p>
       </div>
     </aside>

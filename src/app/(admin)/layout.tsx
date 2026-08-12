@@ -9,8 +9,8 @@ import { Sidebar } from './_components';
  * For now, the layout renders directly assuming authenticated admin.
  */
 export const metadata = {
-  title: 'Admin - Wings & Burgers',
-  description: 'Panel de Administración Wings & Burgers',
+  title: 'Admin - A-la Burguer',
+  description: 'Panel de Administración A-la Burguer',
 };
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="bg-white border-b border-wood-200 px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-wood-800">
-              Wings & Burgers - Admin
+              A-la Burguer - Admin
             </h2>
             <div className="flex items-center gap-3">
               {/* Placeholder for user info - will be connected with auth */}

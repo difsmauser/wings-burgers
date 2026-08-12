@@ -373,7 +373,7 @@ describe('Flujo Pedido Completo: Crear → Confirmar → Pagar → Entregar', ()
     expect(pedido).toBeDefined();
     expect(pedido.numero).toMatch(/^PED-\d{8}-\d{4}$/);
     expect(pedido.items.length).toBe(1);
-    expect(pedido.total.valor).toBe(348.0); // 150 * 2 + 16% IVA
+    expect(pedido.total.valor).toBe(300); // 150 * 2 = 300 (sin IVA)
 
     // Verificar que el cliente fue creado
     const clienteCreado = await clienteRepo.obtenerPorTelefono('5512345678');

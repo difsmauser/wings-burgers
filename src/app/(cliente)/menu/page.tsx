@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { useQrMesa } from '../_context/QrMesaContext';
+import { useCarrito } from '../_context/CarritoContext';
 
 /**
  * Tipos locales para los datos del menú del cliente.
@@ -19,8 +20,7 @@ interface ProductoMenu {
   disponible: boolean;
 }
 
-type Modalidad = 'LOCAL' | 'DOMICILIO' | null;
-type CategoriaFiltro = 'TODAS' | 'ALITAS' | 'HAMBURGUESAS' | 'BEBIDAS' | 'OTROS';
+type Modalidad = 'LOCAL' | 'RETIRO' | 'DOMICILIO' | null;
 
 /**
  * QR validation state for mesa/zona identification (Req 8.1, 8.4).
@@ -34,15 +34,8 @@ interface QrMesaInfo {
 type QrEstado = 'idle' | 'validando' | 'valido' | 'invalido';
 
 /**
- * Categorías disponibles para filtrado.
+ * Categorías se derivan dinámicamente de los productos cargados.
  */
-const CATEGORIAS: { value: CategoriaFiltro; label: string; icon: string }[] = [
-  { value: 'TODAS', label: 'Todas', icon: '🍽️' },
-  { value: 'ALITAS', label: 'Alitas', icon: '🍗' },
-  { value: 'HAMBURGUESAS', label: 'Hamburguesas', icon: '🍔' },
-  { value: 'BEBIDAS', label: 'Bebidas', icon: '🥤' },
-  { value: 'OTROS', label: 'Otros', icon: '🍟' },
-];
 
 /**
  * Placeholder SVG component for products without images.
@@ -50,7 +43,7 @@ const CATEGORIAS: { value: CategoriaFiltro; label: string; icon: string }[] = [
  */
 function PlaceholderImage() {
   return (
-    <div className="w-full h-full bg-gradient-to-br from-brand-100 to-brand-200 flex items-center justify-center">
+    <div className="w-full h-full bg-gradient-to-br from-[#1a1520] to-[#16161f] flex items-center justify-center">
       <svg
         className="w-12 h-12 sm:w-16 sm:h-16 text-brand-400"
         fill="none"
@@ -71,81 +64,171 @@ function PlaceholderImage() {
 
 /**
  * Modality selector component.
- * Asks the client to select between eating locally or delivery (Req 10.4).
+ * Context-based options:
+ * - If esQr (scanned from restaurant): "Comer aquí" (LOCAL) + "Para llevar" (RETIRO)
+ * - If !esQr (from social media / direct): Only "A domicilio" (DOMICILIO)
  */
 function ModalidadSelector({
   onSelect,
+  esQr,
 }: {
   onSelect: (modalidad: Modalidad) => void;
+  esQr: boolean;
 }) {
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <div
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-8
-                    animate-fade-in motion-reduce:animate-none"
-      >
-        <div className="text-center mb-8">
-          <span className="text-5xl sm:text-6xl mb-4 block" aria-hidden="true">
-            🍗
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-wood-800 mb-2">
-            ¡Bienvenido!
-          </h2>
-          <p className="text-wood-600 text-sm sm:text-base">
-            ¿Cómo deseas disfrutar tu pedido?
-          </p>
-        </div>
+    <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4 relative overflow-hidden bg-[#0a0a0f]">
+      {/* Animated gradient background */}
+      <div className="absolute inset-0">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-fire-500/10 rounded-full blur-[128px] animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-[128px] animate-pulse" style={{animationDelay: '1s'}} />
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-fire-600/5 rounded-full blur-[96px] animate-pulse" style={{animationDelay: '2s'}} />
+      </div>
 
-        <div className="space-y-4">
-          <button
-            onClick={() => onSelect('LOCAL')}
-            className="
-              w-full flex items-center gap-4 p-4 sm:p-5
-              min-h-[44px] rounded-xl border-2 border-wood-200
-              bg-white hover:border-brand-400 hover:bg-brand-50
-              transition-all duration-200 motion-reduce:transition-none
-              focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-              group
-            "
-            aria-label="Comer en el local"
-          >
-            <span className="text-3xl sm:text-4xl group-hover:scale-110 transition-transform duration-200 motion-reduce:transition-none" aria-hidden="true">
-              🏠
-            </span>
-            <div className="text-left">
-              <span className="block text-lg font-semibold text-wood-800">
-                Comer en el local
-              </span>
-              <span className="block text-sm text-wood-500">
-                Disfruta en nuestro restaurante
-              </span>
-            </div>
-          </button>
+      {/* Floating food elements with RED and GOLD glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <span className="absolute top-[8%] left-[8%] text-5xl opacity-20 animate-bounce" style={{animationDuration: '3s'}}>🍗</span>
+        <span className="absolute top-[15%] right-[12%] text-4xl opacity-15 animate-bounce" style={{animationDuration: '4s', animationDelay: '1s'}}>🍔</span>
+        <span className="absolute bottom-[25%] left-[15%] text-4xl opacity-15 animate-bounce" style={{animationDuration: '3.5s', animationDelay: '0.5s'}}>🔥</span>
+        <span className="absolute bottom-[12%] right-[8%] text-5xl opacity-20 animate-bounce" style={{animationDuration: '4.5s', animationDelay: '1.5s'}}>🌶️</span>
+        <span className="absolute top-[40%] left-[5%] text-3xl opacity-10 animate-bounce" style={{animationDuration: '5s', animationDelay: '2s'}}>🍟</span>
+        <span className="absolute top-[60%] right-[5%] text-3xl opacity-10 animate-bounce" style={{animationDuration: '4s', animationDelay: '0.8s'}}>🧀</span>
+      </div>
 
-          <button
-            onClick={() => onSelect('DOMICILIO')}
-            className="
-              w-full flex items-center gap-4 p-4 sm:p-5
-              min-h-[44px] rounded-xl border-2 border-wood-200
-              bg-white hover:border-brand-400 hover:bg-brand-50
-              transition-all duration-200 motion-reduce:transition-none
-              focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-              group
-            "
-            aria-label="Entrega a domicilio"
-          >
-            <span className="text-3xl sm:text-4xl group-hover:scale-110 transition-transform duration-200 motion-reduce:transition-none" aria-hidden="true">
-              🛵
-            </span>
-            <div className="text-left">
-              <span className="block text-lg font-semibold text-wood-800">
-                Entrega a domicilio
-              </span>
-              <span className="block text-sm text-wood-500">
-                Te lo llevamos a tu puerta
-              </span>
+      {/* Main Card with animated border */}
+      <div className="relative w-full max-w-md animate-slide-up">
+        {/* Animated gradient border */}
+        <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-fire-500 via-brand-400 to-fire-500 opacity-60 blur-sm animate-pulse" />
+        <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-fire-500 via-brand-400 to-fire-500 opacity-30" />
+
+        <div className="relative bg-[#12121a] rounded-3xl p-8 sm:p-10 border border-white/10 backdrop-blur-xl shadow-2xl shadow-fire-500/5">
+          {/* Logo with glow */}
+          <div className="text-center mb-8">
+            <div className="relative inline-block">
+              <div className="absolute inset-0 bg-brand-500/20 rounded-full blur-xl animate-pulse" />
+              <img
+                src="/logo.png"
+                alt="A-la Burguer"
+                className="relative h-24 w-24 sm:h-28 sm:w-28 rounded-full border-2 border-brand-400/50 shadow-lg shadow-brand-500/30 mx-auto animate-scale-in"
+              />
             </div>
-          </button>
+            <h2 className="mt-5 text-2xl sm:text-3xl font-extrabold text-white">
+              ¡Bienvenido!
+            </h2>
+            <p className="mt-2 text-sm text-gray-400">
+              {esQr
+                ? '¿Cómo deseas disfrutar tu pedido?'
+                : '¡Pide a domicilio y te lo llevamos!'}
+            </p>
+            {/* Decorative gold line */}
+            <div className="mt-4 mx-auto w-24 h-0.5 bg-gradient-to-r from-transparent via-brand-400 to-transparent" />
+          </div>
+
+          <div className="space-y-4">
+            {esQr ? (
+              <>
+                {/* QR scan flow: Comer aquí + Para llevar */}
+                <button
+                  onClick={() => onSelect('LOCAL')}
+                  className="
+                    w-full flex items-center gap-4 p-5 sm:p-6
+                    rounded-2xl border border-white/10
+                    bg-white/5 backdrop-blur-sm
+                    hover:border-brand-400/50 hover:bg-brand-500/5
+                    hover:shadow-lg hover:shadow-brand-500/10
+                    transition-all duration-300 motion-reduce:transition-none
+                    focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-[#12121a]
+                    group active:scale-[0.98]
+                  "
+                  aria-label="Comer aquí"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-400/20 flex items-center justify-center group-hover:bg-brand-500/20 group-hover:border-brand-400/40 group-hover:scale-110 transition-all duration-300">
+                    <span className="text-2xl" aria-hidden="true">🍽️</span>
+                  </div>
+                  <div className="text-left flex-1">
+                    <span className="block text-base font-bold text-white group-hover:text-brand-300 transition-colors duration-200">
+                      Comer aquí
+                    </span>
+                    <span className="block text-xs text-gray-500 group-hover:text-gray-400 transition-colors duration-200">
+                      Disfruta en nuestro restaurante
+                    </span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-brand-400 group-hover:translate-x-1 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => onSelect('RETIRO')}
+                  className="
+                    w-full flex items-center gap-4 p-5 sm:p-6
+                    rounded-2xl border border-white/10
+                    bg-white/5 backdrop-blur-sm
+                    hover:border-fire-400/50 hover:bg-fire-500/5
+                    hover:shadow-lg hover:shadow-fire-500/10
+                    transition-all duration-300 motion-reduce:transition-none
+                    focus:outline-none focus:ring-2 focus:ring-fire-400 focus:ring-offset-2 focus:ring-offset-[#12121a]
+                    group active:scale-[0.98]
+                  "
+                  aria-label="Para llevar (retiro en sucursal)"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-fire-500/10 border border-fire-400/20 flex items-center justify-center group-hover:bg-fire-500/20 group-hover:border-fire-400/40 group-hover:scale-110 transition-all duration-300">
+                    <span className="text-2xl" aria-hidden="true">🛍️</span>
+                  </div>
+                  <div className="text-left flex-1">
+                    <span className="block text-base font-bold text-white group-hover:text-fire-300 transition-colors duration-200">
+                      Para llevar
+                    </span>
+                    <span className="block text-xs text-gray-500 group-hover:text-gray-400 transition-colors duration-200">
+                      Retiro en sucursal
+                    </span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-fire-400 group-hover:translate-x-1 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Social media / direct flow: Only domicilio */}
+                <button
+                  onClick={() => onSelect('DOMICILIO')}
+                  className="
+                    w-full flex items-center gap-4 p-5 sm:p-6
+                    rounded-2xl border border-white/10
+                    bg-white/5 backdrop-blur-sm
+                    hover:border-fire-400/50 hover:bg-fire-500/5
+                    hover:shadow-lg hover:shadow-fire-500/10
+                    transition-all duration-300 motion-reduce:transition-none
+                    focus:outline-none focus:ring-2 focus:ring-fire-400 focus:ring-offset-2 focus:ring-offset-[#12121a]
+                    group active:scale-[0.98]
+                  "
+                  aria-label="Pedir a domicilio"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-fire-500/10 border border-fire-400/20 flex items-center justify-center group-hover:bg-fire-500/20 group-hover:border-fire-400/40 group-hover:scale-110 transition-all duration-300">
+                    <span className="text-2xl" aria-hidden="true">🛵</span>
+                  </div>
+                  <div className="text-left flex-1">
+                    <span className="block text-base font-bold text-white group-hover:text-fire-300 transition-colors duration-200">
+                      Pedir a domicilio
+                    </span>
+                    <span className="block text-xs text-gray-500 group-hover:text-gray-400 transition-colors duration-200">
+                      Te lo llevamos a tu puerta
+                    </span>
+                  </div>
+                  <svg className="w-5 h-5 text-gray-600 group-hover:text-fire-400 group-hover:translate-x-1 transition-all duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Bottom info */}
+          <div className="mt-6 pt-4 border-t border-white/5 text-center">
+            <p className="text-[11px] text-gray-600">
+              📞 Servicio a domicilio: <span className="text-brand-400 font-medium">722 680 2734</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -157,6 +240,8 @@ function ModalidadSelector({
  * Shows image (or placeholder), name, description, price, and availability (Req 10.1, 10.3, 10.5).
  */
 function ProductoCard({ producto }: { producto: ProductoMenu }) {
+  const { agregarItem } = useCarrito();
+
   const precioFormateado = new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
@@ -167,22 +252,21 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
   return (
     <article
       className={`
-        bg-white rounded-xl shadow-sm overflow-hidden
-        border border-wood-100
-        transition-shadow duration-200 motion-reduce:transition-none
-        hover:shadow-md
+        bg-[#14141c] rounded-2xl border border-white/5 overflow-hidden
+        transition-all duration-300 motion-reduce:transition-none
+        group hover:border-brand-400/30 hover:shadow-[0_8px_40px_-8px_rgba(245,166,35,0.15)]
         ${!producto.disponible ? 'opacity-60' : ''}
       `}
       aria-label={`${producto.nombre} - ${precioFormateado}${!producto.disponible ? ' - No disponible' : ''}`}
     >
       {/* Product Image */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-brand-100">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24]">
         {producto.imagenUrl ? (
           <Image
             src={producto.imagenUrl}
             alt={producto.nombre}
             fill
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
@@ -192,12 +276,12 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
         {/* Availability Badge */}
         <div className="absolute top-2 right-2">
           {producto.disponible ? (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20 shadow-sm shadow-green-500/10">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
               Disponible
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 shadow-sm shadow-red-500/10">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" aria-hidden="true" />
               No disponible
             </span>
@@ -207,35 +291,44 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
 
       {/* Product Info */}
       <div className="p-3 sm:p-4">
-        <h3 className="text-sm sm:text-base font-semibold text-wood-800 line-clamp-1">
+        <h3 className="text-sm sm:text-base font-semibold text-white line-clamp-1">
           {producto.nombre}
         </h3>
 
         {producto.descripcion && (
-          <p className="mt-1 text-xs sm:text-sm text-wood-500 line-clamp-2">
-            {producto.descripcion.length > 200
-              ? `${producto.descripcion.slice(0, 200)}…`
-              : producto.descripcion}
+          <p className="mt-1 text-xs sm:text-sm text-gray-400 line-clamp-4">
+            {producto.descripcion}
           </p>
         )}
 
         <div className="mt-2 sm:mt-3 flex items-center justify-between">
-          <span className="text-base sm:text-lg font-bold text-brand-600">
+          <span className="text-lg sm:text-xl font-extrabold text-brand-400 drop-shadow-[0_0_8px_rgba(245,166,35,0.3)]">
             {precioFormateado}
           </span>
 
           {producto.disponible && (
             <button
+              onClick={() => agregarItem({
+                productoId: producto.id,
+                nombre: producto.nombre,
+                precioUnitario: producto.precio,
+                cantidad: 1,
+                imagenUrl: producto.imagenUrl,
+                opcionesDisponibles: [],
+              })}
               className="
                 min-w-[44px] min-h-[44px] flex items-center justify-center
-                rounded-full bg-brand-500 hover:bg-brand-600
-                text-white text-lg
-                transition-colors duration-150 motion-reduce:transition-none
-                focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-                active:scale-95 motion-reduce:active:scale-100
+                rounded-full bg-gradient-to-br from-fire-500 to-brand-500 text-white text-lg font-bold
+                shadow-lg shadow-fire-500/30
+                hover:shadow-xl hover:shadow-brand-500/30 hover:scale-110
+                active:scale-90
+                transition-all duration-300 motion-reduce:transition-none
+                focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-[#14141c]
+                relative
               "
               aria-label={`Agregar ${producto.nombre} al pedido`}
             >
+              <span className="absolute inset-0 rounded-full border border-brand-400/30 animate-ping opacity-20" />
               +
             </button>
           )}
@@ -250,12 +343,12 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
  */
 function ProductoSkeleton() {
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-wood-100 animate-pulse">
-      <div className="aspect-[4/3] w-full bg-brand-100" />
+    <div className="bg-[#16161f] rounded-2xl shadow-sm overflow-hidden border border-white/5 animate-pulse">
+      <div className="aspect-[4/3] w-full bg-[#1a1a24] animate-shimmer" />
       <div className="p-3 sm:p-4 space-y-2">
-        <div className="h-4 bg-wood-100 rounded w-3/4" />
-        <div className="h-3 bg-wood-100 rounded w-full" />
-        <div className="h-5 bg-brand-100 rounded w-1/3 mt-3" />
+        <div className="h-4 bg-white/10 rounded w-3/4 animate-shimmer" />
+        <div className="h-3 bg-white/10 rounded w-full animate-shimmer" />
+        <div className="h-5 bg-brand-400/20 rounded w-1/3 mt-3 animate-shimmer" />
       </div>
     </div>
   );
@@ -269,7 +362,7 @@ function QrInvalidoMessage({ onDismiss }: { onDismiss?: () => void }) {
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
       <div
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-8
+        className="w-full max-w-md bg-[#16161f] rounded-2xl shadow-xl p-6 sm:p-8 border border-white/5
                     animate-fade-in motion-reduce:animate-none text-center"
         role="alert"
         aria-live="assertive"
@@ -277,15 +370,15 @@ function QrInvalidoMessage({ onDismiss }: { onDismiss?: () => void }) {
         <span className="text-5xl sm:text-6xl mb-4 block" aria-hidden="true">
           ⚠️
         </span>
-        <h2 className="text-xl sm:text-2xl font-bold text-fire-700 mb-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-fire-400 mb-3">
           Código QR no válido
         </h2>
-        <p className="text-wood-600 text-sm sm:text-base mb-6">
+        <p className="text-gray-400 text-sm sm:text-base mb-6">
           El código QR escaneado no es válido o ha expirado. Por favor solicita
           asistencia al personal del local.
         </p>
         <div className="space-y-3">
-          <div className="flex items-center justify-center gap-2 text-wood-500 text-sm">
+          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
             <span aria-hidden="true">👋</span>
             <span>Llama a un mesero para que te ayude</span>
           </div>
@@ -294,10 +387,10 @@ function QrInvalidoMessage({ onDismiss }: { onDismiss?: () => void }) {
               onClick={onDismiss}
               className="
                 mt-4 min-h-[44px] px-6 py-3 rounded-xl
-                text-sm font-medium text-white
-                bg-brand-500 hover:bg-brand-600
+                text-sm font-medium text-black
+                gradient-brand hover:opacity-90
                 transition-colors duration-150 motion-reduce:transition-none
-                focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+                focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]
               "
               aria-label="Ver menú sin mesa asignada"
             >
@@ -316,14 +409,14 @@ function QrInvalidoMessage({ onDismiss }: { onDismiss?: () => void }) {
 function QrValidandoMessage() {
   return (
     <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 sm:p-8 text-center animate-pulse">
+      <div className="w-full max-w-md bg-[#16161f] rounded-2xl shadow-xl p-6 sm:p-8 text-center animate-pulse border border-white/5">
         <span className="text-5xl sm:text-6xl mb-4 block" aria-hidden="true">
           📱
         </span>
-        <h2 className="text-xl sm:text-2xl font-bold text-wood-700 mb-2">
+        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
           Validando código QR...
         </h2>
-        <p className="text-wood-500 text-sm">
+        <p className="text-gray-400 text-sm">
           Un momento mientras identificamos tu mesa.
         </p>
       </div>
@@ -336,9 +429,9 @@ function QrValidandoMessage() {
  */
 function QrMesaBanner({ mesaZona }: { mesaZona: string }) {
   return (
-    <div className="mb-4 px-3 py-2 rounded-lg bg-green-50 border border-green-200 flex items-center gap-2">
-      <span className="text-green-600 text-lg" aria-hidden="true">📍</span>
-      <span className="text-sm font-medium text-green-800">
+    <div className="mb-4 px-3 py-2 rounded-lg bg-green-900/30 border border-green-500/20 flex items-center gap-2">
+      <span className="text-green-400 text-lg" aria-hidden="true">📍</span>
+      <span className="text-sm font-medium text-green-300">
         Mesa: {mesaZona}
       </span>
     </div>
@@ -359,10 +452,12 @@ function QrMesaBanner({ mesaZona }: { mesaZona: string }) {
 export default function MenuPage() {
   const searchParams = useSearchParams();
   const qrCodigo = searchParams.get('qr');
-  const { setQrMesa } = useQrMesa();
+  const { setQrMesa, qrMesa } = useQrMesa();
+  const { setModalidad: setModalidadContext, modalidad: carritoModalidad } = useCarrito();
 
-  const [modalidad, setModalidad] = useState<Modalidad>(null);
-  const [categoriaActiva, setCategoriaActiva] = useState<CategoriaFiltro>('TODAS');
+  const [modalidad, setModalidadLocal] = useState<Modalidad>(null);
+  const [categoriaActiva, setCategoriaActiva] = useState<string>('todas');
+  const [todosProductos, setTodosProductos] = useState<ProductoMenu[]>([]);
   const [productos, setProductos] = useState<ProductoMenu[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -370,6 +465,50 @@ export default function MenuPage() {
   // QR state (Req 8.1, 8.4)
   const [qrEstado, setQrEstado] = useState<QrEstado>(qrCodigo ? 'validando' : 'idle');
   const [qrMesaInfo, setQrMesaInfo] = useState<QrMesaInfo | null>(null);
+
+  // Restore modalidad from CarritoContext (persisted in localStorage)
+  // This ensures navigating back from /pedido skips the welcome screen
+  useEffect(() => {
+    if (carritoModalidad && !modalidad) {
+      setModalidadLocal(carritoModalidad);
+    }
+  }, [carritoModalidad, modalidad]);
+
+  // If QR mesa is already in context (from localStorage), mark as valid without re-fetching
+  // This handles returning to /menu after navigating to /pedido
+  useEffect(() => {
+    if (qrMesa && qrEstado === 'idle' && !qrCodigo) {
+      setQrEstado('valido');
+      setQrMesaInfo({
+        codigo: qrMesa.codigo,
+        mesaZona: qrMesa.mesaZona,
+        valido: true,
+      });
+    }
+  }, [qrMesa, qrEstado, qrCodigo]);
+
+  // Derive categories dynamically from fetched products
+  const categoriasDinamicas = [
+    { value: 'todas', label: 'Todas' },
+    ...Array.from(new Set(todosProductos.map(p => p.categoria)))
+      .sort()
+      .map(cat => ({ value: cat, label: cat.charAt(0).toUpperCase() + cat.slice(1) }))
+  ];
+
+  // Filter products client-side by selected category
+  const productosFiltrados = categoriaActiva === 'todas'
+    ? todosProductos
+    : todosProductos.filter(p => p.categoria === categoriaActiva);
+
+  /**
+   * Sets both local and context modalidad.
+   */
+  const setModalidad = useCallback((m: Modalidad) => {
+    setModalidadLocal(m);
+    if (m) {
+      setModalidadContext(m);
+    }
+  }, [setModalidadContext]);
 
   /**
    * Validates QR code against the API (Req 8.1, 8.4).
@@ -384,7 +523,7 @@ export default function MenuPage() {
     async function validarQr() {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000); // 5s max (Req 8.1)
+        const timeout = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch(`/api/qr/${encodeURIComponent(qrCodigo!)}`, {
           signal: controller.signal,
@@ -412,19 +551,16 @@ export default function MenuPage() {
             valido: true,
           });
           setQrEstado('valido');
-          // Set context for use in order flow (Req 8.2)
           setQrMesa({
             codigo: json.data.codigo,
             mesaZona: json.data.mesaZona,
           });
-          // Auto-set modalidad to LOCAL for QR-based access (they're in the restaurant)
-          setModalidad('LOCAL');
+          // Don't auto-set modalidad, let user choose between LOCAL and RETIRO
         } else {
           setQrEstado('invalido');
         }
       } catch (err) {
         if (cancelled) return;
-        // Network error or timeout = invalid QR experience
         setQrEstado('invalido');
       }
     }
@@ -437,28 +573,21 @@ export default function MenuPage() {
   }, [qrCodigo, setQrMesa]);
 
   /**
-   * Fetches products from the API.
-   * Filters by category if one is selected (not 'TODAS').
+   * Fetches all products from the API.
+   * Categories are derived client-side from the full product list.
    */
-  const fetchProductos = useCallback(async (categoria: CategoriaFiltro) => {
+  const fetchProductos = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const params = new URLSearchParams();
-      if (categoria !== 'TODAS') {
-        params.set('categoria', categoria);
-      }
-
-      const url = `/api/productos${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url);
+      const response = await fetch('/api/productos');
 
       if (!response.ok) {
         throw new Error('Error al cargar el menú');
       }
 
       const json = await response.json();
-      // Map API response to local type, defaulting disponible to activo status
       const productosData: ProductoMenu[] = (json.data || []).map(
         (p: Record<string, unknown>) => ({
           id: p.id as string,
@@ -468,12 +597,13 @@ export default function MenuPage() {
           precio: typeof p.precio === 'object' && p.precio !== null
             ? (p.precio as { valor: number }).valor
             : (p.precio as number),
-          imagenUrl: (p.imagenUrl as string) || null,
+          imagenUrl: (p.imagen as string) || (p.imagenUrl as string) || (p.imagen_url as string) || null,
           activo: p.activo !== false,
           disponible: p.disponible !== false && p.activo !== false,
         })
       );
 
+      setTodosProductos(productosData);
       setProductos(productosData);
     } catch (err) {
       setError(
@@ -484,19 +614,19 @@ export default function MenuPage() {
     }
   }, []);
 
-  // Fetch products when modalidad is selected or category changes
+  // Fetch products once when modalidad is selected
   useEffect(() => {
     if (modalidad) {
-      fetchProductos(categoriaActiva);
+      fetchProductos();
     }
-  }, [modalidad, categoriaActiva, fetchProductos]);
+  }, [modalidad, fetchProductos]);
 
-  // QR validating state - show loading while checking code (Req 8.1)
+  // QR validating state
   if (qrEstado === 'validando') {
     return <QrValidandoMessage />;
   }
 
-  // QR invalid state - show error and invite to ask for help (Req 8.4)
+  // QR invalid state
   if (qrEstado === 'invalido') {
     return (
       <QrInvalidoMessage
@@ -507,9 +637,12 @@ export default function MenuPage() {
     );
   }
 
-  // Show modality selector first (Req 10.4) — skipped when QR sets LOCAL automatically
+  // Show modality selector first (Req 10.4)
   if (!modalidad) {
-    return <ModalidadSelector onSelect={setModalidad} />;
+    // esQr is true only when QR was successfully validated (restaurant scan)
+    // When qrEstado is 'idle' (no QR or dismissed invalid), show only domicilio
+    const esQr = qrEstado === 'valido';
+    return <ModalidadSelector onSelect={setModalidad} esQr={esQr} />;
   }
 
   return (
@@ -519,25 +652,29 @@ export default function MenuPage() {
         <QrMesaBanner mesaZona={qrMesaInfo.mesaZona} />
       )}
 
-      {/* Modality indicator */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
+      {/* Modality indicator with decorative accent */}
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-wood-800">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
             Nuestro Menú
           </h2>
-          <p className="text-sm text-wood-500 mt-0.5">
-            {modalidad === 'LOCAL' ? '🏠 Comiendo en el local' : '🛵 Entrega a domicilio'}
+          <p className="text-sm text-gray-500 mt-1">
+            {modalidad === 'LOCAL' && '🍽️ Comiendo en el local'}
+            {modalidad === 'RETIRO' && '🛍️ Para llevar (retiro en sucursal)'}
+            {modalidad === 'DOMICILIO' && '🛵 Entrega a domicilio'}
           </p>
+          {/* Decorative gold gradient line */}
+          <div className="mt-3 w-16 h-0.5 bg-gradient-to-r from-brand-400 to-fire-500 rounded-full" />
         </div>
         <button
           onClick={() => setModalidad(null)}
           className="
             min-w-[44px] min-h-[44px] flex items-center justify-center
-            px-3 py-2 rounded-lg text-sm font-medium
-            text-wood-600 bg-white border border-wood-200
-            hover:bg-wood-50 hover:border-wood-300
-            transition-colors duration-150 motion-reduce:transition-none
-            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+            px-4 py-2 rounded-xl text-sm font-medium
+            text-gray-400 bg-white/5 border border-white/10
+            hover:bg-white/10 hover:border-brand-400/30 hover:text-brand-400
+            transition-all duration-200 motion-reduce:transition-none
+            focus:outline-none focus:ring-2 focus:ring-brand-400
           "
           aria-label="Cambiar modalidad de servicio"
         >
@@ -545,32 +682,34 @@ export default function MenuPage() {
         </button>
       </div>
 
-      {/* Category Filter Tabs (Req 10.2) */}
-      <div className="mb-4 sm:mb-6 -mx-4 px-4 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-2 sm:gap-3 min-w-max pb-1">
-          {CATEGORIAS.map((cat) => {
+      {/* Animated gradient separator */}
+      <div className="mb-4 sm:mb-6 h-px bg-gradient-to-r from-transparent via-brand-400/40 to-transparent" />
+
+      {/* Category Filter */}
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-wrap gap-2">
+          {categoriasDinamicas.map((cat) => {
             const isActive = categoriaActiva === cat.value;
+            const count = cat.value === 'todas' ? todosProductos.length : todosProductos.filter(p => p.categoria === cat.value).length;
             return (
               <button
                 key={cat.value}
                 onClick={() => setCategoriaActiva(cat.value)}
                 className={`
-                  inline-flex items-center gap-1.5 sm:gap-2
-                  min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2
-                  rounded-full text-sm font-medium whitespace-nowrap
+                  flex items-center gap-1.5 px-3 py-2
+                  rounded-xl text-xs font-semibold
                   transition-all duration-200 motion-reduce:transition-none
-                  focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+                  focus:outline-none focus:ring-2 focus:ring-brand-400
                   ${
                     isActive
-                      ? 'bg-brand-500 text-white shadow-md shadow-brand-200'
-                      : 'bg-white text-wood-600 border border-wood-200 hover:border-brand-300 hover:text-brand-600'
+                      ? 'bg-brand-500 text-black shadow-md shadow-brand-500/30'
+                      : 'bg-[#1a1a24] text-gray-400 border border-white/5 hover:border-brand-400/30 hover:text-brand-300'
                   }
                 `}
                 aria-pressed={isActive}
-                aria-label={`Filtrar por categoría: ${cat.label}`}
               >
-                <span aria-hidden="true">{cat.icon}</span>
                 <span>{cat.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-black/20 text-black' : 'bg-white/5 text-gray-500'}`}>{count}</span>
               </button>
             );
           })}
@@ -580,14 +719,14 @@ export default function MenuPage() {
       {/* Error State */}
       {error && (
         <div
-          className="mb-4 p-4 rounded-lg bg-fire-50 border border-fire-200 text-fire-700 text-sm"
+          className="mb-4 p-4 rounded-lg bg-fire-900/30 border border-fire-500/20 text-fire-300 text-sm"
           role="alert"
         >
           <p className="font-medium">Error al cargar el menú</p>
           <p className="mt-1">{error}</p>
           <button
-            onClick={() => fetchProductos(categoriaActiva)}
-            className="mt-2 text-sm font-medium text-fire-600 underline hover:text-fire-800
+            onClick={() => fetchProductos()}
+            className="mt-2 text-sm font-medium text-fire-400 underline hover:text-fire-300
                        min-h-[44px] inline-flex items-center"
           >
             Reintentar
@@ -608,35 +747,35 @@ export default function MenuPage() {
       )}
 
       {/* Products Grid */}
-      {!loading && !error && productos.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          {productos.map((producto) => (
+      {!loading && !error && productosFiltrados.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 stagger-children">
+          {productosFiltrados.map((producto) => (
             <ProductoCard key={producto.id} producto={producto} />
           ))}
         </div>
       )}
 
       {/* Empty State */}
-      {!loading && !error && productos.length === 0 && (
+      {!loading && !error && productosFiltrados.length === 0 && (
         <div className="text-center py-12 sm:py-16">
           <span className="text-5xl block mb-4" aria-hidden="true">🍽️</span>
-          <h3 className="text-lg font-semibold text-wood-700 mb-2">
+          <h3 className="text-lg font-semibold text-white mb-2">
             No hay productos disponibles
           </h3>
-          <p className="text-sm text-wood-500">
-            {categoriaActiva !== 'TODAS'
+          <p className="text-sm text-gray-500">
+            {categoriaActiva !== 'todas'
               ? 'No se encontraron productos en esta categoría.'
               : 'El menú estará disponible pronto.'}
           </p>
-          {categoriaActiva !== 'TODAS' && (
+          {categoriaActiva !== 'todas' && (
             <button
-              onClick={() => setCategoriaActiva('TODAS')}
+              onClick={() => setCategoriaActiva('todas')}
               className="
                 mt-4 min-h-[44px] px-4 py-2 rounded-lg
-                text-sm font-medium text-brand-600
-                bg-brand-50 hover:bg-brand-100
+                text-sm font-medium text-brand-400
+                bg-brand-400/10 hover:bg-brand-400/20
                 transition-colors duration-150 motion-reduce:transition-none
-                focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+                focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]
               "
             >
               Ver todas las categorías
@@ -644,6 +783,35 @@ export default function MenuPage() {
           )}
         </div>
       )}
+
+      {/* Restaurant Info Bar */}
+      <div className="mt-8 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="text-lg mt-0.5" aria-hidden="true">📍</span>
+            <div>
+              <p className="text-xs font-bold text-black uppercase tracking-wide">Dirección</p>
+              <p className="text-sm text-black/80 font-medium">
+                San Pablo Autopan, sobre calle Felipe Villanueva, casi esquina calle Independencia
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:flex-shrink-0">
+            <div className="flex items-start gap-2">
+              <span className="text-lg" aria-hidden="true">📞</span>
+              <div>
+                <p className="text-xs font-bold text-black uppercase tracking-wide">Servicio a Domicilio</p>
+                <a
+                  href="tel:7226802734"
+                  className="text-sm font-bold text-black hover:underline"
+                >
+                  722 680 2734
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 /**
  * Roles del sistema.
  */
-type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor';
+type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja';
 
 /**
  * Rutas públicas que no requieren autenticación.
@@ -14,6 +14,9 @@ const PUBLIC_PATHS = [
   '/registro',
   '/api/webhooks/',
   '/api/qr/',
+  '/api/productos',       // Menu needs to load products without auth
+  '/api/pedidos',         // Client creates orders
+  '/api/notificaciones',  // Push subscription
   '/_next',
   '/favicon',
 ];
@@ -23,6 +26,7 @@ const PUBLIC_PATHS = [
  * El path key usa el prefijo real que Next.js genera para route groups.
  */
 const ROLE_PROTECTED_PATHS: { prefix: string; roles: Rol[] }[] = [
+  { prefix: '/caja', roles: ['admin', 'caja'] },
   { prefix: '/admin', roles: ['admin'] },
   { prefix: '/vendedor', roles: ['admin', 'vendedor'] },
   { prefix: '/repartidor', roles: ['admin', 'repartidor'] },
@@ -37,6 +41,12 @@ function isPublicPath(pathname: string): boolean {
     return true;
   }
 
+  // API routes handle their own authentication internally
+  // (via verificarAutenticacion for POST/PUT/DELETE operations)
+  if (pathname.startsWith('/api/')) {
+    return true;
+  }
+
   // Explicitly public paths
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
     return true;
@@ -47,7 +57,8 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/menu') ||
     pathname.startsWith('/pedido') ||
     pathname.startsWith('/pago') ||
-    pathname.startsWith('/rastreo')
+    pathname.startsWith('/rastreo') ||
+    pathname.startsWith('/demo')
   ) {
     return true;
   }

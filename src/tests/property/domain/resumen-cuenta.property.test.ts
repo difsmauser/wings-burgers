@@ -11,11 +11,11 @@ import { Precio, ModalidadServicio } from '@/domain/value-objects';
  * Generar pedidos con N items, verificar:
  * - N líneas en resumen (pedido.items.length === N)
  * - subtotal === suma(precioUnitario.valor × cantidad) para todos los items
- * - impuestos === subtotal * 0.16 (redondeado a 2 decimales)
- * - total === subtotal + impuestos (redondeado a 2 decimales)
+ * - impuestos === 0.01 (sin IVA, mínimo de Precio)
+ * - total === subtotal (sin IVA)
  */
 describe('Property 14: Correctitud del Resumen de Cuenta', () => {
-  const TASA_IMPUESTOS = 0.16;
+  const TASA_IMPUESTOS = 0;
 
   /**
    * Generador de precios válidos en rango seguro.
@@ -97,7 +97,7 @@ describe('Property 14: Correctitud del Resumen de Cuenta', () => {
     );
   });
 
-  it('impuestos === subtotal * 0.16 (redondeado a 2 decimales)', () => {
+  it('impuestos === 0.01 (sin IVA, mínimo de Precio)', () => {
     fc.assert(
       fc.property(
         fc.array(itemArb, { minLength: 1, maxLength: 10 }),
@@ -111,16 +111,15 @@ describe('Property 14: Correctitud del Resumen de Cuenta', () => {
             );
           }
 
-          // Property: impuestos = subtotal * 0.16 redondeado a 2 decimales
-          const impuestosEsperados = Math.round(pedido.subtotal.valor * TASA_IMPUESTOS * 100) / 100;
-          expect(pedido.impuestos.valor).toBe(impuestosEsperados);
+          // Property: impuestos = 0.01 (mínimo) because TASA_IMPUESTOS = 0
+          expect(pedido.impuestos.valor).toBe(0.01);
         }
       ),
       { numRuns: 500 }
     );
   });
 
-  it('total === subtotal + impuestos (redondeado a 2 decimales)', () => {
+  it('total === subtotal (sin IVA)', () => {
     fc.assert(
       fc.property(
         fc.array(itemArb, { minLength: 1, maxLength: 10 }),
@@ -134,11 +133,8 @@ describe('Property 14: Correctitud del Resumen de Cuenta', () => {
             );
           }
 
-          // Property: total = subtotal + impuestos redondeado a 2 decimales
-          const totalEsperado = Math.round(
-            (pedido.subtotal.valor + pedido.impuestos.valor) * 100
-          ) / 100;
-          expect(pedido.total.valor).toBe(totalEsperado);
+          // Property: total = subtotal (no tax added)
+          expect(pedido.total.valor).toBe(pedido.subtotal.valor);
         }
       ),
       { numRuns: 500 }
@@ -168,13 +164,11 @@ describe('Property 14: Correctitud del Resumen de Cuenta', () => {
           ) / 100;
           expect(pedido.subtotal.valor).toBe(subtotalEsperado);
 
-          // 3. impuestos = subtotal * 0.16
-          const impuestosEsperados = Math.round(subtotalEsperado * TASA_IMPUESTOS * 100) / 100;
-          expect(pedido.impuestos.valor).toBe(impuestosEsperados);
+          // 3. impuestos = 0.01 (sin IVA, mínimo de Precio)
+          expect(pedido.impuestos.valor).toBe(0.01);
 
-          // 4. total = subtotal + impuestos
-          const totalEsperado = Math.round((subtotalEsperado + impuestosEsperados) * 100) / 100;
-          expect(pedido.total.valor).toBe(totalEsperado);
+          // 4. total = subtotal (sin IVA)
+          expect(pedido.total.valor).toBe(subtotalEsperado);
         }
       ),
       { numRuns: 500 }

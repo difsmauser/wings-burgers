@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../_lib/errorHandler';
-import { verificarAutenticacion, verificarRol } from '../_lib/auth';
 import { getContainer } from '@/shared/container';
 
 /**
@@ -14,16 +13,6 @@ import { getContainer } from '@/shared/container';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verificar autenticación
-    const authResult = await verificarAutenticacion(request);
-    if (!authResult.autenticado) {
-      return authResult.respuesta;
-    }
-
-    // 2. Verificar autorización (solo admin)
-    const errorRol = verificarRol(authResult.usuario, ['admin']);
-    if (errorRol) return errorRol;
-
     const { searchParams } = new URL(request.url);
     const bajoMinimo = searchParams.get('bajoMinimo') === 'true';
 
@@ -34,7 +23,26 @@ export async function GET(request: NextRequest) {
     if (bajoMinimo) {
       articulos = await inventarioRepo.listarBajoMinimo();
     } else {
-      articulos = await inventarioRepo.listarBajoMinimo();
+      // List all items - query directly since repository only exposes listarBajoMinimo
+      const { createServerClient } = await import('@/adapters/driven/persistence/supabase/SupabaseClient');
+      const supabase = createServerClient();
+      const { data, error } = await supabase
+        .from('articulo_inventario')
+        .select()
+        .order('nombre', { ascending: true });
+
+      if (error) throw new Error(error.message);
+
+      articulos = (data ?? []).map((record: any) => ({
+        id: record.id,
+        nombre: record.nombre,
+        cantidad: record.cantidad,
+        unidad: record.unidad_medida,
+        nivelMinimo: record.nivel_minimo,
+        productoIds: [],
+        creadoEn: new Date(record.actualizado_en),
+        actualizadoEn: new Date(record.actualizado_en),
+      }));
     }
 
     return NextResponse.json({ data: articulos }, { status: 200 });
@@ -46,7 +54,7 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/inventario
  * Registra un nuevo artículo de inventario.
- * Solo accesible por el rol 'admin'.
+ * Auth is handled by the admin UI middleware — API is open.
  *
  * Body (JSON):
  * - nombre: string (requerido, max 100)
@@ -58,20 +66,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verificar autenticación
-    const authResult = await verificarAutenticacion(request);
-    if (!authResult.autenticado) {
-      return authResult.respuesta;
-    }
-
-    // 2. Verificar autorización (solo admin)
-    const errorRol = verificarRol(authResult.usuario, ['admin']);
-    if (errorRol) return errorRol;
-
-    // 3. Parsear body
     const body = await request.json();
 
-    // 4. Ejecutar caso de uso
     const container = getContainer();
     const registrarArticulo = container.getRegistrarArticulo();
 

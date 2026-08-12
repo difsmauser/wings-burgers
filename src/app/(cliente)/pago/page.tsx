@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useQrMesa } from '../_context/QrMesaContext';
 
 // === Types ===
 
-type MetodoPago = 'mercadopago' | 'transferencia' | null;
-type EstadoPago = 'seleccion' | 'procesando' | 'exito' | 'fallido' | 'pendiente' | 'cancelado';
+type MetodoPago = 'efectivo' | 'transferencia' | null;
+type EstadoPago = 'seleccion' | 'procesando' | 'exito' | 'pendiente' | 'cancelado';
 
 interface DatosBancarios {
   banco: string;
@@ -21,7 +23,6 @@ const DATOS_BANCARIOS: DatosBancarios = {
   clabe: '012345678901234567',
 };
 
-const MAX_REINTENTOS_MP = 3;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const FORMATOS_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf'];
 const FORMATOS_LABEL = 'JPG, PNG o PDF';
@@ -42,7 +43,7 @@ function usePedidoId(): string | null {
     }
     // Fallback: localStorage cart state
     try {
-      const cart = localStorage.getItem('carrito');
+      const cart = localStorage.getItem('wings-burgers-carrito');
       if (cart) {
         const parsed = JSON.parse(cart);
         if (parsed?.pedidoId) {
@@ -59,8 +60,8 @@ function usePedidoId(): string | null {
 
 /**
  * Payment method selection component.
- * Shows MercadoPago and Bank Transfer options within 3 seconds (Req 13.1).
- * Touch targets minimum 44px (Req 18.2).
+ * Shows Efectivo and Transferencia options.
+ * Touch targets minimum 44px.
  */
 function MetodoSelector({
   onSelect,
@@ -74,7 +75,7 @@ function MetodoSelector({
       </h2>
 
       <button
-        onClick={() => onSelect('mercadopago')}
+        onClick={() => onSelect('efectivo')}
         className="
           w-full flex items-center gap-4 p-4 sm:p-5
           min-h-[44px] rounded-xl border-2 border-wood-200
@@ -83,17 +84,17 @@ function MetodoSelector({
           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
           group
         "
-        aria-label="Pagar con MercadoPago"
+        aria-label="Pagar en efectivo"
       >
         <span className="text-3xl sm:text-4xl group-hover:scale-110 transition-transform duration-200 motion-reduce:transition-none" aria-hidden="true">
-          💳
+          💵
         </span>
         <div className="text-left">
           <span className="block text-lg font-semibold text-wood-800">
-            MercadoPago
+            Efectivo
           </span>
           <span className="block text-sm text-wood-500">
-            Pago seguro con tarjeta o saldo
+            Paga al recibir o en caja
           </span>
         </div>
       </button>
@@ -127,65 +128,31 @@ function MetodoSelector({
 }
 
 /**
- * MercadoPago payment flow component.
- * Initiates payment via POST /api/pagos/mercadopago and redirects (Req 13.2).
- * Handles failure with retry up to 3 attempts (Req 13.6).
+ * Efectivo (cash) payment flow component.
+ * Shows confirmation that payment will be collected in person.
  */
-function MercadoPagoFlow({
-  pedidoId,
+function EfectivoFlow({
   onBack,
+  onConfirm,
 }: {
-  pedidoId: string;
   onBack: () => void;
+  onConfirm: () => void;
 }) {
-  const [estado, setEstado] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [intentos, setIntentos] = useState(0);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
-  const iniciarPago = useCallback(async () => {
-    if (intentos >= MAX_REINTENTOS_MP) return;
-
-    setEstado('loading');
-    setErrorMsg(null);
-
-    try {
-      const res = await fetch('/api/pagos/mercadopago', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pedidoId }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          err?.error?.message || 'Error al procesar el pago'
-        );
-      }
-
-      const { data } = await res.json();
-      // Redirect to MercadoPago checkout URL
-      if (data?.initPoint || data?.checkoutUrl || data?.url) {
-        window.location.href = data.initPoint || data.checkoutUrl || data.url;
-      } else {
-        throw new Error('No se recibió URL de pago');
-      }
-    } catch (err) {
-      const newIntentos = intentos + 1;
-      setIntentos(newIntentos);
-      setEstado('error');
-      setErrorMsg(
-        err instanceof Error ? err.message : 'Error desconocido'
-      );
-    }
-  }, [pedidoId, intentos]);
-
-  // Auto-initiate on mount
-  useEffect(() => {
-    if (estado === 'idle') {
-      iniciarPago();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (confirmed) {
+    return (
+      <div className="text-center py-8 animate-fade-in">
+        <span className="text-5xl block mb-4" aria-hidden="true">✅</span>
+        <h3 className="text-xl font-bold text-wood-800 mb-2">
+          Pago en efectivo registrado
+        </h3>
+        <p className="text-sm text-wood-600">
+          Tu pedido está en proceso. Tendrás que pagar al momento de recibirlo o en caja.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -197,80 +164,42 @@ function MercadoPagoFlow({
         ← Cambiar método
       </button>
 
-      {estado === 'loading' && (
-        <div className="text-center py-12">
-          <div className="inline-block w-10 h-10 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin" aria-hidden="true" />
-          <p className="mt-4 text-wood-600 font-medium">
-            Conectando con MercadoPago...
-          </p>
-          <p className="text-sm text-wood-400 mt-1">
-            Serás redirigido en unos momentos
-          </p>
-        </div>
-      )}
+      <div className="bg-white rounded-xl border border-wood-200 p-4 sm:p-6 shadow-sm text-center">
+        <span className="text-5xl block mb-4" aria-hidden="true">💵</span>
+        <h3 className="text-lg font-bold text-wood-800 mb-3">
+          Pago en efectivo
+        </h3>
+        <p className="text-sm text-wood-600 mb-2">
+          Pagarás al momento de recibir tu pedido o directamente en caja.
+        </p>
+        <p className="text-xs text-wood-500">
+          Asegúrate de tener el monto exacto o cambio disponible.
+        </p>
+      </div>
 
-      {estado === 'error' && (
-        <div className="bg-fire-50 border border-fire-200 rounded-xl p-4 sm:p-6" role="alert">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl" aria-hidden="true">⚠️</span>
-            <div className="flex-1">
-              <h3 className="font-semibold text-fire-800">
-                Error en el pago
-              </h3>
-              <p className="text-sm text-fire-700 mt-1">
-                {errorMsg}
-              </p>
-              <p className="text-xs text-fire-600 mt-2">
-                Intento {intentos} de {MAX_REINTENTOS_MP}
-              </p>
-            </div>
-          </div>
-
-          {intentos < MAX_REINTENTOS_MP ? (
-            <button
-              onClick={iniciarPago}
-              className="
-                mt-4 w-full min-h-[44px] px-4 py-3 rounded-lg
-                bg-brand-500 hover:bg-brand-600 text-white font-medium
-                transition-colors duration-150 motion-reduce:transition-none
-                focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-              "
-            >
-              Reintentar pago
-            </button>
-          ) : (
-            <div className="mt-4 p-3 bg-fire-100 rounded-lg">
-              <p className="text-sm text-fire-800 font-medium">
-                Se agotaron los intentos disponibles.
-              </p>
-              <p className="text-xs text-fire-700 mt-1">
-                Puedes intentar con transferencia bancaria o contactar al restaurante.
-              </p>
-              <button
-                onClick={onBack}
-                className="
-                  mt-3 w-full min-h-[44px] px-4 py-3 rounded-lg
-                  bg-wood-100 hover:bg-wood-200 text-wood-800 font-medium
-                  border border-wood-300
-                  transition-colors duration-150 motion-reduce:transition-none
-                  focus:outline-none focus:ring-2 focus:ring-wood-300 focus:ring-offset-2
-                "
-              >
-                Elegir otro método de pago
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <button
+        onClick={() => {
+          setConfirmed(true);
+          onConfirm();
+        }}
+        className="
+          w-full min-h-[44px] px-4 py-4 rounded-xl
+          bg-brand-500 hover:bg-brand-600 text-white font-bold text-base
+          shadow-lg transition-all duration-200 motion-reduce:transition-none
+          focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
+          active:scale-[0.98]
+        "
+      >
+        Confirmar pago en efectivo
+      </button>
     </div>
   );
 }
 
 /**
  * Bank Transfer payment flow component.
- * Shows bank details and file upload for proof (Req 13.3, 13.9).
+ * Shows bank details and file upload for proof of payment.
  * Validates file format (JPG, PNG, PDF) and size (max 5MB) before upload.
- * Shows 24h cancellation notice (Req 13.8).
  */
 function TransferenciaFlow({
   pedidoId,
@@ -308,7 +237,6 @@ function TransferenciaFlow({
       setError(validationError);
       setArchivo(null);
       setPreview(null);
-      // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -404,7 +332,7 @@ function TransferenciaFlow({
         </div>
       </div>
 
-      {/* 24h Cancellation Notice (Req 13.8) */}
+      {/* 24h Cancellation Notice */}
       <div className="bg-golden-50 border border-golden-200 rounded-xl p-4" role="alert">
         <div className="flex items-start gap-3">
           <span className="text-xl" aria-hidden="true">⏰</span>
@@ -420,7 +348,7 @@ function TransferenciaFlow({
         </div>
       </div>
 
-      {/* File Upload Section (Req 13.3, 13.9) */}
+      {/* File Upload Section */}
       <div className="bg-white rounded-xl border border-wood-200 p-4 sm:p-6 shadow-sm">
         <h3 className="text-lg font-bold text-wood-800 mb-4 flex items-center gap-2">
           <span aria-hidden="true">📎</span>
@@ -532,7 +460,7 @@ function TransferenciaFlow({
 }
 
 /**
- * Individual bank detail row component.
+ * Individual bank detail row component with copy button.
  */
 function DatoBancario({ label, valor }: { label: string; valor: string }) {
   const [copied, setCopied] = useState(false);
@@ -570,7 +498,6 @@ function DatoBancario({ label, valor }: { label: string; valor: string }) {
 
 /**
  * Payment status display component.
- * Shows current payment state: pending, paid, rejected, cancelled.
  */
 function EstadoPagoDisplay({ estado }: { estado: EstadoPago }) {
   const config: Record<EstadoPago, { icon: string; title: string; desc: string; color: string }> = {
@@ -586,12 +513,6 @@ function EstadoPagoDisplay({ estado }: { estado: EstadoPago }) {
       title: 'Pago confirmado',
       desc: '¡Tu pago fue recibido exitosamente! Tu pedido está en proceso.',
       color: 'bg-green-50 border-green-200 text-green-800',
-    },
-    fallido: {
-      icon: '❌',
-      title: 'Pago fallido',
-      desc: 'No pudimos procesar tu pago. Intenta de nuevo.',
-      color: 'bg-fire-50 border-fire-200 text-fire-800',
     },
     pendiente: {
       icon: '🕐',
@@ -624,33 +545,19 @@ function EstadoPagoDisplay({ estado }: { estado: EstadoPago }) {
 /**
  * Pago page for the cliente module.
  *
- * Shows payment options (MercadoPago and Bank Transfer) within 3 seconds (Req 13.1).
- * MercadoPago: redirects to checkout, handles failure with 3 retries (Req 13.2, 13.6).
- * Bank Transfer: shows bank details, validates and uploads proof file (Req 13.3, 13.9).
- * Shows 24h cancellation notice for transfers (Req 13.8).
- * Responsive design with 44px touch targets and warm color palette (Req 18.2).
+ * Shows two payment options: Efectivo (cash) and Transferencia (bank transfer).
+ * Efectivo: confirms cash payment on pickup/delivery.
+ * Transferencia: shows bank details and allows uploading proof of payment.
+ * Responsive design with 44px touch targets.
  */
 export default function PagoPage() {
   const pedidoId = usePedidoId();
+  const { qrMesa } = useQrMesa();
+  const menuHref = qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu';
   const [metodo, setMetodo] = useState<MetodoPago>(null);
   const [estadoPago, setEstadoPago] = useState<EstadoPago>('seleccion');
 
-  // Check URL for MercadoPago return status (success/failure/pending)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get('status') || params.get('collection_status');
-
-    if (status === 'approved') {
-      setEstadoPago('exito');
-    } else if (status === 'rejected' || status === 'failure') {
-      setEstadoPago('fallido');
-      setMetodo('mercadopago');
-    } else if (status === 'pending' || status === 'in_process') {
-      setEstadoPago('pendiente');
-    }
-  }, []);
-
-  // If no pedidoId found, show error
+  // If no pedidoId found, show message
   if (!pedidoId) {
     return (
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -663,7 +570,7 @@ export default function PagoPage() {
             Agrega productos a tu carrito para continuar con el pago.
           </p>
           <a
-            href="/menu"
+            href={menuHref}
             className="
               inline-flex items-center justify-center mt-6
               min-h-[44px] px-6 py-3 rounded-lg
@@ -680,7 +587,7 @@ export default function PagoPage() {
   }
 
   // Show payment status if not in selection mode
-  if (estadoPago !== 'seleccion' && estadoPago !== 'fallido') {
+  if (estadoPago !== 'seleccion') {
     return (
       <div className="max-w-lg mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <EstadoPagoDisplay estado={estadoPago} />
@@ -714,25 +621,15 @@ export default function PagoPage() {
         </h1>
       </div>
 
-      {/* Failed status notice from MercadoPago return */}
-      {estadoPago === 'fallido' && metodo === 'mercadopago' && (
-        <div className="mb-6">
-          <EstadoPagoDisplay estado="fallido" />
-        </div>
-      )}
-
       {/* Payment Method Selection or Flow */}
       {!metodo && (
         <MetodoSelector onSelect={setMetodo} />
       )}
 
-      {metodo === 'mercadopago' && (
-        <MercadoPagoFlow
-          pedidoId={pedidoId}
-          onBack={() => {
-            setMetodo(null);
-            setEstadoPago('seleccion');
-          }}
+      {metodo === 'efectivo' && (
+        <EfectivoFlow
+          onBack={() => setMetodo(null)}
+          onConfirm={() => setEstadoPago('exito')}
         />
       )}
 

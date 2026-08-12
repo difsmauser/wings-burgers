@@ -20,7 +20,7 @@ interface ItemPedido {
   cantidad: number;
 }
 
-type ModalidadServicio = 'local' | 'domicilio';
+type ModalidadServicio = 'local' | 'retiro' | 'domicilio';
 
 interface PedidoExistente {
   id: string;

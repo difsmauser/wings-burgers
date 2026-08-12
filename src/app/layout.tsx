@@ -3,13 +3,13 @@ import { PWAProvider } from '@/shared/components/PWAProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Wings & Burgers',
-  description: 'Sistema de gesti\u00f3n para Wings & Burgers',
+  title: 'A-la Burguer',
+  description: 'Sistema de gesti\u00f3n para A-la Burguer',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'W&B',
+    title: 'A-la Burguer',
   },
   other: {
     'mobile-web-app-capable': 'yes',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#EA580C',
+  themeColor: '#F5A623',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

@@ -20,12 +20,12 @@ self.addEventListener('push', (event) => {
   } catch {
     // Fallback for plain text push
     data = {
-      title: 'Wings & Burgers',
+      title: 'A-la Burguer',
       body: event.data.text(),
     };
   }
 
-  const title = data.title || 'Wings & Burgers';
+  const title = data.title || 'A-la Burguer';
   const options = {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192x192.png',

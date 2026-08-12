@@ -165,7 +165,7 @@ function mapearPedidoAData(pedido: Pedido) {
       comentario: item.comentario ?? undefined,
     })),
     estado: pedido.estado.toLowerCase() as 'recibido',
-    modalidad: pedido.modalidad.toLowerCase() as 'local' | 'domicilio',
+    modalidad: pedido.modalidad.toLowerCase() as 'local' | 'retiro' | 'domicilio',
     total: pedido.total.valor,
     mesaZona: pedido.mesaZona ?? undefined,
     observaciones: pedido.observaciones ?? undefined,

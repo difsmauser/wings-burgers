@@ -6,39 +6,37 @@ import Link from 'next/link';
 
 /**
  * Navigation items for the vendedor module.
- * - Pedidos: Real-time panel + order capture
+ * - Pedidos: Real-time panel + order status management
  * - Cuenta: Send bill to client
  */
 const NAV_ITEMS = [
   { href: '/pedidos', label: 'Pedidos', icon: '📋' },
+  { href: '/pedidos/captura', label: 'Captura', icon: '📝' },
   { href: '/cuenta', label: 'Cuenta', icon: '🧾' },
 ];
 
 /**
- * Vendedor module layout with top navigation bar.
+ * Vendedor module layout with dark enterprise theme.
  *
  * Route protection by "vendedor" role is handled by the Next.js middleware (task 16.3).
- * The middleware checks the URL path prefix and validates the user's Supabase Auth
- * session has role "vendedor" (or "admin") before allowing access.
- *
  * Requirements: 19.1, 7.1
  */
 export default function VendedorLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col min-h-screen bg-brand-50">
+    <div className="flex flex-col min-h-screen bg-[#0a0a0f]">
       {/* Top Navigation Bar */}
-      <header className="bg-wood-800 text-white shadow-lg">
+      <header className="bg-[#111118] border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             {/* Logo / Title */}
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-bold text-golden-300">
-                Wings & Burgers
+              <h1 className="text-sm font-bold text-white">
+                A-la Burguer
               </h1>
-              <span className="text-xs text-wood-300 border-l border-wood-600 pl-3">
-                Vendedor
+              <span className="text-[10px] text-gray-500 uppercase tracking-wider border-l border-white/10 pl-3">
+                Cocina
               </span>
             </div>
 
@@ -54,11 +52,11 @@ export default function VendedorLayout({ children }: { children: ReactNode }) {
                     href={item.href}
                     className={`
                       flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                      transition-colors duration-200
+                      transition-all duration-200
                       ${
                         isActive
-                          ? 'bg-brand-600 text-white shadow-md'
-                          : 'text-wood-200 hover:bg-wood-700 hover:text-white'
+                          ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
                       }
                     `}
                     aria-current={isActive ? 'page' : undefined}
@@ -72,9 +70,9 @@ export default function VendedorLayout({ children }: { children: ReactNode }) {
 
             {/* User Info */}
             <div className="flex items-center gap-3">
-              <span className="text-sm text-wood-300">Vendedor</span>
-              <div className="w-8 h-8 rounded-full bg-brand-200 flex items-center justify-center">
-                <span className="text-brand-700 text-sm font-medium">V</span>
+              <span className="text-xs text-gray-500">Vendedor</span>
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">V</span>
               </div>
             </div>
           </div>
@@ -82,7 +80,7 @@ export default function VendedorLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Page Content */}
-      <main className="flex-1 p-4 sm:p-6">
+      <main className="flex-1">
         {children}
       </main>
     </div>

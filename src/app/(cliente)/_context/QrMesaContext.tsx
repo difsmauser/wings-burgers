@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 /**
  * QR Mesa/Zona context for tracking QR-based access to the menu.
@@ -9,6 +9,8 @@ import { createContext, useContext, useState, ReactNode } from 'react';
  *
  * Requirements: 8.1, 8.2, 8.3
  */
+
+const STORAGE_KEY = 'alaburguer-qr-mesa';
 
 interface QrMesaInfo {
   codigo: string;
@@ -27,13 +29,39 @@ interface QrMesaContextValue {
 const QrMesaContext = createContext<QrMesaContextValue | null>(null);
 
 export function QrMesaProvider({ children }: { children: ReactNode }) {
-  const [qrMesa, setQrMesa] = useState<QrMesaInfo | null>(null);
+  const [qrMesa, setQrMesaState] = useState<QrMesaInfo | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setQrMesaState(JSON.parse(stored));
+      }
+    } catch { /* ignore parse errors */ }
+    setHydrated(true);
+  }, []);
+
+  // Persist to localStorage when setting
+  const setQrMesa = (info: QrMesaInfo | null) => {
+    setQrMesaState(info);
+    try {
+      if (info) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch { /* ignore storage errors */ }
+  };
 
   const value: QrMesaContextValue = {
     qrMesa,
     esOrdenQr: qrMesa !== null,
     setQrMesa,
   };
+
+  if (!hydrated) return null;
 
   return (
     <QrMesaContext.Provider value={value}>

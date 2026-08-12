@@ -1,140 +1,157 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-/**
- * Página de inicio de sesión.
- * Usa Supabase Auth con email/password.
- */
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') ?? '/';
+  const redirectTo = searchParams.get('redirect') || null;
   const errorParam = searchParams.get('error');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(
-    errorParam === 'no_autorizado'
-      ? 'No tienes permisos para acceder a esa sección.'
-      : null
-  );
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(
+    errorParam === 'no_autorizado' ? 'No tienes permisos para acceder a esa sección.' : null
+  );
 
-  async function handleSubmit(e: FormEvent) {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setError(null);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError(
-          authError.message === 'Invalid login credentials'
-            ? 'Email o contraseña incorrectos.'
-            : authError.message
-        );
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error?.message || 'Credenciales inválidas');
         return;
       }
 
-      if (data.session) {
-        // Guardar tokens en cookies para el middleware
-        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        document.cookie = `sb-refresh-token=${data.session.refresh_token}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
-
+      // Redirect based on role or redirect param
+      if (redirectTo) {
         router.push(redirectTo);
-        router.refresh();
+      } else {
+        // Redirect based on user role
+        switch (data.data.rol) {
+          case 'admin':
+            router.push('/admin/productos');
+            break;
+          case 'vendedor':
+            router.push('/pedidos');
+            break;
+          case 'repartidor':
+            router.push('/entregas');
+            break;
+          case 'caja':
+            router.push('/caja');
+            break;
+          default:
+            router.push('/menu');
+        }
       }
-    } catch {
-      setError('Error inesperado. Intenta de nuevo.');
+    } catch (err) {
+      setError('Error de conexión. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-amber-50 px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-[#0a0a0f] relative overflow-hidden">
+      {/* Floating decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <span className="absolute top-[10%] left-[10%] text-6xl opacity-10 animate-pulse">🍗</span>
+        <span className="absolute top-[30%] right-[10%] text-5xl opacity-10 animate-pulse" style={{animationDelay: '1s'}}>🍔</span>
+        <span className="absolute bottom-[20%] left-[15%] text-5xl opacity-10 animate-pulse" style={{animationDelay: '0.5s'}}>🔥</span>
+        <span className="absolute bottom-[10%] right-[20%] text-6xl opacity-10 animate-pulse" style={{animationDelay: '1.5s'}}>🌶️</span>
+      </div>
+
+      <div className="w-full max-w-md glass rounded-3xl shadow-2xl p-8 sm:p-10 animate-slide-up relative z-10">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-amber-800">Wings & Burgers</h1>
-          <p className="text-amber-600 mt-2">Inicia sesión para continuar</p>
+          <img src="/logo.png" alt="A-la Burguer" className="h-20 w-20 mx-auto mb-4 rounded-full" />
+          <h1 className="text-2xl font-bold">
+            <span className="text-brand-400">A-la</span>
+            <span className="text-white ml-2">Burguer</span>
+          </h1>
+          <p className="text-sm text-gray-500 mt-2">Panel de Gestión</p>
         </div>
 
+        {/* Error */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
+          <div className="mb-6 p-3 rounded-xl bg-fire-900/30 border border-fire-500/20 text-fire-300 text-sm flex items-start gap-2">
+            <span aria-hidden="true">⚠️</span>
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
+              Correo electrónico
             </label>
             <input
               id="email"
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
-              placeholder="tu@email.com"
-              autoComplete="email"
+              placeholder="usuario@alaburguer.com"
+              required
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all duration-200"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
               Contraseña
             </label>
             <input
               id="password"
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-colors"
               placeholder="••••••••"
-              autoComplete="current-password"
-              minLength={6}
+              required
+              className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all duration-200"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white font-medium rounded-lg transition-colors focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            className="w-full min-h-[48px] px-6 py-3 rounded-xl text-black font-semibold text-sm gradient-brand shadow-lg shadow-brand-500/25 hover:shadow-xl hover:shadow-brand-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-[0.98]"
           >
-            {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+            {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
-          ¿No tienes cuenta?{' '}
-          <a
-            href="/registro"
-            className="text-amber-600 hover:text-amber-700 font-medium"
-          >
-            Regístrate aquí
-          </a>
-        </p>
+        {/* Quick access info */}
+        <div className="mt-8 pt-6 border-t border-white/5">
+          <p className="text-xs text-gray-500 text-center mb-3">Acceso rápido por módulo:</p>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="p-2 rounded-lg bg-white/5">
+              <span className="text-lg block" aria-hidden="true">👨‍💼</span>
+              <span className="text-[10px] text-gray-500">Admin</span>
+            </div>
+            <div className="p-2 rounded-lg bg-white/5">
+              <span className="text-lg block" aria-hidden="true">🧑‍🍳</span>
+              <span className="text-[10px] text-gray-500">Vendedor</span>
+            </div>
+            <div className="p-2 rounded-lg bg-white/5">
+              <span className="text-lg block" aria-hidden="true">🛵</span>
+              <span className="text-[10px] text-gray-500">Repartidor</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

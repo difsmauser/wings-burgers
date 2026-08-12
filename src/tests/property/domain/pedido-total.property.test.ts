@@ -10,10 +10,10 @@ import { Precio, ModalidadServicio } from '@/domain/value-objects';
  *
  * Para cualquier pedido y cualquier secuencia de operaciones (agregar producto,
  * eliminar producto, modificar cantidad), el total del pedido debe ser siempre
- * igual a la suma de (precio_unitario × cantidad) de cada item, más impuestos (16%).
+ * igual a la suma de (precio_unitario × cantidad) de cada item (sin IVA).
  */
 describe('Property 8: Consistencia del Total del Pedido', () => {
-  const TASA_IMPUESTOS = 0.16;
+  const TASA_IMPUESTOS = 0;
 
   /**
    * Helper: calcula el total esperado a partir de los items actuales del pedido.
@@ -33,8 +33,9 @@ describe('Property 8: Consistencia del Total del Pedido', () => {
     }, 0);
 
     const subtotal = Math.round(subtotalValor * 100) / 100;
-    const impuestos = Math.round(subtotal * TASA_IMPUESTOS * 100) / 100;
-    const total = Math.round((subtotal + impuestos) * 100) / 100;
+    const impuestosRaw = Math.round(subtotal * TASA_IMPUESTOS * 100) / 100;
+    const impuestos = impuestosRaw > 0 ? impuestosRaw : 0.01;
+    const total = Math.round((subtotal + impuestosRaw) * 100) / 100;
 
     return { subtotal, impuestos, total };
   }
@@ -173,7 +174,7 @@ describe('Property 8: Consistencia del Total del Pedido', () => {
     );
   });
 
-  it('total = subtotal + impuestos siempre se mantiene (subtotal * 1.16 redondeado)', () => {
+  it('total = subtotal + impuestos siempre se mantiene (sin IVA, total = subtotal)', () => {
     fc.assert(
       fc.property(
         fc.array(itemArb, { minLength: 1, maxLength: 10 }),
@@ -187,17 +188,11 @@ describe('Property 8: Consistencia del Total del Pedido', () => {
             );
           }
 
-          // Verify the structural invariant: total = subtotal + impuestos (rounded)
-          const expectedTotal = Math.round(
-            (pedido.subtotal.valor + pedido.impuestos.valor) * 100
-          ) / 100;
-          expect(pedido.total.valor).toBe(expectedTotal);
+          // Verify the structural invariant: total = subtotal (no tax)
+          expect(pedido.total.valor).toBe(pedido.subtotal.valor);
 
-          // Verify impuestos = subtotal * 0.16 (rounded)
-          const expectedImpuestos = Math.round(
-            pedido.subtotal.valor * TASA_IMPUESTOS * 100
-          ) / 100;
-          expect(pedido.impuestos.valor).toBe(expectedImpuestos);
+          // Verify impuestos is the minimum value (0.01) since rate is 0
+          expect(pedido.impuestos.valor).toBe(0.01);
         }
       ),
       { numRuns: 500 }

@@ -35,11 +35,17 @@ export interface OpcionPersonalizacionProducto {
 }
 
 /**
+ * Modalidad type for the ordering flow.
+ * LOCAL = eating in restaurant, RETIRO = takeout pickup, DOMICILIO = delivery.
+ */
+export type Modalidad = 'LOCAL' | 'RETIRO' | 'DOMICILIO' | null;
+
+/**
  * Cart state interface.
  */
 interface CarritoState {
   items: ItemCarrito[];
-  modalidad: 'LOCAL' | 'DOMICILIO' | null;
+  modalidad: Modalidad;
   confirmado: boolean;
 }
 
@@ -48,14 +54,14 @@ interface CarritoState {
  */
 interface CarritoContextValue {
   items: ItemCarrito[];
-  modalidad: 'LOCAL' | 'DOMICILIO' | null;
+  modalidad: Modalidad;
   confirmado: boolean;
   agregarItem: (item: Omit<ItemCarrito, 'id' | 'personalizaciones' | 'comentario'> & { personalizaciones?: PersonalizacionSeleccionada[]; comentario?: string }) => void;
   eliminarItem: (id: string) => void;
   modificarCantidad: (id: string, cantidad: number) => void;
   actualizarPersonalizaciones: (id: string, personalizaciones: PersonalizacionSeleccionada[]) => void;
   actualizarComentario: (id: string, comentario: string) => void;
-  setModalidad: (modalidad: 'LOCAL' | 'DOMICILIO') => void;
+  setModalidad: (modalidad: 'LOCAL' | 'RETIRO' | 'DOMICILIO') => void;
   confirmarPedido: () => void;
   limpiarCarrito: () => void;
   subtotal: number;
@@ -65,7 +71,7 @@ interface CarritoContextValue {
 }
 
 const STORAGE_KEY = 'wings-burgers-carrito';
-const IVA_RATE = 0.16;
+const IVA_RATE = 0;
 
 const CarritoContext = createContext<CarritoContextValue | null>(null);
 
@@ -178,7 +184,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setModalidad = useCallback((modalidad: 'LOCAL' | 'DOMICILIO') => {
+  const setModalidad = useCallback((modalidad: 'LOCAL' | 'RETIRO' | 'DOMICILIO') => {
     setState((prev) => ({ ...prev, modalidad }));
   }, []);
 
