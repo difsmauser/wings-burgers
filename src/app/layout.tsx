@@ -4,8 +4,12 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'A-la Burguer',
-  description: 'Sistema de gesti\u00f3n para A-la Burguer',
+  description: 'Sistema de gestión para A-la Burguer',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -31,7 +35,8 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
