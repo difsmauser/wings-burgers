@@ -3,6 +3,8 @@ import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { verificarAutenticacion, verificarRol } from '@/app/api/_lib/auth';
 import { getContainer } from '@/shared/container';
 import { ValidacionError } from '@/shared/errors';
+
+export const dynamic = 'force-dynamic';
 import type { CanalEnvio } from '@/application/use-cases/notificaciones';
 
 /** Canales válidos para el envío de cuenta */

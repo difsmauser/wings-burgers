@@ -4,6 +4,8 @@ import { verificarAutenticacion, verificarRol } from '../../_lib/auth';
 import { getContainer } from '@/shared/container';
 import { RecursoNoEncontradoError } from '@/shared/errors';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteParams {
   params: Promise<{ id: string }>;
 }

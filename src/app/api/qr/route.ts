@@ -3,6 +3,8 @@ import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { verificarAutenticacion, verificarRol } from '@/app/api/_lib/auth';
 import { ValidacionError } from '@/shared/errors';
 import { generarCodigoQr, buildQrMenuUrl } from '@/shared/utils/qr-generator';
+
+export const dynamic = 'force-dynamic';
 import { getQrStore, registrarQrEnStore, desactivarQr, type QrMesaRecord } from '@/shared/utils/qr-store';
 
 /**

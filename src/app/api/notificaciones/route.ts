@@ -3,6 +3,8 @@ import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { verificarAutenticacion } from '@/app/api/_lib/auth';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/notificaciones
  * Lista las notificaciones pendientes (no leídas) del usuario autenticado.

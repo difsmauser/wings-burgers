@@ -4,6 +4,8 @@ import { getContainer } from '@/shared/container';
 import { ValidacionError } from '@/shared/errors';
 import type { TipoCorte } from '@/domain/services';
 
+export const dynamic = 'force-dynamic';
+
 const TIPOS_VALIDOS: TipoCorte[] = ['diario', 'semanal', 'mensual'];
 
 /**
