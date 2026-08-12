@@ -26,10 +26,10 @@ const PUBLIC_PATHS = [
  * El path key usa el prefijo real que Next.js genera para route groups.
  */
 const ROLE_PROTECTED_PATHS: { prefix: string; roles: Rol[] }[] = [
-  { prefix: '/caja', roles: ['admin', 'caja'] },
   { prefix: '/admin', roles: ['admin'] },
-  { prefix: '/vendedor', roles: ['admin', 'vendedor'] },
-  { prefix: '/repartidor', roles: ['admin', 'repartidor'] },
+  { prefix: '/pedidos', roles: ['admin', 'vendedor'] },
+  { prefix: '/caja', roles: ['admin', 'caja'] },
+  { prefix: '/entregas', roles: ['admin', 'repartidor'] },
 ];
 
 /**
@@ -52,12 +52,13 @@ function isPublicPath(pathname: string): boolean {
     return true;
   }
 
-  // Client module routes are public
+  // Client module routes are public (no login required)
   if (
     pathname.startsWith('/menu') ||
-    pathname.startsWith('/pedido') ||
+    pathname === '/pedido' ||
     pathname.startsWith('/pago') ||
     pathname.startsWith('/rastreo') ||
+    pathname.startsWith('/mesero') ||
     pathname.startsWith('/demo')
   ) {
     return true;

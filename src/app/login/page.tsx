@@ -42,7 +42,7 @@ function LoginContent() {
         // Redirect based on user role
         switch (data.data.rol) {
           case 'admin':
-            router.push('/admin/productos');
+            router.push('/admin');
             break;
           case 'vendedor':
             router.push('/pedidos');
@@ -54,7 +54,7 @@ function LoginContent() {
             router.push('/caja');
             break;
           default:
-            router.push('/menu');
+            router.push('/menu-domicilio');
         }
       }
     } catch (err) {
@@ -143,8 +143,12 @@ function LoginContent() {
               <span className="text-[10px] text-gray-500">Admin</span>
             </div>
             <div className="p-2 rounded-lg bg-white/5">
-              <span className="text-lg block" aria-hidden="true">🧑‍🍳</span>
-              <span className="text-[10px] text-gray-500">Vendedor</span>
+              <span className="text-lg block" aria-hidden="true">👨‍🍳</span>
+              <span className="text-[10px] text-gray-500">Cocina</span>
+            </div>
+            <div className="p-2 rounded-lg bg-white/5">
+              <span className="text-lg block" aria-hidden="true">💰</span>
+              <span className="text-[10px] text-gray-500">Caja</span>
             </div>
             <div className="p-2 rounded-lg bg-white/5">
               <span className="text-lg block" aria-hidden="true">🛵</span>
