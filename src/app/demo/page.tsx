@@ -33,6 +33,64 @@ export default function DemoPage() {
 
         {/* Módulos */}
         <div className="rounded-xl bg-[#16161f] border border-white/5 p-6">
+          <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider mb-4">🔐 Credenciales de Acceso</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-2 text-gray-500 font-medium">Módulo</th>
+                  <th className="text-left py-2 text-gray-500 font-medium">Email</th>
+                  <th className="text-left py-2 text-gray-500 font-medium">Contraseña</th>
+                  <th className="text-left py-2 text-gray-500 font-medium">Ruta</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                <tr>
+                  <td className="py-2 text-white font-medium">👨‍💼 Admin</td>
+                  <td className="py-2"><code className="text-brand-400">admin@wingsandburgers.com</code></td>
+                  <td className="py-2"><code className="text-white">Admin123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">/admin</code></td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-white font-medium">👨‍🍳 Cocina</td>
+                  <td className="py-2"><code className="text-brand-400">vendedor@wingsandburgers.com</code></td>
+                  <td className="py-2"><code className="text-white">Vendedor123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">/pedidos</code></td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-white font-medium">💰 Caja</td>
+                  <td className="py-2"><code className="text-brand-400">caja@alaburguer.com</code></td>
+                  <td className="py-2"><code className="text-white">Caja123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">/caja</code></td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-white font-medium">🛵 Repartidor</td>
+                  <td className="py-2"><code className="text-brand-400">repartidor@wingsandburgers.com</code></td>
+                  <td className="py-2"><code className="text-white">Repartidor123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">/entregas</code></td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-white font-medium">🧑‍🍳 Mesero</td>
+                  <td className="py-2 text-gray-500">Sin login</td>
+                  <td className="py-2 text-gray-500">Se identifica por nombre</td>
+                  <td className="py-2"><code className="text-brand-400">/mesero</code></td>
+                </tr>
+                <tr>
+                  <td className="py-2 text-white font-medium">🍔 Cliente</td>
+                  <td className="py-2 text-gray-500">Sin login</td>
+                  <td className="py-2 text-gray-500">Acceso por QR o link</td>
+                  <td className="py-2"><code className="text-brand-400">/menu-domicilio</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <CopyButton text="admin@wingsandburgers.com / Admin123!" />
+            <span className="text-[10px] text-gray-500">Copiar admin</span>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-[#16161f] border border-white/5 p-6">
           <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider mb-4">📱 Módulos del Sistema</h2>
           
           <div className="space-y-4">
