@@ -51,24 +51,38 @@ export default function DemoPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Mesa 1 (QR en restaurante)</span>
+                  <span className="text-gray-400">Mesa 1 — Interior</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-1</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-1`} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Mesa 2 (QR en restaurante)</span>
+                  <span className="text-gray-400">Mesa 2 — Interior</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-2</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-2`} />
                   </div>
                 </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-gray-400">Mesa 3 (QR en restaurante)</span>
+                <div className="flex items-center justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Mesa 3 — Interior</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-3</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-3`} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Mesa 4 — Terraza</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-brand-400">{baseUrl}/menu?qr=MESA-4</code>
+                    <CopyButton text={`${baseUrl}/menu?qr=MESA-4`} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-gray-400">Mesa 5 — Terraza</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-brand-400">{baseUrl}/menu?qr=MESA-5</code>
+                    <CopyButton text={`${baseUrl}/menu?qr=MESA-5`} />
                   </div>
                 </div>
               </div>
