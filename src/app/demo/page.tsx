@@ -44,28 +44,28 @@ export default function DemoPage() {
               </div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Menú (domicilio desde redes)</span>
+                  <span className="text-gray-400">Domicilio (link para redes)</span>
                   <div className="flex items-center gap-2">
-                    <code className="text-brand-400">{baseUrl}/menu</code>
-                    <CopyButton text={`${baseUrl}/menu`} />
+                    <code className="text-brand-400">{baseUrl}/menu-domicilio</code>
+                    <CopyButton text={`${baseUrl}/menu-domicilio`} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Menú (QR Mesa 1)</span>
+                  <span className="text-gray-400">Mesa 1 (QR en restaurante)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-1</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-1`} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1 border-b border-white/5">
-                  <span className="text-gray-400">Menú (QR Mesa 2)</span>
+                  <span className="text-gray-400">Mesa 2 (QR en restaurante)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-2</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-2`} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-gray-400">Menú (QR Mesa 3)</span>
+                  <span className="text-gray-400">Mesa 3 (QR en restaurante)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/menu?qr=MESA-3</code>
                     <CopyButton text={`${baseUrl}/menu?qr=MESA-3`} />
@@ -349,9 +349,15 @@ export default function DemoPage() {
             <p>&nbsp;&nbsp;activo BOOLEAN DEFAULT TRUE,</p>
             <p>&nbsp;&nbsp;created_at TIMESTAMPTZ DEFAULT now()</p>
             <p>);</p>
+            <p className="mt-2">-- QR codes para mesas (si no existen)</p>
+            <p>INSERT INTO qr_mesa (codigo, mesa_zona, activo) VALUES</p>
+            <p>&nbsp;&nbsp;(&apos;MESA-1&apos;, &apos;Mesa 1 - Interior&apos;, true),</p>
+            <p>&nbsp;&nbsp;(&apos;MESA-2&apos;, &apos;Mesa 2 - Interior&apos;, true),</p>
+            <p>&nbsp;&nbsp;(&apos;MESA-3&apos;, &apos;Mesa 3 - Terraza&apos;, true)</p>
+            <p>ON CONFLICT (codigo) DO NOTHING;</p>
           </div>
           <div className="flex items-center gap-2 mt-3">
-            <CopyButton text={`ALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_id TEXT DEFAULT NULL;\nALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_nombre TEXT DEFAULT NULL;\n\nCREATE TABLE IF NOT EXISTS mesero (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  nombre TEXT NOT NULL,\n  telefono TEXT,\n  pin TEXT,\n  activo BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMPTZ DEFAULT now()\n);`} />
+            <CopyButton text={`ALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_id TEXT DEFAULT NULL;\nALTER TABLE pedido ADD COLUMN IF NOT EXISTS mesero_nombre TEXT DEFAULT NULL;\n\nCREATE TABLE IF NOT EXISTS mesero (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  nombre TEXT NOT NULL,\n  telefono TEXT,\n  pin TEXT,\n  activo BOOLEAN DEFAULT TRUE,\n  created_at TIMESTAMPTZ DEFAULT now()\n);\n\nINSERT INTO qr_mesa (codigo, mesa_zona, activo) VALUES\n  ('MESA-1', 'Mesa 1 - Interior', true),\n  ('MESA-2', 'Mesa 2 - Interior', true),\n  ('MESA-3', 'Mesa 3 - Terraza', true)\nON CONFLICT (codigo) DO NOTHING;`} />
             <span className="text-[10px] text-gray-500">Copiar SQL completo</span>
           </div>
         </div>
