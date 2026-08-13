@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
@@ -12,9 +14,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: { message: 'Configuración de Supabase incompleta en el servidor.' } },
+        { status: 500 }
+      );
+    }
 
     // Sign in with Supabase Auth
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -34,17 +43,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user role from usuario table
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    // Use service role key if available, otherwise use the session token
+    const dbClient = serviceRoleKey
+      ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+      : createClient(supabaseUrl, supabaseAnonKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { headers: { Authorization: `Bearer ${authData.session!.access_token}` } },
+        });
 
-    const { data: userData } = await adminClient
+    const { data: userData } = await dbClient
       .from('usuario')
       .select('rol, nombre, activo')
       .eq('id', authData.user.id)
       .single();
 
-    if (!userData || !userData.activo) {
+    // If no user record found in usuario table, default to 'cliente' role
+    const rol = userData?.rol || 'cliente';
+    const nombre = userData?.nombre || email.split('@')[0];
+    const activo = userData?.activo !== false;
+
+    if (!activo) {
       return NextResponse.json(
         { error: { message: 'Usuario desactivado. Contacta al administrador.' } },
         { status: 403 }
@@ -56,26 +74,24 @@ export async function POST(request: NextRequest) {
       data: {
         userId: authData.user.id,
         email: authData.user.email,
-        nombre: userData.nombre,
-        rol: userData.rol,
+        nombre,
+        rol,
       },
     });
 
-    // Set access token cookie
     response.cookies.set('sb-access-token', authData.session!.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
       path: '/',
     });
 
-    // Set refresh token cookie
     response.cookies.set('sb-refresh-token', authData.session!.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
 
