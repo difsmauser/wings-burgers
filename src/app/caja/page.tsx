@@ -112,6 +112,47 @@ export default function CajaPage() {
     router.push('/login');
   };
 
+  // Comprobantes pendientes de validación
+  const [comprobantes, setComprobantes] = useState<Array<{
+    id: string;
+    pedido_id: string;
+    mesa_zona: string;
+    total: number;
+    metodo_pago: string;
+    comprobante_url: string | null;
+    estado: string;
+    created_at: string;
+  }>>([]);
+
+  const fetchComprobantes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/pagos/comprobante-upload?estado=pendiente');
+      if (res.ok) { const json = await res.json(); setComprobantes(json.data || []); }
+    } catch { /* */ }
+  }, []);
+
+  useEffect(() => {
+    fetchComprobantes();
+    const i = setInterval(fetchComprobantes, 8000);
+    return () => clearInterval(i);
+  }, [fetchComprobantes]);
+
+  const validarComprobante = async (comp: { id: string; pedido_id: string; mesa_zona: string; metodo_pago: string }) => {
+    setProcesandoId(comp.id);
+    try {
+      // 1. Mark comprobante as validated
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      await fetch(`/api/pagos/validar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comprobanteId: comp.id, pedidoId: comp.pedido_id, mesaZona: comp.mesa_zona }),
+      });
+      fetchComprobantes();
+      fetchData();
+    } catch { /* */ }
+    finally { setProcesandoId(null); }
+  };
+
   // Categorize pedidos
   const pendientesPago = pedidos.filter(p => p.estadoPago !== 'pagado');
   const pedidosMesa = pendientesPago.filter(p => p.modalidad === 'local' || p.modalidad === 'retiro');
@@ -162,6 +203,44 @@ export default function CajaPage() {
             <p className="text-xl font-bold text-brand-400">${totalDia.toFixed(0)}</p>
           </div>
         </div>
+
+        {/* Comprobantes pendientes de validación */}
+        {comprobantes.length > 0 && (
+          <div className="rounded-xl bg-[#16161f] border border-amber-500/20 p-4">
+            <h2 className="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
+              📎 Comprobantes por Validar
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold animate-pulse">
+                {comprobantes.length}
+              </span>
+            </h2>
+            <div className="space-y-2">
+              {comprobantes.map(comp => (
+                <div key={comp.id} className="rounded-lg bg-[#0d0d14] border border-white/5 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="text-xs font-bold text-white">{comp.mesa_zona || 'Sin mesa'}</span>
+                      <span className="text-[10px] text-gray-500 ml-2">{comp.metodo_pago === 'transferencia' ? '📱 Transferencia' : '💵 Efectivo'}</span>
+                      <span className="text-[10px] text-gray-600 ml-2">{new Date(comp.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <span className="text-sm font-bold text-brand-400">${comp.total.toFixed(0)}</span>
+                  </div>
+                  {comp.comprobante_url && (
+                    <a href={comp.comprobante_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 underline mb-2 block">
+                      📷 Ver comprobante
+                    </a>
+                  )}
+                  <button
+                    onClick={() => validarComprobante(comp)}
+                    disabled={procesandoId === comp.id}
+                    className="w-full py-2 rounded-lg text-xs font-bold text-black bg-green-500 hover:bg-green-400 disabled:opacity-50 transition-all active:scale-[0.97]"
+                  >
+                    {procesandoId === comp.id ? 'Validando...' : '✓ Validar Pago'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Floor Map */}
         <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
