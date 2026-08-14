@@ -493,6 +493,72 @@ function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string;
 }
 
 /**
+ * Individual order card within MesaOrdersTracker.
+ * Receives estado from parent (no separate polling needed).
+ */
+function MesaOrderCard({ numero, estado, modalidad }: { numero: string; estado: string; modalidad: string | null }) {
+  const pasos = modalidad === 'DOMICILIO'
+    ? [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Listo para enviar' },
+        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'En camino' },
+        { key: 'entregado', label: 'Entregado', icon: '✅', desc: 'Entregado' },
+      ]
+    : [
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando tu pedido' },
+        { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
+        { key: 'listo_para_servir', label: 'En camino', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
+        { key: 'servido', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
+      ];
+
+  const mapEstado = (apiEstado: string): string => {
+    if (apiEstado === 'servido') return 'servido';
+    if (apiEstado === 'listo_para_servir' || apiEstado === 'listo') return 'listo_para_servir';
+    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
+    if (apiEstado === 'en_camino') return 'en_camino';
+    if (apiEstado === 'entregado') return 'entregado';
+    if (apiEstado === 'en_preparacion') return 'en_preparacion';
+    return 'recibido';
+  };
+
+  const mappedEstado = mapEstado(estado);
+  const currentIdx = pasos.findIndex(p => p.key === mappedEstado);
+  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
+
+  return (
+    <div className="rounded-xl bg-[#0d0d14] border border-white/5 p-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-bold text-white">#{numero}</span>
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+          mappedEstado === 'servido' || mappedEstado === 'entregado'
+            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+            : mappedEstado === 'en_preparacion'
+            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            : mappedEstado === 'empacado' || mappedEstado === 'listo_para_servir'
+            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+            : 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
+        }`}>
+          {currentPaso.icon} {currentPaso.label}
+        </span>
+      </div>
+      <p className="text-[11px] text-gray-400 mb-3">{currentPaso.desc}</p>
+      <div className="flex items-center gap-1">
+        {pasos.map((paso, idx) => (
+          <div
+            key={paso.key}
+            className={`flex-1 h-2 rounded-full transition-all duration-500 ${
+              idx <= currentIdx ? 'bg-brand-400' : 'bg-white/5'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Multi-order tracker for mesa sessions.
  * Shows ALL active orders for the current mesa, with individual progress.
  */
@@ -578,14 +644,14 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
         </span>
       </div>
 
-      {/* Individual order trackers */}
+      {/* Individual order trackers — use data from MesaOrdersTracker fetch, no separate polling */}
       <div className="space-y-2">
         {pedidosMesa.map((pedido) => (
-          <SingleOrderTracker
+          <MesaOrderCard
             key={pedido.id}
-            pedidoId={pedido.id}
-            modalidad={modalidad}
             numero={pedido.numero}
+            estado={pedido.estado}
+            modalidad={modalidad}
           />
         ))}
       </div>

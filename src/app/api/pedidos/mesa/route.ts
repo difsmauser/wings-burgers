@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError } from '@/app/api/_lib/errorHandler';
-import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 
-// Force dynamic rendering since we use request.url
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/pedidos/mesa?mesaZona=Mesa 1 - Interior
  * Returns all active (non-paid, non-cancelled) orders for a specific mesa.
- * Used by the client tracker to show all accumulated orders for a table session.
+ * Uses direct fetch to Supabase REST API (no SDK cache).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -22,17 +19,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    // Fetch all active orders for this mesa (not cancelled, not fully paid+delivered)
-    const { data, error } = await supabase
-      .from('pedido')
-      .select('*, pedido_detalle(*, producto:producto_id(nombre))')
-      .eq('mesa_zona', mesaZona)
-      .not('estado', 'in', '(cancelado)')
-      .order('creado_en', { ascending: true });
+    // Direct fetch — no SDK, no cache
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/pedido?mesa_zona=eq.${encodeURIComponent(mesaZona)}&estado=neq.cancelado&select=id,numero,estado,modalidad,total,subtotal,impuestos,mesa_zona,observaciones,estado_pago,metodo_pago,mesero_id,mesero_nombre,cliente_id,creado_en,actualizado_en,pedido_detalle(producto_id,cantidad,precio_unitario,precio_total,comentario,personalizaciones,producto:producto_id(nombre))&order=creado_en.asc`,
+      {
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+        },
+        cache: 'no-store',
+      }
+    );
 
-    if (error) throw new Error(error.message);
+    if (!res.ok) {
+      const errBody = await res.text();
+      return NextResponse.json({ error: { message: errBody } }, { status: res.status });
+    }
+
+    const data = await res.json();
 
     // Map to frontend format
     const pedidos = (data ?? []).map((p: Record<string, unknown>) => ({
@@ -47,6 +54,8 @@ export async function GET(request: NextRequest) {
       observaciones: p.observaciones,
       estadoPago: p.estado_pago,
       metodoPago: p.metodo_pago,
+      meseroId: p.mesero_id,
+      meseroNombre: p.mesero_nombre,
       clienteId: p.cliente_id,
       creadoEn: p.creado_en,
       actualizadoEn: p.actualizado_en,
@@ -61,8 +70,13 @@ export async function GET(request: NextRequest) {
       })),
     }));
 
-    return NextResponse.json({ data: pedidos });
+    return NextResponse.json({ data: pedidos }, {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+    });
   } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json(
+      { error: { message: error instanceof Error ? error.message : 'Error' } },
+      { status: 500 }
+    );
   }
 }
