@@ -2,30 +2,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
+/**
+ * POST /api/auth/login
+ * Autentica usuario contra Supabase Auth y retorna sesión con cookies.
+ */
 export async function POST(request: NextRequest) {
+  // 1. Parse body
+  let email: string;
+  let password: string;
+
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    email = body.email;
+    password = body.password;
+  } catch {
+    return NextResponse.json(
+      { error: { message: 'Body JSON inválido' } },
+      { status: 400 }
+    );
+  }
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: { message: 'Email y contraseña son requeridos' } },
-        { status: 400 }
-      );
-    }
+  if (!email || !password) {
+    return NextResponse.json(
+      { error: { message: 'Email y contraseña son requeridos' } },
+      { status: 400 }
+    );
+  }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // 2. Check env vars
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: { message: 'Configuración de Supabase incompleta en el servidor.' } },
-        { status: 500 }
-      );
-    }
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.json(
+      { error: { message: 'Error de configuración del servidor. Contacta al administrador.', debug: { hasUrl: !!supabaseUrl, hasAnon: !!supabaseAnonKey, hasService: !!serviceRoleKey } } },
+      { status: 500 }
+    );
+  }
 
-    // Sign in with Supabase Auth
+  // 3. Authenticate with Supabase
+  try {
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
@@ -35,21 +54,18 @@ export async function POST(request: NextRequest) {
       password,
     });
 
-    if (authError || !authData.user) {
+    if (authError || !authData.user || !authData.session) {
       return NextResponse.json(
         { error: { message: 'Credenciales inválidas. Verifica tu correo y contraseña.' } },
         { status: 401 }
       );
     }
 
-    // Get user role from usuario table
-    // Use service role key if available, otherwise use the session token
-    const dbClient = serviceRoleKey
-      ? createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
-      : createClient(supabaseUrl, supabaseAnonKey, {
-          auth: { persistSession: false, autoRefreshToken: false },
-          global: { headers: { Authorization: `Bearer ${authData.session!.access_token}` } },
-        });
+    // 4. Get user role
+    const dbKey = serviceRoleKey || supabaseAnonKey;
+    const dbClient = createClient(supabaseUrl, dbKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     const { data: userData } = await dbClient
       .from('usuario')
@@ -57,19 +73,17 @@ export async function POST(request: NextRequest) {
       .eq('id', authData.user.id)
       .single();
 
-    // If no user record found in usuario table, default to 'cliente' role
     const rol = userData?.rol || 'cliente';
     const nombre = userData?.nombre || email.split('@')[0];
-    const activo = userData?.activo !== false;
 
-    if (!activo) {
+    if (userData && userData.activo === false) {
       return NextResponse.json(
-        { error: { message: 'Usuario desactivado. Contacta al administrador.' } },
+        { error: { message: 'Usuario desactivado.' } },
         { status: 403 }
       );
     }
 
-    // Set auth cookies
+    // 5. Set cookies and respond
     const response = NextResponse.json({
       data: {
         userId: authData.user.id,
@@ -79,27 +93,26 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.cookies.set('sb-access-token', authData.session!.access_token, {
+    response.cookies.set('sb-access-token', authData.session.access_token, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24,
+      maxAge: 86400,
       path: '/',
     });
 
-    response.cookies.set('sb-refresh-token', authData.session!.refresh_token, {
+    response.cookies.set('sb-refresh-token', authData.session.refresh_token, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 604800,
       path: '/',
     });
 
     return response;
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (err) {
     return NextResponse.json(
-      { error: { message: 'Error interno del servidor' } },
+      { error: { message: 'Error del servidor al procesar login', detail: err instanceof Error ? err.message : 'unknown' } },
       { status: 500 }
     );
   }
