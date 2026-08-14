@@ -976,6 +976,30 @@ export default function PedidoPage() {
     }
   };
 
+  // Check if session is complete (all paid) — clear everything
+  useEffect(() => {
+    if (!confirmado || !qrMesa) return;
+    const checkPaid = async () => {
+      try {
+        const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(qrMesa.mesaZona)}`);
+        if (res.ok) {
+          const json = await res.json();
+          const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
+          if (activos.length === 0 && json.data.length > 0) {
+            // All paid — clean session
+            limpiarCarrito();
+            localStorage.removeItem('alaburguer-pedido-ids');
+            localStorage.removeItem('alaburguer-pedido-id');
+          }
+        }
+      } catch { /* */ }
+    };
+    const interval = setInterval(checkPaid, 10000);
+    checkPaid();
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmado, qrMesa]);
+
   // Empty cart
   if (items.length === 0 && !confirmado) {
     return (
