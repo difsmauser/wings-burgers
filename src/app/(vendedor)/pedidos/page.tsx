@@ -12,6 +12,7 @@ interface Pedido {
   total: number;
   creadoEn: string;
   mesaZona?: string;
+  meseroNombre?: string;
   observaciones?: string;
 }
 
@@ -33,14 +34,13 @@ export default function CocinaPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const audioRef = useRef<AudioContext | null>(null);
   const prevNewCount = useRef(0);
 
   const fetchPedidos = useCallback(async () => {
     try {
       const supabaseUrl = '/api/pedidos';
-      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir'];
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido'];
       const results = await Promise.all(
         estados.map(async (estado) => {
           const res = await fetch(`${supabaseUrl}?estado=${estado}`);
@@ -56,6 +56,7 @@ export default function CocinaPage() {
             total: p.total as number || 0,
             creadoEn: p.creadoEn as string || new Date().toISOString(),
             mesaZona: p.mesaZona as string || '',
+            meseroNombre: p.meseroNombre as string || '',
             observaciones: p.observaciones as string || '',
           }));
         })
@@ -84,22 +85,12 @@ export default function CocinaPage() {
     return () => clearInterval(interval);
   }, [fetchPedidos]);
 
-  // Auto-dismiss completed orders after 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCompletedIds(prev => {
-        const newSet = new Set(prev);
-        // Remove IDs that are no longer in pedidos (already disappeared)
-        for (const id of newSet) {
-          if (!pedidos.find(p => p.id === id)) {
-            newSet.delete(id);
-          }
-        }
-        return newSet;
-      });
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [pedidos]);
+  // Only show today's completed orders (disappear next day)
+  const isToday = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  };
 
   const playSound = () => {
     try {
@@ -136,18 +127,6 @@ export default function CocinaPage() {
         body: JSON.stringify({ estado: next }),
       });
 
-      // If marking as listo (listo_para_servir), track for auto-dismiss
-      if (next === 'listo') {
-        setCompletedIds(prev => new Set(prev).add(pedido.id));
-        setTimeout(() => {
-          setCompletedIds(prev => {
-            const s = new Set(prev);
-            s.delete(pedido.id);
-            return s;
-          });
-        }, 60000);
-      }
-
       await fetchPedidos();
     } catch { /* */ }
     finally { setUpdatingId(null); }
@@ -157,7 +136,9 @@ export default function CocinaPage() {
   const nuevas = pedidos.filter(p => p.estado === 'recibido');
   const cocinando = pedidos.filter(p => p.estado === 'en_preparacion');
   const empacado = pedidos.filter(p => p.estado === 'empacado');
-  const listas = pedidos.filter(p => p.estado === 'listo_para_servir' && !completedIds.has(p.id));
+  const listas = pedidos.filter(p =>
+    (p.estado === 'listo_para_servir' || p.estado === 'servido') && isToday(p.creadoEn)
+  );
 
   if (loading) {
     return (
@@ -367,10 +348,12 @@ function OrderCard({
         </button>
       )}
 
-      {/* Readonly status */}
+      {/* Readonly status — show mesero name */}
       {readonly && (
         <div className="mt-2 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <span className="text-[10px] text-green-400 font-medium">✓ Esperando mesero</span>
+          <span className="text-[10px] text-green-400 font-medium">
+            {pedido.meseroNombre ? `✓ ${pedido.meseroNombre}` : '✓ Esperando mesero'}
+          </span>
         </div>
       )}
     </div>
