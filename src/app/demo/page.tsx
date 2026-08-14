@@ -47,14 +47,14 @@ export default function DemoPage() {
               <tbody className="divide-y divide-white/5">
                 <tr>
                   <td className="py-2 text-white font-medium">👨‍💼 Admin</td>
-                  <td className="py-2"><code className="text-brand-400">admin@wingsandburgers.com</code></td>
+                  <td className="py-2"><code className="text-brand-400">admin@alaburguer.com</code></td>
                   <td className="py-2"><code className="text-white">Admin123!</code></td>
                   <td className="py-2"><code className="text-brand-400">/admin</code></td>
                 </tr>
                 <tr>
                   <td className="py-2 text-white font-medium">👨‍🍳 Cocina</td>
-                  <td className="py-2"><code className="text-brand-400">vendedor@wingsandburgers.com</code></td>
-                  <td className="py-2"><code className="text-white">Vendedor123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">cocina@alaburguer.com</code></td>
+                  <td className="py-2"><code className="text-white">Cocina123!</code></td>
                   <td className="py-2"><code className="text-brand-400">/pedidos</code></td>
                 </tr>
                 <tr>
@@ -65,7 +65,7 @@ export default function DemoPage() {
                 </tr>
                 <tr>
                   <td className="py-2 text-white font-medium">🛵 Repartidor</td>
-                  <td className="py-2"><code className="text-brand-400">repartidor@wingsandburgers.com</code></td>
+                  <td className="py-2"><code className="text-brand-400">repartidor@alaburguer.com</code></td>
                   <td className="py-2"><code className="text-white">Repartidor123!</code></td>
                   <td className="py-2"><code className="text-brand-400">/entregas</code></td>
                 </tr>
@@ -85,7 +85,7 @@ export default function DemoPage() {
             </table>
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <CopyButton text="admin@wingsandburgers.com / Admin123!" />
+            <CopyButton text="admin@alaburguer.com / Admin123!" />
             <span className="text-[10px] text-gray-500">Copiar admin</span>
           </div>
         </div>
@@ -173,8 +173,8 @@ export default function DemoPage() {
                 <div className="p-2 rounded bg-white/[0.02]">
                   <span className="text-gray-500">Email:</span>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <code className="text-white text-[11px]">admin@wingsandburgers.com</code>
-                    <CopyButton text="admin@wingsandburgers.com" />
+                    <code className="text-white text-[11px]">admin@alaburguer.com</code>
+                    <CopyButton text="admin@alaburguer.com" />
                   </div>
                 </div>
                 <div className="p-2 rounded bg-white/[0.02]">
@@ -288,15 +288,15 @@ export default function DemoPage() {
                 <div className="p-2 rounded bg-white/[0.02]">
                   <span className="text-gray-500">Email:</span>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <code className="text-white text-[11px]">vendedor@wingsandburgers.com</code>
-                    <CopyButton text="vendedor@wingsandburgers.com" />
+                    <code className="text-white text-[11px]">cocina@alaburguer.com</code>
+                    <CopyButton text="cocina@alaburguer.com" />
                   </div>
                 </div>
                 <div className="p-2 rounded bg-white/[0.02]">
                   <span className="text-gray-500">Contraseña:</span>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <code className="text-white text-[11px]">Vendedor123!</code>
-                    <CopyButton text="Vendedor123!" />
+                    <code className="text-white text-[11px]">Cocina123!</code>
+                    <CopyButton text="Cocina123!" />
                   </div>
                 </div>
               </div>
@@ -346,8 +346,8 @@ export default function DemoPage() {
                 <div className="p-2 rounded bg-white/[0.02]">
                   <span className="text-gray-500">Email:</span>
                   <div className="flex items-center gap-1 mt-0.5">
-                    <code className="text-white text-[11px]">repartidor@wingsandburgers.com</code>
-                    <CopyButton text="repartidor@wingsandburgers.com" />
+                    <code className="text-white text-[11px]">repartidor@alaburguer.com</code>
+                    <CopyButton text="repartidor@alaburguer.com" />
                   </div>
                 </div>
                 <div className="p-2 rounded bg-white/[0.02]">
