@@ -2,16 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// ========== Types ==========
-
 interface Pedido {
   id: string;
   numero: string;
   estado: string;
   modalidad: string;
-  canal?: string;
   clienteNombre?: string;
-  clienteTelefono?: string;
   items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
   total: number;
   creadoEn: string;
@@ -19,80 +15,35 @@ interface Pedido {
   observaciones?: string;
 }
 
-// ========== Constants ==========
-
-const ESTADOS_FLOW = ['recibido', 'en_preparacion', 'empacado', 'listo', 'en_ruta', 'entregado'];
-
-const ESTADO_LABELS: Record<string, string> = {
-  recibido: 'Recibido',
-  en_preparacion: 'En Preparación',
-  empacado: 'Empaquetado',
-  listo_para_servir: 'Listo p/ Mesero',
-  listo: 'Listo',
-  en_ruta: 'En Ruta',
-  entregado: 'Entregado',
-  en_camino: 'En Camino',
-  servido: 'Servido',
-};
-
-const ESTADO_COLORS: Record<string, string> = {
-  recibido: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  en_preparacion: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  empacado: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  listo_para_servir: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  listo: 'bg-green-500/10 text-green-400 border-green-500/20',
-  en_ruta: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
-  en_camino: 'bg-brand-500/10 text-brand-400 border-brand-500/20',
-  entregado: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-  servido: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-};
-
-const CANAL_BADGES: Record<string, { label: string; color: string }> = {
-  QR: { label: '🟡 QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
-  QR_REDES: { label: '🟢 Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' },
-  MESERO: { label: '🔵 Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-};
-
-// ========== Helper Functions ==========
-
-function getNextStatus(current: string, modalidad: string): string | null {
-  // For LOCAL/RETIRO: recibido → en_preparacion → empacado → listo (cocina done, goes to mesero)
-  if (modalidad === 'local' || modalidad === 'retiro') {
-    if (current === 'recibido') return 'en_preparacion';
-    if (current === 'en_preparacion') return 'empacado';
-    if (current === 'empacado') return 'listo';
-    return null; // Cocina's job ends here — mesero picks up
-  }
-
-  // For DOMICILIO: recibido → en_preparacion → empacado → en_camino → entregado
-  if (current === 'recibido') return 'en_preparacion';
-  if (current === 'en_preparacion') return 'empacado';
-  if (current === 'empacado') return 'en_camino';
-  if (current === 'en_camino') return 'entregado';
-  return null;
+function parseCanal(obs?: string): string {
+  if (!obs) return 'QR';
+  const m = obs.match(/\[(QR|QR_REDES|MESERO)\]/);
+  return m ? m[1] : 'QR';
 }
 
-function parseCanal(observaciones?: string): string {
-  if (!observaciones) return 'QR';
-  const match = observaciones.match(/\[(QR|QR_REDES|MESERO)\]/);
-  return match ? match[1] : 'QR';
+function getTimeSince(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Ahora';
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 }
 
-// ========== Component ==========
-
-export default function PedidosCocinaPage() {
+export default function CocinaPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [prevCount, setPrevCount] = useState(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const audioRef = useRef<AudioContext | null>(null);
+  const prevNewCount = useRef(0);
 
   const fetchPedidos = useCallback(async () => {
     try {
-      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'en_camino', 'listo', 'entregado', 'servido'];
+      const supabaseUrl = '/api/pedidos';
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir'];
       const results = await Promise.all(
         estados.map(async (estado) => {
-          const res = await fetch(`/api/pedidos?estado=${estado}`);
+          const res = await fetch(`${supabaseUrl}?estado=${estado}`);
           if (!res.ok) return [];
           const json = await res.json();
           return (json.data || []).map((p: Record<string, unknown>) => ({
@@ -100,9 +51,7 @@ export default function PedidosCocinaPage() {
             numero: p.numero as string,
             estado: p.estado as string || estado,
             modalidad: p.modalidad as string || 'local',
-            canal: parseCanal(p.observaciones as string | undefined),
             clienteNombre: p.clienteNombre as string || '',
-            clienteTelefono: p.clienteTelefono as string || '',
             items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
             total: p.total as number || 0,
             creadoEn: p.creadoEn as string || new Date().toISOString(),
@@ -112,69 +61,71 @@ export default function PedidosCocinaPage() {
         })
       );
 
-      const todosPedidos = results.flat() as Pedido[];
-      
-      // Sound notification on new orders
-      if (prevCount > 0 && todosPedidos.filter(p => p.estado === 'recibido').length > pedidos.filter(p => p.estado === 'recibido').length) {
-        reproducirSonido();
+      const todos = results.flat() as Pedido[];
+
+      // Sound on new recibido orders
+      const newCount = todos.filter(p => p.estado === 'recibido').length;
+      if (newCount > prevNewCount.current && prevNewCount.current > 0) {
+        playSound();
       }
-      setPrevCount(todosPedidos.filter(p => p.estado === 'recibido').length);
-      setPedidos(todosPedidos);
+      prevNewCount.current = newCount;
+
+      setPedidos(todos);
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, [prevCount, pedidos]);
-
-  const reproducirSonido = useCallback(() => {
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-        )();
-      }
-      const ctx = audioContextRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-
-      const now = ctx.currentTime;
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now);
-      gain1.gain.setValueAtTime(0.3, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.3);
-
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1174.66, now + 0.15);
-      gain2.gain.setValueAtTime(0, now);
-      gain2.gain.setValueAtTime(0.3, now + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(now + 0.15);
-      osc2.stop(now + 0.5);
-    } catch {
-      // Audio not available
-    }
   }, []);
 
   useEffect(() => {
     fetchPedidos();
-    const interval = setInterval(fetchPedidos, 10000);
+    const interval = setInterval(fetchPedidos, 8000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchPedidos]);
 
-  const handleAdvanceStatus = async (pedido: Pedido) => {
-    const next = getNextStatus(pedido.estado, pedido.modalidad);
+  // Auto-dismiss completed orders after 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCompletedIds(prev => {
+        const newSet = new Set(prev);
+        // Remove IDs that are no longer in pedidos (already disappeared)
+        for (const id of newSet) {
+          if (!pedidos.find(p => p.id === id)) {
+            newSet.delete(id);
+          }
+        }
+        return newSet;
+      });
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [pedidos]);
+
+  const playSound = () => {
+    try {
+      if (!audioRef.current) audioRef.current = new AudioContext();
+      const ctx = audioRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch { /* */ }
+  };
+
+  const advanceStatus = async (pedido: Pedido) => {
+    const nextMap: Record<string, string> = {
+      recibido: 'en_preparacion',
+      en_preparacion: 'empacado',
+      empacado: 'listo',
+    };
+    const next = nextMap[pedido.estado];
     if (!next) return;
 
     setUpdatingId(pedido.id);
@@ -184,168 +135,244 @@ export default function PedidosCocinaPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado: next }),
       });
+
+      // If marking as listo (listo_para_servir), track for auto-dismiss
+      if (next === 'listo') {
+        setCompletedIds(prev => new Set(prev).add(pedido.id));
+        setTimeout(() => {
+          setCompletedIds(prev => {
+            const s = new Set(prev);
+            s.delete(pedido.id);
+            return s;
+          });
+        }, 60000);
+      }
+
       await fetchPedidos();
-    } catch {
-      // silent
-    } finally {
-      setUpdatingId(null);
-    }
+    } catch { /* */ }
+    finally { setUpdatingId(null); }
   };
 
-  // Active orders (not entregado/servido, and not listo_para_servir/listo-for-local/retiro)
-  const pedidosActivos = pedidos.filter(p =>
-    !['entregado', 'servido', 'cancelado', 'listo_para_servir'].includes(p.estado) &&
-    !(p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
-  );
-
-  const pedidosCompletados = pedidos.filter(p =>
-    p.estado === 'entregado' ||
-    p.estado === 'servido' ||
-    p.estado === 'listo_para_servir' ||
-    (p.estado === 'listo' && (p.modalidad === 'local' || p.modalidad === 'retiro'))
-  );
+  // Categorize
+  const nuevas = pedidos.filter(p => p.estado === 'recibido');
+  const cocinando = pedidos.filter(p => p.estado === 'en_preparacion');
+  const empacado = pedidos.filter(p => p.estado === 'empacado');
+  const listas = pedidos.filter(p => p.estado === 'listo_para_servir' && !completedIds.has(p.id));
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Cargando pedidos...</p>
-        </div>
+      <div className="flex items-center justify-center h-[calc(100vh-56px)]">
+        <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              <span className="text-3xl">👨‍🍳</span>
-              Cocina / Pedidos
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {pedidosActivos.length} pedidos activos &bull; Auto-refresco cada 10s
-            </p>
+    <div className="h-[calc(100vh-56px)] overflow-hidden p-4 sm:p-6">
+      {/* Stats bar */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-red-400 animate-pulse" />
+            <span className="text-xs text-gray-400">Nuevas: <span className="text-white font-bold">{nuevas.length}</span></span>
           </div>
-          <button
-            onClick={fetchPedidos}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white transition-all duration-200"
-          >
-            🔄 Actualizar
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-amber-400" />
+            <span className="text-xs text-gray-400">Cocinando: <span className="text-white font-bold">{cocinando.length}</span></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-purple-400" />
+            <span className="text-xs text-gray-400">Empacando: <span className="text-white font-bold">{empacado.length}</span></span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-green-400" />
+            <span className="text-xs text-gray-400">Listas: <span className="text-white font-bold">{listas.length}</span></span>
+          </div>
         </div>
+        <button
+          onClick={fetchPedidos}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all"
+        >
+          🔄 Actualizar
+        </button>
+      </div>
 
-        {/* Active Orders */}
-        {pedidosActivos.length === 0 ? (
-          <div className="rounded-xl bg-[#16161f] border border-white/5 p-12 text-center">
-            <span className="text-5xl block mb-3">🎉</span>
-            <p className="text-gray-400">No hay pedidos pendientes</p>
+      {/* Kanban columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100%-48px)] overflow-hidden">
+        {/* Column: Nuevas Órdenes */}
+        <Column
+          title="🔴 Nuevas Órdenes"
+          color="border-red-500/30"
+          headerColor="text-red-400"
+          pedidos={nuevas}
+          buttonLabel="→ Preparar"
+          buttonColor="bg-amber-500 hover:bg-amber-400"
+          onAdvance={advanceStatus}
+          updatingId={updatingId}
+        />
+
+        {/* Column: Cocinando */}
+        <Column
+          title="🟡 Cocinando"
+          color="border-amber-500/30"
+          headerColor="text-amber-400"
+          pedidos={cocinando}
+          buttonLabel="→ Empacar"
+          buttonColor="bg-purple-500 hover:bg-purple-400"
+          onAdvance={advanceStatus}
+          updatingId={updatingId}
+        />
+
+        {/* Column: Empacando */}
+        <Column
+          title="🟣 Empacando"
+          color="border-purple-500/30"
+          headerColor="text-purple-400"
+          pedidos={empacado}
+          buttonLabel="✓ Listo para mesero"
+          buttonColor="bg-green-500 hover:bg-green-400"
+          onAdvance={advanceStatus}
+          updatingId={updatingId}
+        />
+
+        {/* Column: Listas (auto-dismiss after 1 min) */}
+        <Column
+          title="🟢 Entregadas a Mesero"
+          color="border-green-500/30"
+          headerColor="text-green-400"
+          pedidos={listas}
+          buttonLabel=""
+          buttonColor=""
+          onAdvance={() => {}}
+          updatingId={null}
+          readonly
+        />
+      </div>
+    </div>
+  );
+}
+
+function Column({
+  title,
+  color,
+  headerColor,
+  pedidos,
+  buttonLabel,
+  buttonColor,
+  onAdvance,
+  updatingId,
+  readonly = false,
+}: {
+  title: string;
+  color: string;
+  headerColor: string;
+  pedidos: Pedido[];
+  buttonLabel: string;
+  buttonColor: string;
+  onAdvance: (p: Pedido) => void;
+  updatingId: string | null;
+  readonly?: boolean;
+}) {
+  return (
+    <div className={`flex flex-col rounded-xl bg-[#111118] border ${color} overflow-hidden`}>
+      {/* Column header */}
+      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+        <h2 className={`text-xs font-bold uppercase tracking-wider ${headerColor}`}>{title}</h2>
+        <span className="text-xs text-gray-500 font-mono">{pedidos.length}</span>
+      </div>
+
+      {/* Column body — scrollable */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {pedidos.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600 text-xs">Sin pedidos</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pedidosActivos.map((pedido) => {
-              const nextStatus = getNextStatus(pedido.estado, pedido.modalidad);
-              const canal = CANAL_BADGES[pedido.canal || 'QR'] || CANAL_BADGES.QR;
-
-              return (
-                <div
-                  key={pedido.id}
-                  className="rounded-xl bg-[#16161f] border border-white/5 overflow-hidden hover:border-brand-400/20 transition-all duration-200"
-                >
-                  {/* Card header */}
-                  <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ESTADO_COLORS[pedido.estado] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
-                      {ESTADO_LABELS[pedido.estado] || pedido.estado}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${pedido.mesaZona ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' : canal.color}`}>
-                      {pedido.mesaZona ? `🟡 ${pedido.mesaZona.split(' - ')[0]}` : canal.label}
-                    </span>
-                  </div>
-
-                  {/* Card body */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-white">#{pedido.numero}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(pedido.creadoEn).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-
-                    {/* Client info */}
-                    {pedido.clienteNombre && (
-                      <p className="text-xs text-gray-400">
-                        👤 {pedido.clienteNombre}
-                        {pedido.mesaZona && <span className="ml-2 text-brand-400">📍 {pedido.mesaZona}</span>}
-                      </p>
-                    )}
-
-                    {/* Modalidad */}
-                    <p className="text-xs text-gray-500 capitalize">
-                      {pedido.modalidad === 'domicilio' ? '🛵 A domicilio' :
-                       pedido.modalidad === 'retiro' ? '🏪 Retiro en sucursal' :
-                       '🏠 Comer aquí'}
-                    </p>
-
-                    {/* Items */}
-                    <div className="space-y-1 pt-2 border-t border-white/5">
-                      {pedido.items?.slice(0, 4).map((item, i) => (
-                        <div key={i} className="flex justify-between text-xs">
-                          <span className="text-gray-300">{item.cantidad}x {item.nombre}</span>
-                          <span className="text-gray-500">${(item.cantidad * item.precioUnitario).toFixed(0)}</span>
-                        </div>
-                      ))}
-                      {(pedido.items?.length || 0) > 4 && (
-                        <p className="text-[10px] text-gray-600">+{(pedido.items?.length || 0) - 4} más...</p>
-                      )}
-                    </div>
-
-                    {/* Total */}
-                    <div className="flex justify-between items-center pt-2 border-t border-white/5">
-                      <span className="text-xs text-gray-500">Total</span>
-                      <span className="text-sm font-bold text-brand-400">${pedido.total?.toFixed(2)}</span>
-                    </div>
-
-                    {/* Next status button */}
-                    {nextStatus && (
-                      <button
-                        onClick={() => handleAdvanceStatus(pedido)}
-                        disabled={updatingId === pedido.id}
-                        className="w-full mt-2 px-4 py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-400 to-brand-500 shadow-lg shadow-brand-500/20 hover:shadow-xl disabled:opacity-50 transition-all duration-200 active:scale-[0.98]"
-                      >
-                        {updatingId === pedido.id ? 'Actualizando...' : `→ ${ESTADO_LABELS[nextStatus] || nextStatus}`}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Completed Today */}
-        {pedidosCompletados.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
-              Completados ({pedidosCompletados.length})
-            </h2>
-            <div className="rounded-xl bg-[#16161f] border border-white/5 divide-y divide-white/5">
-              {pedidosCompletados.slice(0, 10).map((p) => (
-                <div key={p.id} className="px-4 py-3 flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-green-400">✓</span>
-                    <span className="text-white font-medium">#{p.numero}</span>
-                    <span className="text-xs text-gray-500 capitalize">{p.modalidad}</span>
-                  </div>
-                  <span className="text-brand-400 font-medium">${p.total?.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          pedidos.map(pedido => (
+            <OrderCard
+              key={pedido.id}
+              pedido={pedido}
+              buttonLabel={buttonLabel}
+              buttonColor={buttonColor}
+              onAdvance={() => onAdvance(pedido)}
+              updating={updatingId === pedido.id}
+              readonly={readonly}
+            />
+          ))
         )}
       </div>
+    </div>
+  );
+}
+
+function OrderCard({
+  pedido,
+  buttonLabel,
+  buttonColor,
+  onAdvance,
+  updating,
+  readonly,
+}: {
+  pedido: Pedido;
+  buttonLabel: string;
+  buttonColor: string;
+  onAdvance: () => void;
+  updating: boolean;
+  readonly: boolean;
+}) {
+  const canal = parseCanal(pedido.observaciones);
+
+  return (
+    <div className="rounded-lg bg-[#0d0d14] border border-white/5 p-3 hover:border-white/10 transition-all">
+      {/* Header: number + mesa + time */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-white">#{pedido.numero.split('-').pop()}</span>
+          {pedido.mesaZona && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">
+              📍 {pedido.mesaZona.split(' - ')[0]}
+            </span>
+          )}
+        </div>
+        <span className="text-[9px] text-gray-500">{getTimeSince(pedido.creadoEn)}</span>
+      </div>
+
+      {/* Modalidad + Canal */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[9px] text-gray-500">
+          {pedido.modalidad === 'domicilio' ? '🛵 Domicilio' : pedido.modalidad === 'retiro' ? '🛍️ Llevar' : '🍽️ Local'}
+        </span>
+        <span className="text-[9px] text-gray-600">
+          {canal === 'QR' ? 'vía QR' : canal === 'MESERO' ? 'vía Mesero' : 'vía Redes'}
+        </span>
+      </div>
+
+      {/* Items */}
+      <div className="space-y-0.5 mb-2">
+        {pedido.items.map((item, i) => (
+          <p key={i} className="text-[11px] text-gray-300">
+            <span className="text-brand-400 font-bold">{item.cantidad}x</span> {item.nombre}
+          </p>
+        ))}
+      </div>
+
+      {/* Action button */}
+      {!readonly && buttonLabel && (
+        <button
+          onClick={onAdvance}
+          disabled={updating}
+          className={`w-full mt-2 py-2 rounded-lg text-xs font-bold text-black ${buttonColor} disabled:opacity-50 transition-all active:scale-[0.97]`}
+        >
+          {updating ? '...' : buttonLabel}
+        </button>
+      )}
+
+      {/* Readonly status */}
+      {readonly && (
+        <div className="mt-2 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+          <span className="text-[10px] text-green-400 font-medium">✓ Esperando mesero</span>
+        </div>
+      )}
     </div>
   );
 }
