@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError } from '@/app/api/_lib/errorHandler';
-import { getContainer } from '@/shared/container';
-import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
-import { RecursoNoEncontradoError } from '@/shared/errors';
 
 export const dynamic = 'force-dynamic';
-import { EstadoPedido } from '@/domain/value-objects';
+
+function getSupabaseConfig() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  return { url, key };
+}
 
 /**
  * GET /api/pedidos/[id]
- * Obtiene un pedido por su ID.
- * Joins pedido_detalle with producto to include product names.
- * Requirements: 7.1
+ * Obtiene un pedido por su ID con detalles y nombres de producto.
+ * Usa fetch directo a Supabase REST (sin SDK cache).
  */
 export async function GET(
   request: NextRequest,
@@ -19,40 +19,44 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const supabase = createServerClient();
+    const { url, key } = getSupabaseConfig();
 
-    const { data, error } = await supabase
-      .from('pedido')
-      .select('*, pedido_detalle(*, producto:producto_id(nombre))')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw new RecursoNoEncontradoError('Pedido', id);
+    const res = await fetch(
+      `${url}/rest/v1/pedido?id=eq.${id}&select=*,pedido_detalle(*,producto:producto_id(nombre))`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        cache: 'no-store',
       }
-      throw new Error(error.message);
+    );
+
+    if (!res.ok) {
+      return NextResponse.json({ error: { message: 'Error al obtener pedido' } }, { status: 500 });
     }
 
-    // Map to include product names in items
+    const data = await res.json();
+    if (!data || data.length === 0) {
+      return NextResponse.json({ error: { message: 'Pedido no encontrado' } }, { status: 404 });
+    }
+
+    const p = data[0];
     const pedido = {
-      id: data.id,
-      numero: data.numero,
-      estado: data.estado,
-      modalidad: data.modalidad,
-      total: data.total,
-      subtotal: data.subtotal,
-      impuestos: data.impuestos,
-      mesaZona: data.mesa_zona,
-      observaciones: data.observaciones,
-      estadoPago: data.estado_pago,
-      metodoPago: data.metodo_pago,
-      meseroId: data.mesero_id,
-      meseroNombre: data.mesero_nombre,
-      clienteId: data.cliente_id,
-      creadoEn: data.creado_en,
-      actualizadoEn: data.actualizado_en,
-      items: (Array.isArray(data.pedido_detalle) ? data.pedido_detalle : []).map((d: Record<string, unknown>) => ({
+      id: p.id,
+      numero: p.numero,
+      estado: p.estado,
+      modalidad: p.modalidad,
+      total: p.total,
+      subtotal: p.subtotal,
+      impuestos: p.impuestos,
+      mesaZona: p.mesa_zona,
+      observaciones: p.observaciones,
+      estadoPago: p.estado_pago,
+      metodoPago: p.metodo_pago,
+      meseroId: p.mesero_id,
+      meseroNombre: p.mesero_nombre,
+      clienteId: p.cliente_id,
+      creadoEn: p.creado_en,
+      actualizadoEn: p.actualizado_en,
+      items: (Array.isArray(p.pedido_detalle) ? p.pedido_detalle : []).map((d: Record<string, unknown>) => ({
         productoId: d.producto_id,
         nombre: (d.producto as Record<string, unknown> | null)?.nombre || 'Producto',
         cantidad: d.cantidad,
@@ -63,17 +67,22 @@ export async function GET(
       })),
     };
 
-    return NextResponse.json({ data: pedido });
+    return NextResponse.json({ data: pedido }, {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+    });
   } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json(
+      { error: { message: error instanceof Error ? error.message : 'Error' } },
+      { status: 500 }
+    );
   }
 }
 
 /**
  * PUT /api/pedidos/[id]
- * Actualiza el estado de un pedido, estado de pago, y/o método de pago.
- * Body: { estado?: string, estadoPago?: string, metodoPago?: string }
- * Requirements: 7.4, 14.2
+ * Actualiza estado, pago, y/o mesero de un pedido.
+ * Usa fetch directo a Supabase REST (sin SDK cache).
+ * Valida transiciones de estado antes de actualizar.
  */
 export async function PUT(
   request: NextRequest,
@@ -82,11 +91,9 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
+    const { url, key } = getSupabaseConfig();
 
-    const container = getContainer();
-    const pedidoRepo = container.getPedidoRepository();
-
-    // Handle estado_pago and metodo_pago updates (for Caja module)
+    // Handle estado_pago, metodo_pago, mesero updates
     if (body.estadoPago || body.metodoPago || body.meseroId !== undefined || body.meseroNombre !== undefined) {
       const updateFields: Record<string, unknown> = {};
       if (body.estadoPago) updateFields.estado_pago = body.estadoPago;
@@ -94,31 +101,17 @@ export async function PUT(
       if (body.meseroId !== undefined) updateFields.mesero_id = body.meseroId;
       if (body.meseroNombre !== undefined) updateFields.mesero_nombre = body.meseroNombre;
 
-      // Direct update via the repository's underlying client
-      // Since the PedidoMapper.toPartialDb doesn't handle these fields,
-      // we do a raw update through the repo's actualizar method with observaciones hack
-      // Actually let's use the pedidoRepo.actualizar with the fields we can update
-      const pedido = await pedidoRepo.obtenerPorId(id);
-      if (!pedido) {
-        throw new RecursoNoEncontradoError('Pedido', id);
+      const updateRes = await fetch(`${url}/rest/v1/pedido?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify(updateFields),
+        cache: 'no-store',
+      });
+
+      if (!updateRes.ok) {
+        return NextResponse.json({ error: { message: await updateRes.text() } }, { status: 500 });
       }
 
-      // For payment status, we need to update the DB directly
-      // Use the Supabase client directly for estado_pago and metodo_pago
-      const client = createServerClient();
-      const { error } = await client
-        .from('pedido')
-        .update(updateFields)
-        .eq('id', id);
-
-      if (error) {
-        return NextResponse.json(
-          { error: { code: 'UPDATE_ERROR', message: error.message } },
-          { status: 500 }
-        );
-      }
-
-      // If also updating estado (order status), handle it below
       if (!body.estado) {
         return NextResponse.json({ data: { id, ...updateFields } });
       }
@@ -126,38 +119,69 @@ export async function PUT(
 
     // Handle order estado update
     if (body.estado) {
-      const estadoMap: Record<string, EstadoPedido> = {
-        recibido: EstadoPedido.RECIBIDO,
-        en_preparacion: EstadoPedido.EN_PREPARACION,
-        empacado: EstadoPedido.EMPACADO,
-        listo_para_servir: EstadoPedido.LISTO_PARA_SERVIR,
-        servido: EstadoPedido.SERVIDO,
-        en_camino: EstadoPedido.EN_CAMINO,
-        entregado: EstadoPedido.ENTREGADO,
+      const VALID_TRANSITIONS: Record<string, string[]> = {
+        recibido: ['en_preparacion'],
+        en_preparacion: ['empacado'],
+        empacado: ['listo_para_servir', 'en_camino'],
+        listo_para_servir: ['servido'],
+        servido: [],
+        en_camino: ['entregado'],
+        entregado: [],
       };
 
-      // Also handle listo -> map to LISTO_PARA_SERVIR for local orders (cocina marks listo)
-      const estadoKey = body.estado === 'listo' ? 'listo_para_servir' : body.estado;
-      const nuevoEstado = estadoMap[estadoKey];
+      const targetEstado = body.estado === 'listo' ? 'listo_para_servir' : body.estado;
 
-      if (!nuevoEstado) {
+      if (!Object.keys(VALID_TRANSITIONS).includes(targetEstado) && !['servido', 'entregado'].includes(targetEstado)) {
         return NextResponse.json(
           { error: { code: 'ESTADO_INVALIDO', message: `Estado no válido: ${body.estado}` } },
           { status: 400 }
         );
       }
 
-      const useCase = container.getActualizarEstadoPedido();
-      await useCase.ejecutar(id, nuevoEstado);
+      // Read current state directly from DB
+      const getRes = await fetch(`${url}/rest/v1/pedido?id=eq.${id}&select=estado`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        cache: 'no-store',
+      });
+      const pedidoArr = await getRes.json();
 
-      return NextResponse.json({ data: { id, estado: body.estado } });
+      if (!pedidoArr || pedidoArr.length === 0) {
+        return NextResponse.json({ error: { message: 'Pedido no encontrado' } }, { status: 404 });
+      }
+
+      const currentEstado = pedidoArr[0].estado;
+      const allowed = VALID_TRANSITIONS[currentEstado] || [];
+
+      if (!allowed.includes(targetEstado)) {
+        return NextResponse.json(
+          { error: { code: 'TRANSICION_ESTADO_INVALIDA', message: `No se puede cambiar de "${currentEstado}" a "${targetEstado}". Válidos: ${allowed.join(', ') || 'ninguno (estado terminal)'}` } },
+          { status: 422 }
+        );
+      }
+
+      // Update
+      const updateRes = await fetch(`${url}/rest/v1/pedido?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ estado: targetEstado, actualizado_en: new Date().toISOString() }),
+        cache: 'no-store',
+      });
+
+      if (!updateRes.ok) {
+        return NextResponse.json({ error: { message: await updateRes.text() } }, { status: 500 });
+      }
+
+      return NextResponse.json({ data: { id, estado: targetEstado } });
     }
 
     return NextResponse.json(
-      { error: { code: 'CAMPOS_REQUERIDOS', message: 'Se requiere al menos estado, estadoPago, o metodoPago' } },
+      { error: { message: 'Se requiere al menos estado, estadoPago, o metodoPago' } },
       { status: 400 }
     );
   } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json(
+      { error: { message: error instanceof Error ? error.message : 'Error' } },
+      { status: 500 }
+    );
   }
 }
