@@ -416,7 +416,7 @@ function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string;
 
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/pedidos/${pedidoId}`);
+        const res = await fetch(`/api/pedidos/${pedidoId}/estado`);
         if (res.ok) {
           const json = await res.json();
           const pedidoData = json?.data || json;
@@ -647,7 +647,7 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
 
     const fetchStatus = async () => {
       try {
-        const res = await fetch(`/api/pedidos/${pedidoId}`);
+        const res = await fetch(`/api/pedidos/${pedidoId}/estado`);
         if (res.ok) {
           const json = await res.json();
           const pedidoData = json?.data || json;
