@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../_lib/errorHandler';
 import { verificarAutenticacion, verificarRol } from '../_lib/auth';

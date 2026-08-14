@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { getContainer } from '@/shared/container';

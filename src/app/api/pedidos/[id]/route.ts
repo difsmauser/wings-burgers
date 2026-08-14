@@ -3,6 +3,8 @@ import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { getContainer } from '@/shared/container';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 import { RecursoNoEncontradoError } from '@/shared/errors';
+
+export const dynamic = 'force-dynamic';
 import { EstadoPedido } from '@/domain/value-objects';
 
 /**

@@ -387,18 +387,18 @@ function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string;
 
   const pasos = modalidad === 'DOMICILIO'
     ? [
-        { key: 'recibido', label: 'Recibido', icon: '📋' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦' },
-        { key: 'en_camino', label: 'En camino', icon: '🛵' },
-        { key: 'entregado', label: 'Entregado', icon: '✅' },
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por el restaurante' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Tu comida se está preparando' },
+        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Listo para enviar' },
+        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'El repartidor va hacia ti' },
+        { key: 'entregado', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
       ]
     : [
-        { key: 'recibido', label: 'Recibido', icon: '📋' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦' },
-        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️' },
-        { key: 'listo', label: 'Listo', icon: '✅' },
+        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
+        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando tu pedido' },
+        { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
+        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
+        { key: 'listo', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
       ];
 
   const mapEstado = (apiEstado: string): string => {
@@ -439,29 +439,37 @@ function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string;
   }, [pedidoId, polling]);
 
   const currentIdx = pasos.findIndex(p => p.key === estado);
+  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
 
   return (
-    <div className="rounded-lg bg-[#0d0d14] border border-white/5 p-3">
-      {/* Order number + compact progress */}
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-xl bg-[#0d0d14] border border-white/5 p-4">
+      {/* Order number + status */}
+      <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-bold text-white">
           {numero ? `#${numero}` : 'Pedido'}
         </span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
           estado === 'listo' || estado === 'entregado'
             ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+            : estado === 'en_preparacion'
+            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+            : estado === 'empacado' || estado === 'en_camino_mesa'
+            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
             : 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
         }`}>
-          {pasos[currentIdx >= 0 ? currentIdx : 0]?.label}
+          {currentPaso.icon} {currentPaso.label}
         </span>
       </div>
 
-      {/* Compact progress bar */}
+      {/* Description */}
+      <p className="text-[11px] text-gray-400 mb-3">{currentPaso.desc}</p>
+
+      {/* Progress bar */}
       <div className="flex items-center gap-1">
         {pasos.map((paso, idx) => (
           <div
             key={paso.key}
-            className={`flex-1 h-1.5 rounded-full transition-all duration-500 ${
+            className={`flex-1 h-2 rounded-full transition-all duration-500 ${
               idx <= currentIdx ? 'bg-brand-400' : 'bg-white/5'
             }`}
           />
@@ -477,7 +485,7 @@ function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string;
       )}
       {!polling && (
         <p className="mt-2 text-[10px] text-green-400 font-medium">
-          {estado === 'entregado' ? '✅ Entregado' : '✅ Listo'}
+          {currentPaso.icon} {currentPaso.desc}
         </p>
       )}
     </div>

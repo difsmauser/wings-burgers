@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 

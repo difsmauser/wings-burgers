@@ -4,6 +4,8 @@ import { getContainer } from '@/shared/container';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 import type { EstadoPedido } from '@/shared/domain-types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/pedidos?estado=recibido
  * Lista pedidos filtrados por estado.
