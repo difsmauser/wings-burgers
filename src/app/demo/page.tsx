@@ -329,8 +329,8 @@ export default function DemoPage() {
                 <div className="flex items-center justify-between py-1">
                   <span className="text-gray-400">Captura de pedido (tomar orden)</span>
                   <div className="flex items-center gap-2">
-                    <code className="text-brand-400">{baseUrl}/pedidos/captura</code>
-                    <CopyButton text={`${baseUrl}/pedidos/captura`} />
+                    <code className="text-brand-400">{baseUrl}/mesero/captura</code>
+                    <CopyButton text={`${baseUrl}/mesero/captura`} />
                   </div>
                 </div>
               </div>

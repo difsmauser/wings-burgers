@@ -522,7 +522,7 @@ export default function MeseroPage() {
         {/* Link to capture (mesero can also take orders) */}
         <div className="pt-4 border-t border-white/5">
           <button
-            onClick={() => router.push('/pedidos/captura')}
+            onClick={() => router.push('/mesero/captura')}
             className="w-full py-3 rounded-xl text-sm font-medium text-brand-400 bg-brand-500/5 border border-brand-400/20 hover:bg-brand-500/10 transition-all"
           >
             📝 Tomar nueva orden de cliente

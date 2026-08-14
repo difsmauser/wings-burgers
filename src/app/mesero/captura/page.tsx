@@ -153,10 +153,10 @@ export default function CapturaPage() {
             <p className="text-sm text-gray-500 mt-1">Toma de orden por mesero</p>
           </div>
           <button
-            onClick={() => router.push('/pedidos')}
+            onClick={() => router.push('/mesero')}
             className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all duration-200"
           >
-            &larr; Volver a Pedidos
+            &larr; Volver al panel
           </button>
         </div>
 
