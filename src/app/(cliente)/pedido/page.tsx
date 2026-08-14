@@ -658,10 +658,18 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 
       {/* Summary */}
       {todosListos && (
-        <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-          <p className="text-xs text-green-400 font-medium">
-            🎉 ¡Todos tus pedidos están listos!
-          </p>
+        <div className="mt-3 space-y-3">
+          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+            <p className="text-xs text-green-400 font-medium">
+              🎉 ¡Todos tus pedidos están listos!
+            </p>
+          </div>
+          <a
+            href="/pagar"
+            className="block w-full py-4 rounded-2xl font-bold text-base text-center text-black bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 shadow-xl shadow-brand-500/20 hover:shadow-2xl transition-all active:scale-[0.97]"
+          >
+            💳 Pagar — {formatPrecio(totalMesa)}
+          </a>
         </div>
       )}
 

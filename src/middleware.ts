@@ -56,6 +56,7 @@ function isPublicPath(pathname: string): boolean {
   if (
     pathname.startsWith('/menu') ||
     pathname === '/pedido' ||
+    pathname.startsWith('/pagar') ||
     pathname.startsWith('/pago') ||
     pathname.startsWith('/rastreo') ||
     pathname.startsWith('/mesero') ||

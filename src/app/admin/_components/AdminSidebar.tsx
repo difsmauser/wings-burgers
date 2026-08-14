@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/admin/meseros', label: 'Meseros', icon: '🧑‍🍳' },
   { href: '/admin/productos', label: 'Productos', icon: '🍗' },
   { href: '/admin/categorias', label: 'Categorías', icon: '📂' },
+  { href: '/admin/cuentas-bancarias', label: 'Cuentas Bancarias', icon: '🏦' },
   { href: '/admin/inventario', label: 'Inventario', icon: '📦' },
   { href: '/admin/gastos', label: 'Gastos', icon: '💰' },
   { href: '/admin/cortes', label: 'Cortes', icon: '📈' },
