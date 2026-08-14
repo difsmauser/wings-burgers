@@ -8,10 +8,20 @@ interface Gasto {
   concepto: string;
   categoria: string;
   fecha: string;
-  creadoEn: string;
+  creadoEn?: string;
 }
 
-const CATEGORIAS_GASTO = ['insumos', 'servicios', 'nomina', 'mantenimiento', 'repartidor', 'marketing', 'otros'];
+const CATEGORIAS = [
+  { value: 'insumos', label: 'Insumos', icon: '🥩' },
+  { value: 'servicios', label: 'Servicios', icon: '💡' },
+  { value: 'nomina', label: 'Nómina', icon: '👥' },
+  { value: 'mantenimiento', label: 'Mantenimiento', icon: '🔧' },
+  { value: 'repartidor', label: 'Repartidor', icon: '🛵' },
+  { value: 'marketing', label: 'Marketing', icon: '📢' },
+  { value: 'otros', label: 'Otros', icon: '📎' },
+];
+
+type FiltroCategoria = string | 'todas';
 
 export default function GastosPage() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -19,147 +29,204 @@ export default function GastosPage() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filtroCategoria, setFiltroCategoria] = useState('todas');
-  
+  const [filtro, setFiltro] = useState<FiltroCategoria>('todas');
+
   // Form
   const [monto, setMonto] = useState('');
   const [concepto, setConcepto] = useState('');
   const [categoria, setCategoria] = useState('insumos');
-  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
 
   const fetchGastos = useCallback(async () => {
     try {
       const res = await fetch('/api/gastos');
-      if (res.ok) {
-        const data = await res.json();
-        setGastos(data?.data ?? []);
-      }
-    } catch {} finally { setLoading(false); }
+      if (res.ok) { const j = await res.json(); setGastos(j.data || []); }
+    } catch { /* */ }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchGastos(); }, [fetchGastos]);
 
-  const handleCrear = async () => {
-    if (!monto.trim() || !concepto.trim()) { setError('Monto y concepto son requeridos'); return; }
+  const handleGuardar = async () => {
+    if (!monto || !concepto.trim()) { setError('Monto y concepto requeridos'); return; }
     setSaving(true); setError(null);
     try {
       const res = await fetch('/api/gastos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monto: parseFloat(monto), concepto: concepto.trim(), categoria, fecha }),
+        body: JSON.stringify({ monto: parseFloat(monto), concepto, categoria, fecha }),
       });
-      if (!res.ok) { const e = await res.json().catch(() => null); throw new Error(e?.error?.message || 'Error'); }
-      setShowModal(false); setMonto(''); setConcepto(''); setCategoria('insumos'); setFecha(new Date().toISOString().split('T')[0]);
-      fetchGastos();
+      if (!res.ok) throw new Error('Error al guardar');
+      setShowModal(false); setMonto(''); setConcepto(''); setCategoria('insumos');
+      setFecha(new Date().toISOString().slice(0, 10)); fetchGastos();
     } catch (err) { setError(err instanceof Error ? err.message : 'Error'); }
     finally { setSaving(false); }
   };
 
-  // Filtered gastos
-  const gastosFiltrados = filtroCategoria === 'todas' ? gastos : gastos.filter(g => g.categoria === filtroCategoria);
+  const handleEliminar = async (id: string) => {
+    await fetch(`/api/gastos?id=${id}`, { method: 'DELETE' });
+    fetchGastos();
+  };
 
-  // Totals
-  const totalGeneral = gastos.reduce((sum, g) => sum + g.monto, 0);
-  const totalHoy = gastos.filter(g => g.fecha === new Date().toISOString().split('T')[0]).reduce((sum, g) => sum + g.monto, 0);
-  const totalMes = gastos.filter(g => g.fecha?.startsWith(new Date().toISOString().slice(0, 7))).reduce((sum, g) => sum + g.monto, 0);
+  // Filter & calculations
+  const gastosFiltrados = filtro === 'todas' ? gastos : gastos.filter(g => g.categoria === filtro);
+  const totalFiltrado = gastosFiltrados.reduce((s, g) => s + g.monto, 0);
+  const totalMes = gastos.filter(g => {
+    const d = new Date(g.fecha);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).reduce((s, g) => s + g.monto, 0);
+
+  // By category totals
+  const porCategoria: Record<string, number> = {};
+  gastos.forEach(g => { porCategoria[g.categoria] = (porCategoria[g.categoria] || 0) + g.monto; });
+  const maxCategoria = Math.max(...Object.values(porCategoria), 1);
+
+  const fmt = (v: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v);
+  const getCatInfo = (cat: string) => CATEGORIAS.find(c => c.value === cat) || { icon: '📎', label: cat };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
+    </div>
+  );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Gastos</h1>
-          <p className="text-sm text-gray-500 mt-1">Registro y control de gastos operativos</p>
+          <p className="text-sm text-gray-500 mt-0.5">Control de egresos del negocio</p>
         </div>
-        <button onClick={() => { setError(null); setShowModal(true); }} className="px-4 py-2.5 rounded-lg text-sm font-medium text-black gradient-brand shadow-lg shadow-brand-500/20 hover:shadow-xl transition-all duration-200">
+        <button onClick={() => setShowModal(true)} className="px-4 py-2.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-400 to-brand-600 shadow-lg shadow-brand-500/20 hover:shadow-xl transition-all active:scale-[0.97]">
           + Registrar Gasto
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
-          <p className="text-xs text-gray-500">Gastos Hoy</p>
-          <p className="text-2xl font-bold text-red-400 mt-1">${totalHoy.toFixed(2)}</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl bg-[#16161f] border border-red-500/20 p-4">
+          <p className="text-[10px] text-gray-500">Total del Mes</p>
+          <p className="text-xl font-bold text-red-400">{fmt(totalMes)}</p>
         </div>
         <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
-          <p className="text-xs text-gray-500">Gastos este Mes</p>
-          <p className="text-2xl font-bold text-amber-400 mt-1">${totalMes.toFixed(2)}</p>
+          <p className="text-[10px] text-gray-500">Registros</p>
+          <p className="text-xl font-bold text-white">{gastos.length}</p>
         </div>
         <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
-          <p className="text-xs text-gray-500">Total Registrado</p>
-          <p className="text-2xl font-bold text-white mt-1">${totalGeneral.toFixed(2)}</p>
+          <p className="text-[10px] text-gray-500">Categorías</p>
+          <p className="text-xl font-bold text-white">{Object.keys(porCategoria).length}</p>
+        </div>
+        <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
+          <p className="text-[10px] text-gray-500">Filtrado</p>
+          <p className="text-xl font-bold text-brand-400">{fmt(totalFiltrado)}</p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        {['todas', ...CATEGORIAS_GASTO].map(cat => (
-          <button key={cat} onClick={() => setFiltroCategoria(cat)} className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${filtroCategoria === cat ? 'bg-brand-500/10 text-brand-400 border border-brand-500/20' : 'text-gray-400 bg-[#16161f] border border-white/5 hover:text-white'}`}>
-            {cat}
-          </button>
-        ))}
+      {/* Category breakdown */}
+      <div className="rounded-xl bg-[#16161f] border border-white/5 p-5">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Gastos por Categoría</h3>
+        <div className="space-y-3">
+          {CATEGORIAS.filter(c => porCategoria[c.value]).map(cat => (
+            <div key={cat.value}>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-400">{cat.icon} {cat.label}</span>
+                <span className="text-white font-medium">{fmt(porCategoria[cat.value] || 0)}</span>
+              </div>
+              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-red-400/80 transition-all duration-500" style={{ width: `${((porCategoria[cat.value] || 0) / maxCategoria) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Gastos List */}
-      <div className="rounded-xl bg-[#16161f] border border-white/5 overflow-hidden">
+      {/* Filter + Table */}
+      <div className="rounded-xl bg-[#16161f] border border-white/5 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Registros</h3>
+          <div className="flex gap-1">
+            <button onClick={() => setFiltro('todas')} className={`px-3 py-1 rounded-lg text-[10px] font-medium transition-all ${filtro === 'todas' ? 'bg-brand-500 text-black' : 'text-gray-400 hover:text-white bg-white/5'}`}>Todas</button>
+            {CATEGORIAS.map(c => (
+              <button key={c.value} onClick={() => setFiltro(c.value)} className={`px-2 py-1 rounded-lg text-[10px] transition-all ${filtro === c.value ? 'bg-brand-500 text-black' : 'text-gray-400 hover:text-white bg-white/5'}`} title={c.label}>{c.icon}</button>
+            ))}
+          </div>
+        </div>
+
         {gastosFiltrados.length === 0 ? (
-          <div className="p-12 text-center"><span className="text-4xl block mb-3">💸</span><p className="text-gray-400 text-sm">No hay gastos registrados</p></div>
+          <p className="text-xs text-gray-600 text-center py-8">Sin gastos registrados</p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">Concepto</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                <th className="text-right px-5 py-3 text-xs font-medium text-gray-500 uppercase">Monto</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {gastosFiltrados.map(g => (
-                <tr key={g.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-5 py-3 text-sm text-white">{g.concepto}</td>
-                  <td className="px-5 py-3"><span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-gray-300 capitalize">{g.categoria}</span></td>
-                  <td className="px-5 py-3 text-sm text-gray-400">{g.fecha}</td>
-                  <td className="px-5 py-3 text-sm font-bold text-red-400 text-right">-${g.monto.toFixed(2)}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-2 text-gray-500">Fecha</th>
+                  <th className="text-left py-2 text-gray-500">Concepto</th>
+                  <th className="text-left py-2 text-gray-500">Categoría</th>
+                  <th className="text-right py-2 text-gray-500">Monto</th>
+                  <th className="text-right py-2 text-gray-500"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {gastosFiltrados.slice(0, 30).map(g => {
+                  const catInfo = getCatInfo(g.categoria);
+                  return (
+                    <tr key={g.id} className="hover:bg-white/[0.02]">
+                      <td className="py-2.5 text-gray-400">{new Date(g.fecha).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' })}</td>
+                      <td className="py-2.5 text-white font-medium">{g.concepto}</td>
+                      <td className="py-2.5"><span className="px-2 py-0.5 rounded text-[9px] bg-white/5 text-gray-400">{catInfo.icon} {catInfo.label}</span></td>
+                      <td className="py-2.5 text-right font-bold text-red-400">{fmt(g.monto)}</td>
+                      <td className="py-2.5 text-right">
+                        <button onClick={() => handleEliminar(g.id)} className="text-gray-600 hover:text-red-400 transition-colors">✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Create Modal */}
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-md bg-[#16161f] border border-white/10 rounded-2xl shadow-2xl p-6 animate-scale-in">
-            <h3 className="text-lg font-bold text-white mb-5">Registrar Gasto</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl bg-[#16161f] border border-white/10 p-6 animate-scale-in shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-white">Registrar Gasto</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Concepto *</label>
-                <input type="text" value={concepto} onChange={(e) => setConcepto(e.target.value)} placeholder="Compra de pollo, gas LP, etc." className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-500/50 transition-all" />
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Monto *</label>
+                <input type="number" value={monto} onChange={e => setMonto(e.target.value)} placeholder="0.00" step="0.01" className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Monto *</label>
-                  <input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="500.00" min="0.01" step="0.01" className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-500/50 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-400 mb-1.5">Categoría</label>
-                  <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-500/50 transition-all">
-                    {CATEGORIAS_GASTO.map(c => <option key={c} value={c} className="bg-[#16161f] capitalize">{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-                  </select>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Concepto *</label>
+                <input type="text" value={concepto} onChange={e => setConcepto(e.target.value)} placeholder="Descripción del gasto" className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Categoría</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {CATEGORIAS.map(c => (
+                    <button key={c.value} onClick={() => setCategoria(c.value)} className={`py-2 rounded-lg text-[10px] font-medium border transition-all ${categoria === c.value ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'text-gray-400 border-white/5 hover:border-white/10'}`}>
+                      <span className="block text-base mb-0.5">{c.icon}</span>{c.label}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Fecha</label>
-                <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className="w-full px-3 py-2.5 rounded-lg bg-white/5 border border-white/10 text-sm text-white focus:outline-none focus:border-brand-500/50 transition-all" />
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Fecha</label>
+                <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400/50" />
               </div>
-              {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{error}</div>}
+              {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">{error}</div>}
             </div>
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-white/5">
-              <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">Cancelar</button>
-              <button onClick={handleCrear} disabled={saving} className="px-5 py-2.5 rounded-lg text-sm font-medium text-black gradient-brand shadow-lg shadow-brand-500/20 disabled:opacity-50 transition-all">{saving ? 'Guardando...' : 'Registrar'}</button>
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 transition-all">Cancelar</button>
+              <button onClick={handleGuardar} disabled={saving} className="flex-1 py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-400 to-brand-600 shadow-lg disabled:opacity-50 transition-all active:scale-[0.97]">
+                {saving ? 'Guardando...' : 'Registrar'}
+              </button>
             </div>
           </div>
         </div>
