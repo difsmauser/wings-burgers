@@ -30,6 +30,7 @@ const ROLE_PROTECTED_PATHS: { prefix: string; roles: Rol[] }[] = [
   { prefix: '/pedidos', roles: ['admin', 'vendedor'] },
   { prefix: '/caja', roles: ['admin', 'caja'] },
   { prefix: '/entregas', roles: ['admin', 'repartidor'] },
+  { prefix: '/mapa', roles: ['admin', 'repartidor'] },
 ];
 
 /**
