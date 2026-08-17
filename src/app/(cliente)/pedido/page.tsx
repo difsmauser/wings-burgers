@@ -137,8 +137,9 @@ function ComentarioInput({
   return (
     <div className="mt-3">
       <label className="block text-xs font-semibold text-gray-400 mb-1">
-        Comentarios especiales
+        Instrucciones para cocina
       </label>
+      <p className="text-[10px] text-gray-500 mb-1.5">Indica sabor, combinación, o cómo lo quieres</p>
       <div className="relative">
         <textarea
           value={value}
@@ -146,7 +147,7 @@ function ComentarioInput({
           disabled={disabled}
           maxLength={maxChars}
           rows={2}
-          placeholder="Ej: Sin cebolla, bien cocido..."
+          placeholder="Ej: BBQ y Mango Habanero combinadas, sin cebolla, bien doraditas..."
           className={`
             w-full px-3 py-2 text-sm rounded-lg border border-white/10
             bg-white/5 text-white placeholder:text-gray-600
@@ -154,7 +155,7 @@ function ComentarioInput({
             resize-none transition-colors duration-150
             ${disabled ? 'opacity-60 cursor-not-allowed bg-white/5' : ''}
           `}
-          aria-label="Comentarios especiales para este producto"
+          aria-label="Instrucciones para cocina"
         />
         <span
           className={`absolute bottom-2 right-2 text-[10px] ${
@@ -309,9 +310,9 @@ function ItemCarritoCard({
                 focus:outline-none focus:ring-2 focus:ring-brand-500
               "
               aria-expanded={expanded}
-              aria-label={expanded ? 'Ocultar personalización' : 'Personalizar'}
+              aria-label={expanded ? 'Ocultar opciones' : 'Sabor y notas'}
             >
-              {expanded ? 'Ocultar' : 'Personalizar'}
+              {expanded ? '▲ Ocultar' : '🌶️ Sabor / Notas'}
             </button>
           )}
         </div>

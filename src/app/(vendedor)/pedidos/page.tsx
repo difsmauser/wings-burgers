@@ -8,7 +8,7 @@ interface Pedido {
   estado: string;
   modalidad: string;
   clienteNombre?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; personalizaciones?: string[]; comentario?: string }>;
   total: number;
   creadoEn: string;
   mesaZona?: string;
@@ -329,11 +329,23 @@ function OrderCard({
       </div>
 
       {/* Items */}
-      <div className="space-y-0.5 mb-2">
+      <div className="space-y-1 mb-2">
         {pedido.items.map((item, i) => (
-          <p key={i} className="text-[11px] text-gray-300">
-            <span className="text-brand-400 font-bold">{item.cantidad}x</span> {item.nombre}
-          </p>
+          <div key={i}>
+            <p className="text-[11px] text-gray-300">
+              <span className="text-brand-400 font-bold">{item.cantidad}x</span> {item.nombre}
+            </p>
+            {item.personalizaciones && item.personalizaciones.length > 0 && (
+              <p className="text-[9px] text-amber-400 ml-4">
+                ⚙️ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}
+              </p>
+            )}
+            {item.comentario && (
+              <p className="text-[9px] text-cyan-400 ml-4 italic">
+                💬 &quot;{item.comentario}&quot;
+              </p>
+            )}
+          </div>
         ))}
       </div>
 
