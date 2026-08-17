@@ -64,6 +64,7 @@ interface CarritoContextValue {
   setModalidad: (modalidad: 'LOCAL' | 'RETIRO' | 'DOMICILIO') => void;
   confirmarPedido: () => void;
   limpiarCarrito: () => void;
+  limpiarParaNuevoPedido: () => void;
   subtotal: number;
   impuestos: number;
   total: number;
@@ -196,6 +197,11 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     setState({ items: [], modalidad: null, confirmado: false });
   }, []);
 
+  /** Limpia solo los items para pedir más, mantiene modalidad y estado confirmado */
+  const limpiarParaNuevoPedido = useCallback(() => {
+    setState((prev) => ({ ...prev, items: [], confirmado: false }));
+  }, []);
+
   // Calculated values
   const subtotal = state.items.reduce((acc, item) => acc + calcularLineaTotal(item), 0);
   const subtotalRedondeado = Math.round(subtotal * 100) / 100;
@@ -215,6 +221,7 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     setModalidad,
     confirmarPedido,
     limpiarCarrito,
+    limpiarParaNuevoPedido,
     subtotal: subtotalRedondeado,
     impuestos,
     total,
