@@ -249,7 +249,6 @@ function ItemCarritoCard({
   onPersonalizacionesChange: (p: PersonalizacionSeleccionada[]) => void;
   onComentarioChange: (c: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const lineTotal = calcularLineaTotal(item);
   const hasOpciones = item.opcionesDisponibles.length > 0;
 
@@ -297,67 +296,53 @@ function ItemCarritoCard({
             onDelete={onDelete}
             disabled={confirmado}
           />
-
-          {/* Toggle personalization/comments */}
-          {(hasOpciones || !confirmado) && (
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="
-                min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium
-                text-brand-400 bg-brand-500/10 hover:bg-brand-500/20
-                transition-colors duration-150 motion-reduce:transition-none
-                focus:outline-none focus:ring-2 focus:ring-brand-500
-              "
-              aria-expanded={expanded}
-              aria-label={expanded ? 'Ocultar opciones' : 'Sabor y notas'}
-            >
-              {expanded ? '▲ Ocultar' : '🌶️ Sabor / Notas'}
-            </button>
-          )}
         </div>
 
-        {/* Selected personalizations summary (when collapsed) */}
-        {!expanded && item.personalizaciones.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {item.personalizaciones.map((p, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-brand-500/10 text-brand-400"
-              >
-                {p.opcion}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Comment summary (when collapsed) */}
-        {!expanded && item.comentario && (
-          <p className="mt-1 text-[11px] text-gray-400 italic truncate">
-            &quot;{item.comentario}&quot;
-          </p>
-        )}
-      </div>
-
-      {/* Expanded: Personalization options + comment field */}
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-white/[0.04] pt-3 bg-[#0e0e16]/50">
-          {hasOpciones && (
+        {/* Personalization options (if configured in admin) */}
+        {hasOpciones && (
+          <div className="mt-3">
             <PersonalizacionSelector
               opciones={item.opcionesDisponibles}
               seleccionadas={item.personalizaciones}
               onChange={onPersonalizacionesChange}
               disabled={confirmado}
             />
-          )}
+          </div>
+        )}
 
-          <ComentarioInput
-            value={item.comentario}
-            onChange={onComentarioChange}
-            disabled={confirmado}
-          />
-        </div>
-      )}
+        {/* Selected personalizations badges */}
+        {item.personalizaciones.length > 0 && !hasOpciones && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {item.personalizaciones.map((p, idx) => (
+              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-brand-500/10 text-brand-400">{p.opcion}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Always visible: instructions for kitchen */}
+        {!confirmado && (
+          <div className="mt-3">
+            <div className="relative">
+              <textarea
+                value={item.comentario}
+                onChange={(e) => onComentarioChange(e.target.value.slice(0, 250))}
+                disabled={confirmado}
+                maxLength={250}
+                rows={1}
+                placeholder="¿Cómo lo quieres? Ej: sabor BBQ, sin cebolla, bien frías..."
+                className="w-full px-3 py-2 text-xs rounded-lg border border-white/[0.06] bg-white/[0.02] text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-400/40 focus:border-brand-400/30 resize-none transition-all"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Show comment when confirmed */}
+        {confirmado && item.comentario && (
+          <p className="mt-2 text-[11px] text-cyan-400 italic">
+            💬 &quot;{item.comentario}&quot;
+          </p>
+        )}
+      </div>
     </article>
   );
 }
