@@ -58,6 +58,12 @@ export default function DemoPage() {
                   <td className="py-2"><code className="text-brand-400">/pedidos</code></td>
                 </tr>
                 <tr>
+                  <td className="py-2 text-white font-medium">🍸 Bar</td>
+                  <td className="py-2"><code className="text-brand-400">bar@alaburguer.com</code></td>
+                  <td className="py-2"><code className="text-white">Bar123!</code></td>
+                  <td className="py-2"><code className="text-brand-400">/bar</code></td>
+                </tr>
+                <tr>
                   <td className="py-2 text-white font-medium">💰 Caja</td>
                   <td className="py-2"><code className="text-brand-400">caja@alaburguer.com</code></td>
                   <td className="py-2"><code className="text-white">Caja123!</code></td>
@@ -302,10 +308,44 @@ export default function DemoPage() {
               </div>
               <div className="space-y-1 text-xs">
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-gray-400">Pedidos (prepara y marca listo)</span>
+                  <span className="text-gray-400">Pedidos alimentos (prepara y marca listo)</span>
                   <div className="flex items-center gap-2">
                     <code className="text-brand-400">{baseUrl}/pedidos</code>
                     <CopyButton text={`${baseUrl}/pedidos`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bar */}
+            <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-white">🍸 Módulo Bar / Bebidas</h3>
+                <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">Requiere login</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                <div className="p-2 rounded bg-white/[0.02]">
+                  <span className="text-gray-500">Email:</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <code className="text-white text-[11px]">bar@alaburguer.com</code>
+                    <CopyButton text="bar@alaburguer.com" />
+                  </div>
+                </div>
+                <div className="p-2 rounded bg-white/[0.02]">
+                  <span className="text-gray-500">Contraseña:</span>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <code className="text-white text-[11px]">Bar123!</code>
+                    <CopyButton text="Bar123!" />
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-500 mb-2">Solo ve bebidas (categoría bar). Misma dinámica kanban que cocina pero independiente.</p>
+              <div className="space-y-1 text-xs">
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-gray-400">Pedidos bebidas (prepara y marca listo)</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-brand-400">{baseUrl}/bar</code>
+                    <CopyButton text={`${baseUrl}/bar`} />
                   </div>
                 </div>
               </div>

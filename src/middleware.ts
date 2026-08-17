@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 /**
  * Roles del sistema.
  */
-type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja';
+type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja' | 'bar';
 
 /**
  * Rutas públicas que no requieren autenticación.
@@ -28,6 +28,7 @@ const PUBLIC_PATHS = [
 const ROLE_PROTECTED_PATHS: { prefix: string; roles: Rol[] }[] = [
   { prefix: '/admin', roles: ['admin'] },
   { prefix: '/pedidos', roles: ['admin', 'vendedor'] },
+  { prefix: '/bar', roles: ['admin', 'bar'] },
   { prefix: '/caja', roles: ['admin', 'caja'] },
   { prefix: '/entregas', roles: ['admin', 'repartidor'] },
   { prefix: '/mapa', roles: ['admin', 'repartidor'] },

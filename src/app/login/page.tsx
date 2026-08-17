@@ -47,6 +47,9 @@ function LoginContent() {
           case 'vendedor':
             router.push('/pedidos');
             break;
+          case 'bar':
+            router.push('/bar');
+            break;
           case 'repartidor':
             router.push('/entregas');
             break;

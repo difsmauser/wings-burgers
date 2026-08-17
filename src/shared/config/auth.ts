@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 /**
  * Roles del sistema Wings & Burgers.
  */
-export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja';
+export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja' | 'bar';
 
 /**
  * Información del usuario autenticado.

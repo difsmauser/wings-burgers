@@ -1,25 +1,27 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
+interface ItemEstacion {
+  id: string;
+  nombre: string;
+  cantidad: number;
+  precioUnitario: number;
+  comentario: string | null;
+  personalizaciones: string[] | null;
+  itemEstado: string;
+}
 
 interface Pedido {
   id: string;
   numero: string;
   estado: string;
   modalidad: string;
-  clienteNombre?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; personalizaciones?: string[]; comentario?: string }>;
-  total: number;
+  mesaZona: string;
+  meseroNombre: string;
   creadoEn: string;
-  mesaZona?: string;
-  meseroNombre?: string;
-  observaciones?: string;
-}
-
-function parseCanal(obs?: string): string {
-  if (!obs) return 'QR';
-  const m = obs.match(/\[(QR|QR_REDES|MESERO)\]/);
-  return m ? m[1] : 'QR';
+  items: ItemEstacion[];
+  stationEstado: string;
 }
 
 function getTimeSince(dateStr: string): string {
@@ -39,44 +41,19 @@ export default function CocinaPage() {
 
   const fetchPedidos = useCallback(async () => {
     try {
-      const supabaseUrl = '/api/pedidos';
-      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido'];
-      const results = await Promise.all(
-        estados.map(async (estado) => {
-          const res = await fetch(`${supabaseUrl}?estado=${estado}`);
-          if (!res.ok) return [];
-          const json = await res.json();
-          return (json.data || []).map((p: Record<string, unknown>) => ({
-            id: p.id as string,
-            numero: p.numero as string,
-            estado: p.estado as string || estado,
-            modalidad: p.modalidad as string || 'local',
-            clienteNombre: p.clienteNombre as string || '',
-            items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
-            total: p.total as number || 0,
-            creadoEn: p.creadoEn as string || new Date().toISOString(),
-            mesaZona: p.mesaZona as string || '',
-            meseroNombre: p.meseroNombre as string || '',
-            observaciones: p.observaciones as string || '',
-          }));
-        })
-      );
+      const res = await fetch('/api/pedidos/estacion?tipo=cocina');
+      if (res.ok) {
+        const json = await res.json();
+        const data = (json.data || []) as Pedido[];
 
-      const todos = results.flat() as Pedido[];
+        const newCount = data.filter(p => p.stationEstado === 'pendiente').length;
+        if (newCount > prevNewCount.current && prevNewCount.current > 0) playSound();
+        prevNewCount.current = newCount;
 
-      // Sound on new recibido orders
-      const newCount = todos.filter(p => p.estado === 'recibido').length;
-      if (newCount > prevNewCount.current && prevNewCount.current > 0) {
-        playSound();
+        setPedidos(data);
       }
-      prevNewCount.current = newCount;
-
-      setPedidos(todos);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* */ }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
@@ -84,13 +61,6 @@ export default function CocinaPage() {
     const interval = setInterval(fetchPedidos, 8000);
     return () => clearInterval(interval);
   }, [fetchPedidos]);
-
-  // Only show today's completed orders (disappear next day)
-  const isToday = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return d.toDateString() === now.toDateString();
-  };
 
   const playSound = () => {
     try {
@@ -103,182 +73,98 @@ export default function CocinaPage() {
       osc.frequency.setValueAtTime(880, ctx.currentTime);
       gain.gain.setValueAtTime(0.3, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.3);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
     } catch { /* */ }
   };
 
-  const advanceStatus = async (pedido: Pedido) => {
-    const nextMap: Record<string, string> = {
-      recibido: 'en_preparacion',
-      en_preparacion: 'empacado',
-      empacado: 'listo',
-    };
-    const next = nextMap[pedido.estado];
-    if (!next) return;
-
+  const advanceAllItems = async (pedido: Pedido, nuevoEstado: string) => {
     setUpdatingId(pedido.id);
     try {
-      await fetch(`/api/pedidos/${pedido.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: next }),
-      });
-
+      for (const item of pedido.items) {
+        if (item.itemEstado !== 'listo') {
+          await fetch('/api/pedidos/estacion', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ itemId: item.id, itemEstado: nuevoEstado }),
+          });
+        }
+      }
       await fetchPedidos();
     } catch { /* */ }
     finally { setUpdatingId(null); }
   };
 
-  // Categorize
-  const nuevas = pedidos.filter(p => p.estado === 'recibido');
-  const cocinando = pedidos.filter(p => p.estado === 'en_preparacion');
-  const empacado = pedidos.filter(p => p.estado === 'empacado');
-  const listas = pedidos.filter(p =>
-    (p.estado === 'listo_para_servir' || p.estado === 'servido') && isToday(p.creadoEn)
-  );
+  // Categorize by station status
+  const pendientes = pedidos.filter(p => p.stationEstado === 'pendiente');
+  const preparando = pedidos.filter(p => p.stationEstado === 'preparando');
+  const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString();
+  const listos = pedidos.filter(p => p.stationEstado === 'listo' && isToday(p.creadoEn));
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-[calc(100vh-56px)]">
+      <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
+    </div>
+  );
 
   return (
     <div className="h-[calc(100vh-56px)] overflow-hidden p-4 sm:p-6">
-      {/* Stats bar */}
+      {/* Stats */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-red-400 animate-pulse" />
-            <span className="text-xs text-gray-400">Nuevas: <span className="text-white font-bold">{nuevas.length}</span></span>
+            <span className="text-xs text-gray-400">Nuevas: <span className="text-white font-bold">{pendientes.length}</span></span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-amber-400" />
-            <span className="text-xs text-gray-400">Cocinando: <span className="text-white font-bold">{cocinando.length}</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-purple-400" />
-            <span className="text-xs text-gray-400">Empacando: <span className="text-white font-bold">{empacado.length}</span></span>
+            <span className="text-xs text-gray-400">Cocinando: <span className="text-white font-bold">{preparando.length}</span></span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-green-400" />
-            <span className="text-xs text-gray-400">Listas: <span className="text-white font-bold">{listas.length}</span></span>
+            <span className="text-xs text-gray-400">Listas: <span className="text-white font-bold">{listos.length}</span></span>
           </div>
         </div>
-        <button
-          onClick={fetchPedidos}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all"
-        >
+        <button onClick={fetchPedidos} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all">
           🔄 Actualizar
         </button>
       </div>
 
-      {/* Kanban columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 md:h-[calc(100%-48px)] overflow-auto md:overflow-hidden">
-        {/* Column: Nuevas Órdenes */}
-        <Column
-          title="🔴 Nuevas Órdenes"
-          color="border-red-500/30"
-          headerColor="text-red-400"
-          pedidos={nuevas}
-          buttonLabel="→ Preparar"
-          buttonColor="bg-amber-500 hover:bg-amber-400"
-          onAdvance={advanceStatus}
-          updatingId={updatingId}
-        />
+      {/* Kanban */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 md:h-[calc(100%-48px)] overflow-auto md:overflow-hidden">
+        <Column title="🔴 Nuevas Órdenes" color="border-red-500/30" headerColor="text-red-400" pedidos={pendientes}
+          buttonLabel="→ Preparar" buttonColor="bg-amber-500 hover:bg-amber-400"
+          onAdvance={(p) => advanceAllItems(p, 'preparando')} updatingId={updatingId} />
 
-        {/* Column: Cocinando */}
-        <Column
-          title="🟡 Cocinando"
-          color="border-amber-500/30"
-          headerColor="text-amber-400"
-          pedidos={cocinando}
-          buttonLabel="→ Empacar"
-          buttonColor="bg-purple-500 hover:bg-purple-400"
-          onAdvance={advanceStatus}
-          updatingId={updatingId}
-        />
+        <Column title="🟡 Cocinando" color="border-amber-500/30" headerColor="text-amber-400" pedidos={preparando}
+          buttonLabel="✓ Listo" buttonColor="bg-green-500 hover:bg-green-400"
+          onAdvance={(p) => advanceAllItems(p, 'listo')} updatingId={updatingId} />
 
-        {/* Column: Empacando */}
-        <Column
-          title="🟣 Empacando"
-          color="border-purple-500/30"
-          headerColor="text-purple-400"
-          pedidos={empacado}
-          buttonLabel="✓ Listo para mesero"
-          buttonColor="bg-green-500 hover:bg-green-400"
-          onAdvance={advanceStatus}
-          updatingId={updatingId}
-        />
-
-        {/* Column: Listas (auto-dismiss after 1 min) */}
-        <Column
-          title="🟢 Entregadas a Mesero"
-          color="border-green-500/30"
-          headerColor="text-green-400"
-          pedidos={listas}
-          buttonLabel=""
-          buttonColor=""
-          onAdvance={() => {}}
-          updatingId={null}
-          readonly
-        />
+        <Column title="🟢 Entregadas" color="border-green-500/30" headerColor="text-green-400" pedidos={listos}
+          buttonLabel="" buttonColor="" onAdvance={() => {}} updatingId={null} readonly />
       </div>
     </div>
   );
 }
 
-function Column({
-  title,
-  color,
-  headerColor,
-  pedidos,
-  buttonLabel,
-  buttonColor,
-  onAdvance,
-  updatingId,
-  readonly = false,
-}: {
-  title: string;
-  color: string;
-  headerColor: string;
-  pedidos: Pedido[];
-  buttonLabel: string;
-  buttonColor: string;
-  onAdvance: (p: Pedido) => void;
-  updatingId: string | null;
-  readonly?: boolean;
+function Column({ title, color, headerColor, pedidos, buttonLabel, buttonColor, onAdvance, updatingId, readonly = false }: {
+  title: string; color: string; headerColor: string; pedidos: Pedido[];
+  buttonLabel: string; buttonColor: string; onAdvance: (p: Pedido) => void;
+  updatingId: string | null; readonly?: boolean;
 }) {
   return (
     <div className={`flex flex-col rounded-xl bg-[#111118] border ${color} overflow-hidden`}>
-      {/* Column header */}
       <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
         <h2 className={`text-xs font-bold uppercase tracking-wider ${headerColor}`}>{title}</h2>
         <span className="text-xs text-gray-500 font-mono">{pedidos.length}</span>
       </div>
-
-      {/* Column body — scrollable */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {pedidos.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600 text-xs">Sin pedidos</p>
-          </div>
+          <div className="text-center py-8"><p className="text-gray-600 text-xs">Sin pedidos</p></div>
         ) : (
           pedidos.map(pedido => (
-            <OrderCard
-              key={pedido.id}
-              pedido={pedido}
-              buttonLabel={buttonLabel}
-              buttonColor={buttonColor}
-              onAdvance={() => onAdvance(pedido)}
-              updating={updatingId === pedido.id}
-              readonly={readonly}
-            />
+            <OrderCard key={pedido.id} pedido={pedido} buttonLabel={buttonLabel} buttonColor={buttonColor}
+              onAdvance={() => onAdvance(pedido)} updating={updatingId === pedido.id} readonly={readonly} />
           ))
         )}
       </div>
@@ -286,26 +172,12 @@ function Column({
   );
 }
 
-function OrderCard({
-  pedido,
-  buttonLabel,
-  buttonColor,
-  onAdvance,
-  updating,
-  readonly,
-}: {
-  pedido: Pedido;
-  buttonLabel: string;
-  buttonColor: string;
-  onAdvance: () => void;
-  updating: boolean;
-  readonly: boolean;
+function OrderCard({ pedido, buttonLabel, buttonColor, onAdvance, updating, readonly }: {
+  pedido: Pedido; buttonLabel: string; buttonColor: string;
+  onAdvance: () => void; updating: boolean; readonly: boolean;
 }) {
-  const canal = parseCanal(pedido.observaciones);
-
   return (
     <div className="rounded-lg bg-[#0d0d14] border border-white/5 p-3 hover:border-white/10 transition-all">
-      {/* Header: number + mesa + time */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold text-white">#{pedido.numero.split('-').pop()}</span>
@@ -318,49 +190,29 @@ function OrderCard({
         <span className="text-[9px] text-gray-500">{getTimeSince(pedido.creadoEn)}</span>
       </div>
 
-      {/* Modalidad + Canal */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-[9px] text-gray-500">
-          {pedido.modalidad === 'domicilio' ? '🛵 Domicilio' : pedido.modalidad === 'retiro' ? '🛍️ Llevar' : '🍽️ Local'}
-        </span>
-        <span className="text-[9px] text-gray-600">
-          {canal === 'QR' ? 'vía QR' : canal === 'MESERO' ? 'vía Mesero' : 'vía Redes'}
-        </span>
-      </div>
-
-      {/* Items */}
       <div className="space-y-1 mb-2">
-        {pedido.items.map((item, i) => (
-          <div key={i}>
+        {pedido.items.map((item) => (
+          <div key={item.id}>
             <p className="text-[11px] text-gray-300">
               <span className="text-brand-400 font-bold">{item.cantidad}x</span> {item.nombre}
             </p>
             {item.personalizaciones && item.personalizaciones.length > 0 && (
-              <p className="text-[9px] text-amber-400 ml-4">
-                ⚙️ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}
-              </p>
+              <p className="text-[9px] text-amber-400 ml-4">⚙️ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}</p>
             )}
             {item.comentario && (
-              <p className="text-[9px] text-cyan-400 ml-4 italic">
-                💬 &quot;{item.comentario}&quot;
-              </p>
+              <p className="text-[9px] text-cyan-400 ml-4 italic">💬 &quot;{item.comentario}&quot;</p>
             )}
           </div>
         ))}
       </div>
 
-      {/* Action button */}
       {!readonly && buttonLabel && (
-        <button
-          onClick={onAdvance}
-          disabled={updating}
-          className={`w-full mt-2 py-2 rounded-lg text-xs font-bold text-black ${buttonColor} disabled:opacity-50 transition-all active:scale-[0.97]`}
-        >
+        <button onClick={onAdvance} disabled={updating}
+          className={`w-full mt-2 py-2 rounded-lg text-xs font-bold text-black ${buttonColor} disabled:opacity-50 transition-all active:scale-[0.97]`}>
           {updating ? '...' : buttonLabel}
         </button>
       )}
 
-      {/* Readonly status — show mesero name */}
       {readonly && (
         <div className="mt-2 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
           <span className="text-[10px] text-green-400 font-medium">
