@@ -254,25 +254,36 @@ function ItemCarritoCard({
 
   return (
     <article className="bg-[#12121a] rounded-2xl border border-white/[0.06] overflow-hidden hover:border-brand-400/30 transition-all duration-300 shadow-[0_0_15px_rgba(0,0,0,0.3)] hover:shadow-[0_0_20px_rgba(var(--brand-rgb,245,158,11),0.08)]">
-      {/* Header row: product info + quantity + line total */}
+      {/* Header row: product image + info + line total */}
       <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          {/* Product image */}
+          {item.imagenUrl ? (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 border border-white/5">
+              <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl shrink-0 bg-[#1a1a24] border border-white/5 flex items-center justify-center">
+              <span className="text-2xl opacity-30">🍔</span>
+            </div>
+          )}
+
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm sm:text-base font-bold text-white/95 tracking-tight truncate">
-              {item.nombre}
-            </h3>
-            <p className="text-xs text-gray-400/80 mt-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-white/95 tracking-tight truncate">
+                {item.nombre}
+              </h3>
+              <p className="text-sm sm:text-base font-black text-brand-400 drop-shadow-[0_0_6px_rgba(var(--brand-rgb,245,158,11),0.3)] shrink-0">
+                {formatPrecio(lineTotal)}
+              </p>
+            </div>
+            <p className="text-xs text-gray-400/80 mt-0.5">
               {formatPrecio(item.precioUnitario)} c/u
               {item.personalizaciones.length > 0 && (
                 <span className="text-brand-400/90 ml-1.5 font-medium">
                   (+{formatPrecio(item.personalizaciones.reduce((a, p) => a + p.precioExtra, 0))} extras)
                 </span>
               )}
-            </p>
-          </div>
-          <div className="text-right shrink-0">
-            <p className="text-sm sm:text-base font-black text-brand-400 drop-shadow-[0_0_6px_rgba(var(--brand-rgb,245,158,11),0.3)]">
-              {formatPrecio(lineTotal)}
             </p>
           </div>
         </div>
