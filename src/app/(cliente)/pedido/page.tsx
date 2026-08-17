@@ -998,8 +998,28 @@ export default function PedidoPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmado, qrMesa]);
 
-  // Empty cart
-  if (items.length === 0 && !confirmado) {
+  // Check if there are active orders on this mesa (regardless of cart state)
+  const [hayPedidosActivos, setHayPedidosActivos] = useState(false);
+
+  useEffect(() => {
+    if (!qrMesa) return;
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(qrMesa.mesaZona)}`);
+        if (res.ok) {
+          const json = await res.json();
+          const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
+          setHayPedidosActivos(activos.length > 0);
+        }
+      } catch { /* */ }
+    };
+    check();
+    const interval = setInterval(check, 8000);
+    return () => clearInterval(interval);
+  }, [qrMesa]);
+
+  // Empty cart — only show if NO active orders on mesa
+  if (items.length === 0 && !confirmado && !hayPedidosActivos) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
         <CarritoVacio menuHref={qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu'} />
@@ -1042,8 +1062,8 @@ export default function PedidoPage() {
         )}
       </div>
 
-      {/* Real-time status tracker — multi-order for mesa, single for non-mesa */}
-      {confirmado && qrMesa && (
+      {/* Real-time status tracker — show when there are active orders on mesa */}
+      {(confirmado || hayPedidosActivos) && qrMesa && (
         <MesaOrdersTracker
           pedidoIds={pedidoIds}
           modalidad={modalidad}
