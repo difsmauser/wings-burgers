@@ -15,7 +15,7 @@ function ClienteLayoutInner({ children }: { children: ReactNode }) {
   const navItems = [
     { href: qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu', label: 'Menú', icon: '🍔' },
     { href: '/pedido', label: 'Mi Pedido', icon: '🛒' },
-    { href: '/pago', label: 'Pago', icon: '💳' },
+    { href: '/pagar', label: 'Pago', icon: '💳' },
     { href: '/rastreo', label: 'Rastreo', icon: '📍' },
   ];
 

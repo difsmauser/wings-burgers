@@ -151,8 +151,8 @@ export default function CocinaPage() {
   return (
     <div className="h-[calc(100vh-56px)] overflow-hidden p-4 sm:p-6">
       {/* Stats bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-red-400 animate-pulse" />
             <span className="text-xs text-gray-400">Nuevas: <span className="text-white font-bold">{nuevas.length}</span></span>
@@ -179,7 +179,7 @@ export default function CocinaPage() {
       </div>
 
       {/* Kanban columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-[calc(100%-48px)] overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 md:h-[calc(100%-48px)] overflow-auto md:overflow-hidden">
         {/* Column: Nuevas Órdenes */}
         <Column
           title="🔴 Nuevas Órdenes"

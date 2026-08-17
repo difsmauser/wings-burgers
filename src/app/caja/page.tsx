@@ -252,7 +252,7 @@ export default function CajaPage() {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span>Cobro</span>
             </div>
           </div>
-          <div className="relative w-full h-[250px] bg-[#0d0d14] rounded-xl border border-white/5 overflow-hidden">
+          <div className="relative w-full h-[200px] sm:h-[250px] bg-[#0d0d14] rounded-xl border border-white/5 overflow-hidden">
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '10% 10%' }} />
             {mesas.map(mesa => {
               const isOcupada = mesa.estado === 'ocupada';
