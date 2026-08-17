@@ -49,12 +49,13 @@ export default function CuentasBancariasPage() {
   };
 
   const handleGuardar = async () => {
-    if (!banco.trim() || !titular.trim() || !clabe.trim()) {
-      setError('Banco, titular y CLABE son obligatorios'); return;
-    }
+    if (!banco.trim()) { setError('El banco es obligatorio'); return; }
+    if (!titular.trim()) { setError('El titular es obligatorio'); return; }
+    if (!clabe.trim() || clabe.replace(/\D/g, '').length !== 18) { setError('La CLABE debe tener exactamente 18 dígitos'); return; }
+    if (!numeroTarjeta.trim() || numeroTarjeta.replace(/\D/g, '').length !== 16) { setError('El número de tarjeta debe tener exactamente 16 dígitos'); return; }
     setSaving(true); setError(null);
     try {
-      const payload = { banco, titular, clabe, numeroTarjeta: numeroTarjeta || null, referencia: referencia || null, ...(editando ? { id: editando.id } : {}) };
+      const payload = { banco, titular, clabe: clabe.replace(/\D/g, ''), numeroTarjeta: numeroTarjeta.replace(/\D/g, ''), referencia: referencia || null, ...(editando ? { id: editando.id } : {}) };
       const res = await fetch('/api/cuentas-bancarias', {
         method: editando ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,8 +67,11 @@ export default function CuentasBancariasPage() {
     finally { setSaving(false); }
   };
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   const handleEliminar = async (id: string) => {
     await fetch(`/api/cuentas-bancarias?id=${id}`, { method: 'DELETE' });
+    setConfirmDeleteId(null);
     fetchCuentas();
   };
 
@@ -114,7 +118,7 @@ export default function CuentasBancariasPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openEditar(c)} className="px-3 py-1.5 rounded-lg text-xs text-gray-400 bg-white/5 hover:text-white hover:bg-white/10 border border-white/5 transition-all">Editar</button>
-                  <button onClick={() => handleEliminar(c.id)} className="px-3 py-1.5 rounded-lg text-xs text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all">Eliminar</button>
+                  <button onClick={() => setConfirmDeleteId(c.id)} className="px-3 py-1.5 rounded-lg text-xs text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all">Eliminar</button>
                 </div>
               </div>
             </div>
@@ -142,10 +146,13 @@ export default function CuentasBancariasPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">CLABE Interbancaria *</label>
                 <input type="text" value={clabe} onChange={e => setClabe(e.target.value.replace(/[^\d]/g, '').slice(0, 18))} placeholder="18 dígitos" maxLength={18} className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 font-mono" />
+                {clabe && clabe.length !== 18 && <p className="text-[10px] text-red-400 mt-1">Debe tener 18 dígitos ({clabe.length}/18)</p>}
+                {clabe && clabe.length === 18 && <p className="text-[10px] text-green-400 mt-1">✓ CLABE válida</p>}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1">Número de Tarjeta (opcional)</label>
+                <label className="block text-xs font-semibold text-gray-400 mb-1">Número de Tarjeta *</label>
                 <input type="text" value={numeroTarjeta} onChange={e => setNumeroTarjeta(e.target.value.replace(/[^\d]/g, '').slice(0, 16))} placeholder="16 dígitos" maxLength={16} className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 font-mono" />
+                {numeroTarjeta && numeroTarjeta.length !== 16 && <p className="text-[10px] text-red-400 mt-1">Debe tener 16 dígitos ({numeroTarjeta.length}/16)</p>}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-400 mb-1">Referencia / Concepto (opcional)</label>
@@ -158,6 +165,23 @@ export default function CuentasBancariasPage() {
               <button onClick={handleGuardar} disabled={saving} className="flex-1 py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-brand-400 to-brand-600 shadow-lg disabled:opacity-50 transition-all active:scale-[0.97]">
                 {saving ? 'Guardando...' : editando ? 'Actualizar' : 'Crear Cuenta'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-[#16161f] border border-red-500/20 p-6 animate-scale-in shadow-2xl">
+            <div className="text-center mb-5">
+              <span className="text-4xl block mb-3">⚠️</span>
+              <h3 className="text-base font-bold text-white">¿Eliminar cuenta?</h3>
+              <p className="text-xs text-gray-400 mt-2">Esta acción desactivará la cuenta bancaria. Los clientes no la verán como opción de pago.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 bg-white/5 border border-white/10 hover:bg-white/10 transition-all">Cancelar</button>
+              <button onClick={() => handleEliminar(confirmDeleteId)} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-400 transition-all active:scale-[0.97]">Sí, eliminar</button>
             </div>
           </div>
         </div>
