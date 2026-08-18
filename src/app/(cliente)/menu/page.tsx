@@ -454,7 +454,7 @@ export default function MenuPage() {
   const searchParams = useSearchParams();
   const qrCodigo = searchParams.get('qr');
   const { setQrMesa, qrMesa } = useQrMesa();
-  const { setModalidad: setModalidadContext, modalidad: carritoModalidad, agregarItem } = useCarrito();
+  const { setModalidad: setModalidadContext, modalidad: carritoModalidad, agregarItem, confirmado, limpiarParaNuevoPedido } = useCarrito();
 
   const [modalidad, setModalidadLocal] = useState<Modalidad>(null);
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todas');
@@ -470,6 +470,11 @@ export default function MenuPage() {
 
   // Track if user explicitly clicked "Cambiar" to prevent auto-restore
   const [userReset, setUserReset] = useState(false);
+
+  // Reset stale confirmado so user can add items again
+  useEffect(() => {
+    if (confirmado) limpiarParaNuevoPedido();
+  }, [confirmado, limpiarParaNuevoPedido]);
 
   // Restore modalidad from CarritoContext (persisted in localStorage)
   // This ensures navigating back from /pedido skips the welcome screen

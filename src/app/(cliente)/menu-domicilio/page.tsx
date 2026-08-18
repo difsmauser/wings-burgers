@@ -155,18 +155,22 @@ function ProductoSkeleton() {
 // ========== Main Page ==========
 
 export default function MenuDomicilioPage() {
-  const { setModalidad, cantidadTotal } = useCarrito();
+  const { setModalidad, cantidadTotal, confirmado, limpiarParaNuevoPedido } = useCarrito();
   const { setQrMesa } = useQrMesa();
   const [todosProductos, setTodosProductos] = useState<ProductoMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categoriaActiva, setCategoriaActiva] = useState('todas');
 
-  // Siempre DOMICILIO — clear any QR mesa data
+  // Siempre DOMICILIO — clear any QR mesa data and reset cart if stale
   useEffect(() => {
     setModalidad('DOMICILIO');
     setQrMesa(null); // Clear stale QR mesa from localStorage
-  }, [setModalidad, setQrMesa]);
+    // If cart has a stale "confirmado" state from a previous order, reset it
+    if (confirmado) {
+      limpiarParaNuevoPedido();
+    }
+  }, [setModalidad, setQrMesa, confirmado, limpiarParaNuevoPedido]);
 
   const fetchProductos = useCallback(async () => {
     setLoading(true);
