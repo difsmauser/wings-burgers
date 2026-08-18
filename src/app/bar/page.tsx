@@ -174,64 +174,71 @@ function BarColumn({ title, color, headerColor, pedidos, buttonLabel, buttonColo
   updatingId: string | null; readonly?: boolean;
 }) {
   return (
-    <div className={`flex flex-col rounded-xl bg-[#111118] border ${color} overflow-hidden`}>
-      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-        <h2 className={`text-xs font-bold uppercase tracking-wider ${headerColor}`}>{title}</h2>
-        <span className="text-xs text-gray-500 font-mono">{pedidos.length}</span>
+    <div className={`flex flex-col rounded-2xl bg-[#0a0a12]/80 backdrop-blur-sm border ${color} overflow-hidden shadow-[0_4px_30px_-10px_rgba(0,0,0,0.5)]`}>
+      <div className="px-4 py-3.5 border-b border-white/[0.04] flex items-center justify-between bg-white/[0.01]">
+        <h2 className={`text-[11px] font-black uppercase tracking-[0.15em] ${headerColor}`}>{title}</h2>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${color} ${headerColor}`}>{pedidos.length}</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {pedidos.length === 0 ? (
-          <div className="text-center py-8"><p className="text-gray-600 text-xs">Sin pedidos</p></div>
+          <div className="text-center py-12">
+            <span className="text-3xl block mb-2 opacity-20">🍸</span>
+            <p className="text-gray-700 text-[10px] uppercase tracking-wider">Sin pedidos</p>
+          </div>
         ) : (
-          pedidos.map(pedido => (
-            <div key={pedido.id} className="rounded-lg bg-[#0d0d14] border border-white/5 p-3 hover:border-white/10 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-white">#{pedido.numero.split('-').pop()}</span>
-                  {pedido.mesaZona && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">
-                      📍 {pedido.mesaZona.split(' - ')[0]}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[9px] text-gray-500">{getTimeSince(pedido.creadoEn)}</span>
-              </div>
-
-              {/* Items for this station */}
-              <div className="space-y-1 mb-2">
-                {pedido.items.map(item => (
-                  <div key={item.id}>
-                    <p className="text-[11px] text-gray-300">
-                      <span className="text-purple-400 font-bold">{item.cantidad}x</span> {item.nombre}
-                    </p>
-                    {item.personalizaciones && item.personalizaciones.length > 0 && (
-                      <p className="text-[9px] text-amber-400 ml-4">⚙️ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}</p>
-                    )}
-                    {item.comentario && (
-                      <p className="text-[9px] text-cyan-400 ml-4 italic">💬 &quot;{item.comentario}&quot;</p>
+          pedidos.map((pedido, i) => (
+            <div key={pedido.id} className="animate-card-enter" style={{ animationDelay: `${i * 80}ms` }}>
+              <div className="rounded-xl bg-[#0d0d16] border border-white/[0.05] p-3.5 hover:border-purple-400/20 hover:shadow-[0_0_20px_rgba(168,85,247,0.05)] transition-all duration-300">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black text-white">#{pedido.numero.split('-').pop()}</span>
+                    {pedido.mesaZona && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold">
+                        📍 {pedido.mesaZona.split(' - ')[0]}
+                      </span>
                     )}
                   </div>
-                ))}
-              </div>
-
-              {/* Action */}
-              {!readonly && buttonLabel && (
-                <button
-                  onClick={() => onAdvance(pedido)}
-                  disabled={updatingId === pedido.id}
-                  className={`w-full mt-2 py-2 rounded-lg text-xs font-bold text-black ${buttonColor} disabled:opacity-50 transition-all active:scale-[0.97]`}
-                >
-                  {updatingId === pedido.id ? '...' : buttonLabel}
-                </button>
-              )}
-
-              {readonly && (
-                <div className="mt-2 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-                  <span className="text-[10px] text-green-400 font-medium">
-                    {pedido.meseroNombre ? `✓ ${pedido.meseroNombre}` : '✓ Esperando mesero'}
-                  </span>
+                  <span className="text-[9px] text-gray-600 font-mono">{getTimeSince(pedido.creadoEn)}</span>
                 </div>
-              )}
+
+                <div className="space-y-1 mb-3">
+                  {pedido.items.map(item => (
+                    <div key={item.id}>
+                      <p className="text-[11px] text-gray-300">
+                        <span className="text-purple-400 font-black">{item.cantidad}x</span> {item.nombre}
+                      </p>
+                      {item.personalizaciones && item.personalizaciones.length > 0 && (
+                        <p className="text-[9px] text-amber-400/80 ml-4 flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-amber-400" />
+                          {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}
+                        </p>
+                      )}
+                      {item.comentario && (
+                        <p className="text-[9px] text-cyan-400/80 ml-4 italic flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-cyan-400" />
+                          {item.comentario}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {!readonly && buttonLabel && (
+                  <button onClick={() => onAdvance(pedido)} disabled={updatingId === pedido.id}
+                    className={`relative w-full py-2.5 rounded-xl text-xs font-black text-black ${buttonColor} disabled:opacity-50 transition-all duration-300 active:scale-[0.95] overflow-hidden group`}>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                    <span className="relative">{updatingId === pedido.id ? '⏳' : buttonLabel}</span>
+                  </button>
+                )}
+
+                {readonly && (
+                  <div className="py-2 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
+                    <span className="text-[10px] text-green-400 font-bold">
+                      {pedido.meseroNombre ? `✓ ${pedido.meseroNombre}` : '⏳ Esperando mesero'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}
