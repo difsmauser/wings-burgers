@@ -34,47 +34,106 @@ export default function DemoPage() {
         {/* ═══════════════════════════════════════════════ */}
         {/* DESCRIPCIÓN DEL SISTEMA */}
         {/* ═══════════════════════════════════════════════ */}
-        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-4">Descripción del Sistema</h2>
-          <p className="text-sm text-gray-300 leading-relaxed mb-4">
-            Sistema enterprise de gestión integral diseñado específicamente para restaurantes de alitas, hamburguesas y bar. Digitaliza la operación completa del negocio: desde que el cliente ordena hasta que paga, pasando por cocina, bar y servicio de meseros.
-          </p>
-          <p className="text-sm text-gray-300 leading-relaxed mb-4">
-            Opera con <span className="text-brand-400 font-medium">3 canales de venta independientes</span>: menú QR en mesa (el cliente escanea y ordena solo), captura por mesero (presencial o vía WhatsApp), y pedidos a domicilio con ticket automático por WhatsApp. Los tres canales conviven sin mezclarse, cada uno con su flujo optimizado.
-          </p>
-          <p className="text-sm text-gray-300 leading-relaxed mb-6">
-            El panel administrativo incluye dashboard con KPIs en tiempo real, corte de caja con desglose por canal y método de pago, inventario con alertas de stock, control de gastos con tendencias, y gestión de personal (meseros con PIN + foto, repartidores). Todo accesible desde cualquier dispositivo — se instala como app nativa (PWA).
-          </p>
-
-          {/* Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <HighlightCard emoji="📱" valor="4" label="Canales de Venta" desc="QR Mesa / Mesero / Para Llevar / Domicilio" />
-            <HighlightCard emoji="🧩" valor="12+" label="Módulos" desc="Admin, Cocina, Bar, Mesero..." />
-            <HighlightCard emoji="🍗" valor="40" label="Productos" desc="Menú real con personalización" />
-            <HighlightCard emoji="⚡" valor="30s" label="Auto-Refresh" desc="Datos en tiempo real" />
+        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8 space-y-8">
+          <div>
+            <h2 className="text-xl font-bold text-white mb-4">¿Qué es este sistema?</h2>
+            <p className="text-sm text-gray-300 leading-relaxed mb-3">
+              Es un sistema <span className="text-brand-400 font-medium">completo de gestión</span> diseñado para restaurantes que necesitan digitalizar toda su operación. Controla desde el momento en que un cliente decide pedir, hasta que paga y se va. Cocina, bar, meseros, repartidores, caja — todo conectado en tiempo real.
+            </p>
+            <p className="text-sm text-gray-300 leading-relaxed">
+              Funciona como app en el celular del cliente (no necesita descargar nada), en la tablet de la cocina, y en la computadora del administrador. Se instala como PWA (Progressive Web App) — se ve y funciona como app nativa.
+            </p>
           </div>
 
-          {/* Features grid */}
-          <div className="mt-6 pt-6 border-t border-white/[0.06]">
-            <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-3">Funcionalidades Principales</p>
+          {/* Highlights */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <HighlightCard emoji="📱" valor="4" label="Canales de Venta" desc="QR Mesa / Mesero / Para Llevar / Domicilio" />
+            <HighlightCard emoji="🧩" valor="12+" label="Módulos" desc="Admin, Cocina, Bar, Mesero, Caja..." />
+            <HighlightCard emoji="🍗" valor="40+" label="Productos" desc="Con fotos y personalización" />
+            <HighlightCard emoji="⚡" valor="Tiempo Real" label="Auto-Refresh" desc="Pedidos, cocina, pagos" />
+          </div>
+
+          {/* 4 CANALES DE VENTA */}
+          <div>
+            <h3 className="text-base font-bold text-white mb-1">4 Canales de Venta Independientes</h3>
+            <p className="text-xs text-gray-500 mb-4">Cada canal tiene su propio flujo optimizado. No se mezclan entre sí.</p>
+
+            <div className="space-y-3">
+              <CanalDesc
+                color="yellow" emoji="📱" titulo="QR en Mesa"
+                desc="El cliente escanea el código QR pegado en su mesa. Ve el menú completo con fotos, agrega productos, y confirma su pedido. El pedido llega directo a cocina sin necesidad de mesero. Cuando está listo, el mesero sirve y después cobra."
+                flujo="Escanea QR → Ve menú → Agrega productos → Confirma → Cocina prepara → Mesero sirve → Cliente paga"
+              />
+              <CanalDesc
+                color="blue" emoji="🧑‍🍳" titulo="Mesero (Presencial o WhatsApp)"
+                desc="El mesero toma la orden directamente en la mesa del cliente o recibe el pedido por WhatsApp. Tiene un selector inteligente que solo muestra mesas disponibles. Puede agregar instrucciones especiales por producto (sin cebolla, extra picante, etc.)."
+                flujo="Mesero toma orden → Selecciona mesa → Envía a cocina → Cocina prepara → Mesero sirve → Cobra"
+              />
+              <CanalDesc
+                color="amber" emoji="🛍️" titulo="Para Llevar (QR en Mostrador)"
+                desc="Un QR genérico pegado en el mostrador o barra. El cliente que no tiene mesa escanea, arma su pedido con su nombre y WhatsApp. Va a cocina, se prepara, y cuando está listo se le llama. Paga en caja y se le entrega su pedido."
+                flujo="Escanea QR mostrador → Agrega productos → Confirma → Cocina prepara → Se llama al cliente → Paga en caja → Se entrega"
+              />
+              <CanalDesc
+                color="green" emoji="🛵" titulo="Domicilio"
+                desc="Link único que se comparte en redes sociales, WhatsApp, o grupos. El cliente abre desde su celular, arma su pedido, y paga antes de que se envíe a cocina. Si paga con transferencia, caja valida y luego va a cocina. Si paga en efectivo, dice con qué billete paga para que el repartidor lleve cambio."
+                flujo="Abre link → Agrega productos → Paga (transfer o efectivo) → Cocina prepara → Repartidor entrega → Ticket WhatsApp"
+              />
+            </div>
+          </div>
+
+          {/* FLUJO DE PAGO */}
+          <div>
+            <h3 className="text-base font-bold text-white mb-1">Sistema de Pago Inteligente</h3>
+            <p className="text-xs text-gray-500 mb-4">El pago se adapta automáticamente al canal. No se muestra hasta que es el momento correcto.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                <p className="text-xs font-bold text-blue-400 mb-2">💳 Transferencia</p>
+                <p className="text-[11px] text-gray-400 leading-relaxed">Se muestran los datos bancarios (Titular, CLABE, Tarjeta) con botón de <span className="text-white">Copiar</span> para que el cliente pegue directo en su banca móvil. Sube foto del comprobante y caja valida en tiempo real.</p>
+              </div>
+              <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10">
+                <p className="text-xs font-bold text-green-400 mb-2">💵 Efectivo</p>
+                <p className="text-[11px] text-gray-400 leading-relaxed">En mesa: el mesero cobra. Para llevar: paga en caja. Domicilio: el cliente indica con qué billete paga ($100, $200, $500) y el repartidor lleva el cambio exacto.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* MÓDULOS DEL ADMIN */}
+          <div>
+            <h3 className="text-base font-bold text-white mb-1">Panel de Administración</h3>
+            <p className="text-xs text-gray-500 mb-4">El dueño del negocio controla todo desde aquí. Accesible desde celular o computadora.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <AdminModuleDesc emoji="📊" titulo="Dashboard" desc="Ventas del día en tiempo real, gráfica de ventas por hora, ticket promedio, utilidad neta, actividad reciente con badges de color por canal, top productos vendidos." />
+              <AdminModuleDesc emoji="📈" titulo="Corte de Caja" desc="Reporte financiero con filtro por período (hoy/semana/mes). Dona por método de pago, dona por canal de venta, desglose Cocina vs Bar, tabla completa de pedidos." />
+              <AdminModuleDesc emoji="📦" titulo="Inventario" desc="Control de stock con alertas automáticas. Cuando un insumo baja del nivel mínimo, se marca como crítico. Historial de entradas y salidas con timeline visual." />
+              <AdminModuleDesc emoji="💰" titulo="Gastos" desc="Registro de gastos por categoría (insumos, nómina, servicios, etc.). Gráfica de dona por categoría, tendencia mensual con línea de 6 meses, promedio diario." />
+              <AdminModuleDesc emoji="🧑‍🍳" titulo="Meseros" desc="Alta de meseros con foto y PIN numérico de 4 dígitos. El mesero inicia sesión seleccionando su foto e ingresando su PIN — sin emails ni contraseñas." />
+              <AdminModuleDesc emoji="🪑" titulo="Mesas" desc="Mapa visual del local con posición de cada mesa. Estado en tiempo real (disponible, ocupada, pendiente cobro). Generación automática de QR por mesa." />
+              <AdminModuleDesc emoji="🍗" titulo="Productos" desc="Menú completo con fotos, descripciones, precios y opciones de personalización por producto. Activar/desactivar productos sin eliminarlos." />
+              <AdminModuleDesc emoji="🛵" titulo="Repartidores" desc="Alta de repartidores con nombre, teléfono y vehículo. Se asignan a pedidos de domicilio para la entrega." />
+            </div>
+          </div>
+
+          {/* SEGURIDAD Y TÉCNICO */}
+          <div>
+            <h3 className="text-base font-bold text-white mb-1">Seguridad y Arquitectura</h3>
+            <p className="text-xs text-gray-500 mb-4">Construido con estándares enterprise de seguridad y código limpio.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
               {[
-                'Dashboard con gráficas animadas de ventas por hora',
-                'Corte de caja: dona por canal, método de pago, Cocina vs Bar',
-                'Menú QR: cliente escanea y ordena sin mesero',
-                'Captura mesero: selector inteligente de mesas disponibles',
-                'Pedidos domicilio con ticket WhatsApp automático',
-                'Inventario con alertas de stock bajo/crítico',
-                'Gastos con dona por categoría y tendencia mensual',
-                'Meseros con foto y login por PIN numérico',
-                'Mapa interactivo de mesas con estados',
-                'Multi-método de pago (efectivo / transferencia)',
-                'PWA instalable — funciona offline',
-                'Seguridad: JWT, roles, rate limiting, validación',
-                'Arquitectura hexagonal (clean code, testable)',
-                'Responsive design (móvil + tablet + escritorio)',
-                'Carrito con TTL de 12h (auto-limpieza)',
-                'Sesiones aisladas — múltiples clientes simultáneos',
+                'Autenticación JWT con roles (admin, caja, vendedor)',
+                'Rate limiting — protección contra abuso de APIs',
+                'Validación de datos en servidor (no confía en el cliente)',
+                'Sesiones aisladas — 10 clientes simultáneos sin conflicto',
+                'Carrito con expiración automática de 12 horas',
+                'Arquitectura hexagonal (dominio puro, adaptadores, puertos)',
+                'TypeScript estricto end-to-end (frontend + backend)',
+                'Base de datos PostgreSQL (Supabase) con RLS',
+                'Storage para imágenes y comprobantes (Supabase Storage)',
+                'Deploy automático en Vercel con CDN global',
+                'PWA: se instala como app, funciona sin conexión',
+                'Responsive: celular, tablet y escritorio',
               ].map((feat, i) => (
                 <div key={i} className="flex items-start gap-2 py-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-1.5 flex-shrink-0" />
@@ -234,6 +293,39 @@ function HighlightCard({ emoji, valor, label, desc }: { emoji: string; valor: st
       <p className="text-xl font-black text-white mt-1">{valor}</p>
       <p className="text-[11px] text-gray-400 mt-0.5">{label}</p>
       <p className="text-[9px] text-gray-600">{desc}</p>
+    </div>
+  );
+}
+
+function CanalDesc({ color, emoji, titulo, desc, flujo }: { color: string; emoji: string; titulo: string; desc: string; flujo: string }) {
+  const borderColors: Record<string, string> = {
+    yellow: 'border-yellow-500/20', blue: 'border-blue-500/20', amber: 'border-amber-500/20', green: 'border-green-500/20',
+  };
+  const textColors: Record<string, string> = {
+    yellow: 'text-yellow-400', blue: 'text-blue-400', amber: 'text-amber-400', green: 'text-green-400',
+  };
+  return (
+    <div className={`p-4 rounded-xl bg-white/[0.01] border ${borderColors[color] || 'border-white/5'}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-base">{emoji}</span>
+        <h4 className={`text-sm font-bold ${textColors[color] || 'text-white'}`}>{titulo}</h4>
+      </div>
+      <p className="text-xs text-gray-400 leading-relaxed mb-3">{desc}</p>
+      <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+        <p className="text-[10px] text-gray-500"><span className="text-gray-400 font-medium">Flujo:</span> {flujo}</p>
+      </div>
+    </div>
+  );
+}
+
+function AdminModuleDesc({ emoji, titulo, desc }: { emoji: string; titulo: string; desc: string }) {
+  return (
+    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-sm">{emoji}</span>
+        <h4 className="text-xs font-bold text-white">{titulo}</h4>
+      </div>
+      <p className="text-[11px] text-gray-400 leading-relaxed">{desc}</p>
     </div>
   );
 }
