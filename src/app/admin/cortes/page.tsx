@@ -152,14 +152,12 @@ export default function CortesPage() {
 
   // === By canal (donut data) ===
   const ventasDomicilio = pagados.filter(p => p.modalidad === 'domicilio').reduce((s, p) => s + p.total, 0);
-  const ventasMesero = pagados.filter(p => p.modalidad === 'local' && (p.observaciones.includes('[MESERO]') || !!p.meseroNombre)).reduce((s, p) => s + p.total, 0);
-  const ventasQR = pagados.filter(p => p.modalidad === 'local' && p.observaciones.includes('[QR]') && !p.meseroNombre).reduce((s, p) => s + p.total, 0);
-  const ventasOtro = totalVentas - ventasDomicilio - ventasMesero - ventasQR;
+  const ventasQR = pagados.filter(p => p.modalidad === 'local' && p.observaciones.includes('[QR]')).reduce((s, p) => s + p.total, 0);
+  const ventasMesero = pagados.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[QR]')).reduce((s, p) => s + p.total, 0);
   const canalData = [
-    { label: 'Mesero', value: ventasMesero, color: '#3b82f6' },
     { label: 'QR Mesa', value: ventasQR, color: '#eab308' },
+    { label: 'Mesero', value: ventasMesero, color: '#3b82f6' },
     { label: 'Domicilio', value: ventasDomicilio, color: '#22c55e' },
-    { label: 'Otro', value: ventasOtro, color: '#6b7280' },
   ].filter(d => d.value > 0);
 
   // === Ventas por día (bar chart) ===
@@ -174,7 +172,7 @@ export default function CortesPage() {
   // === Canal classification for table ===
   const getCanal = (p: PedidoCorte): { label: string; color: string } => {
     if (p.modalidad === 'domicilio') return { label: 'Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (p.observaciones.includes('[QR]') && !p.meseroNombre) return { label: 'QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
+    if (p.observaciones.includes('[QR]')) return { label: 'QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
     return { label: 'Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
   };
 
