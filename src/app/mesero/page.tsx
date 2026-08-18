@@ -44,13 +44,15 @@ function parseCanal(obs?: string): string {
   return m ? m[1] : 'QR';
 }
 
-// ========== Login Component ==========
+// ========== Login Component (PIN + Photo) ==========
 
 function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
-  const [meserosRegistrados, setMeserosRegistrados] = useState<Array<{ id: string; nombre: string }>>([]);
+  const [meserosRegistrados, setMeserosRegistrados] = useState<Array<{ id: string; nombre: string; pin: string | null; foto_url: string | null }>>([]);
   const [loadingList, setLoadingList] = useState(true);
-  const [nombreManual, setNombreManual] = useState('');
-  const [modoManual, setModoManual] = useState(false);
+  const [selectedMesero, setSelectedMesero] = useState<{ id: string; nombre: string; pin: string | null; foto_url: string | null } | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState(false);
+  const [shaking, setShaking] = useState(false);
 
   useEffect(() => {
     fetch('/api/meseros')
@@ -60,73 +62,177 @@ function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
       .finally(() => setLoadingList(false));
   }, []);
 
+  // Auto-submit when 4 digits entered
+  useEffect(() => {
+    if (pinInput.length === 4 && selectedMesero) {
+      if (!selectedMesero.pin || selectedMesero.pin === pinInput) {
+        // Success
+        setPinError(false);
+        onLogin(selectedMesero.nombre);
+      } else {
+        // Wrong PIN
+        setPinError(true);
+        setShaking(true);
+        setTimeout(() => { setShaking(false); setPinInput(''); setPinError(false); }, 600);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinInput, selectedMesero]);
+
+  const handlePinDigit = (digit: string) => {
+    if (pinInput.length < 4) {
+      setPinInput(prev => prev + digit);
+    }
+  };
+
+  const handlePinDelete = () => {
+    setPinInput(prev => prev.slice(0, -1));
+    setPinError(false);
+  };
+
+  const handleSelectMesero = (mesero: typeof meserosRegistrados[0]) => {
+    setSelectedMesero(mesero);
+    setPinInput('');
+    setPinError(false);
+    // If mesero has no PIN, log in directly
+    if (!mesero.pin) {
+      onLogin(mesero.nombre);
+    }
+  };
+
   if (loadingList) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
+        <div className="w-12 h-12 rounded-full border-2 border-brand-500/20 border-t-brand-400 animate-spin" />
       </div>
     );
   }
 
+  // PIN Entry Screen
+  if (selectedMesero && selectedMesero.pin) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+        <div className="w-full max-w-xs">
+          {/* Back button */}
+          <button
+            onClick={() => { setSelectedMesero(null); setPinInput(''); }}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors mb-6"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            Cambiar mesero
+          </button>
+
+          {/* Profile */}
+          <div className="text-center mb-8">
+            <div className={`w-20 h-20 rounded-2xl mx-auto overflow-hidden border-2 transition-all duration-300 ${
+              pinError ? 'border-red-500 shadow-lg shadow-red-500/20' : 'border-white/10 shadow-lg shadow-black/20'
+            } ${shaking ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+              {selectedMesero.foto_url ? (
+                <img src={selectedMesero.foto_url} alt={selectedMesero.nombre} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-brand-500/30 to-brand-600/20 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-brand-400">{selectedMesero.nombre.charAt(0).toUpperCase()}</span>
+                </div>
+              )}
+            </div>
+            <h2 className="text-lg font-bold text-white mt-3">{selectedMesero.nombre}</h2>
+            <p className="text-xs text-gray-500 mt-1">Ingresa tu PIN de 4 dígitos</p>
+          </div>
+
+          {/* PIN Dots */}
+          <div className={`flex items-center justify-center gap-4 mb-8 ${shaking ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
+            {[0, 1, 2, 3].map(i => (
+              <div
+                key={i}
+                className={`w-4 h-4 rounded-full transition-all duration-200 ${
+                  i < pinInput.length
+                    ? pinError ? 'bg-red-400 scale-110' : 'bg-brand-400 scale-110'
+                    : 'bg-white/10 border border-white/20'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Error message */}
+          {pinError && (
+            <p className="text-center text-xs text-red-400 mb-4 animate-fade-in">PIN incorrecto</p>
+          )}
+
+          {/* Numeric Keypad */}
+          <div className="grid grid-cols-3 gap-3 max-w-[240px] mx-auto">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].map((key) => {
+              if (key === '') return <div key="empty" />;
+              if (key === 'del') {
+                return (
+                  <button
+                    key="del"
+                    onClick={handlePinDelete}
+                    className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all mx-auto"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414-6.414a2 2 0 011.414-.586H19a2 2 0 012 2v10a2 2 0 01-2 2h-8.172a2 2 0 01-1.414-.586L3 12z" /></svg>
+                  </button>
+                );
+              }
+              return (
+                <button
+                  key={key}
+                  onClick={() => handlePinDigit(key)}
+                  className="w-16 h-16 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-center text-xl font-semibold text-white hover:bg-white/[0.08] active:scale-95 active:bg-brand-500/10 transition-all mx-auto"
+                >
+                  {key}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mesero Selection Grid
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 shadow-2xl">
-        <div className="text-center mb-6">
-          <span className="text-5xl block mb-3">🧑‍🍳</span>
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
           <h1 className="text-xl font-bold text-white">Módulo Mesero</h1>
-          <p className="text-xs text-gray-400 mt-1">Selecciona tu perfil para comenzar</p>
+          <p className="text-sm text-gray-500 mt-1">Selecciona tu perfil para continuar</p>
         </div>
 
-        {!modoManual && meserosRegistrados.length > 0 ? (
-          <div className="space-y-2">
+        {meserosRegistrados.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {meserosRegistrados.map(m => (
               <button
                 key={m.id}
-                onClick={() => onLogin(m.nombre)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:border-brand-400/30 hover:bg-brand-500/5 transition-all text-left group"
+                onClick={() => handleSelectMesero(m)}
+                className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-[#12121a] border border-white/[0.06] hover:border-brand-400/30 hover:bg-brand-500/5 transition-all group active:scale-[0.97]"
               >
-                <div className="w-9 h-9 rounded-full bg-brand-500/10 border border-brand-400/20 flex items-center justify-center group-hover:bg-brand-500/20 transition-all">
-                  <span className="text-sm font-bold text-brand-400">{m.nombre.charAt(0).toUpperCase()}</span>
+                <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white/10 group-hover:border-brand-400/30 transition-all">
+                  {m.foto_url ? (
+                    <img src={m.foto_url} alt={m.nombre} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center">
+                      <span className="text-lg font-bold text-brand-400">{m.nombre.charAt(0).toUpperCase()}</span>
+                    </div>
+                  )}
                 </div>
-                <span className="text-sm font-medium text-white">{m.nombre}</span>
+                <span className="text-xs font-medium text-white text-center truncate w-full">{m.nombre}</span>
+                {m.pin && (
+                  <span className="text-[9px] text-gray-600 flex items-center gap-1">
+                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    PIN
+                  </span>
+                )}
               </button>
             ))}
-            <div className="pt-3 border-t border-white/5 mt-3">
-              <button
-                onClick={() => setModoManual(true)}
-                className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Entrar con otro nombre...
-              </button>
-            </div>
           </div>
         ) : (
-          <form onSubmit={(e) => { e.preventDefault(); if (nombreManual.trim()) onLogin(nombreManual.trim()); }}>
-            <input
-              type="text"
-              value={nombreManual}
-              onChange={(e) => setNombreManual(e.target.value)}
-              placeholder="Tu nombre (ej: Carlos)"
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 mb-4"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!nombreManual.trim()}
-              className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-brand-400 to-brand-600 text-black disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg hover:shadow-brand-500/20"
-            >
-              Entrar
-            </button>
-            {meserosRegistrados.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setModoManual(false)}
-                className="w-full mt-3 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                ← Volver a la lista
-              </button>
-            )}
-          </form>
+          <div className="text-center py-8 rounded-2xl bg-[#12121a] border border-white/[0.06]">
+            <p className="text-sm text-gray-400">No hay meseros registrados</p>
+            <p className="text-xs text-gray-600 mt-1">Pide al administrador que registre meseros</p>
+          </div>
         )}
       </div>
     </div>

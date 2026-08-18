@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
+import { requireAuth } from '@/app/api/_lib/auth';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 
 export const dynamic = 'force-dynamic';
@@ -7,8 +8,11 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/meseros
  * Lista todos los meseros registrados.
+ * Auth: admin, vendedor, caja
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin', 'vendedor', 'caja']);
+  if ('respuesta' in auth) return auth.respuesta;
   try {
     const supabase = createServerClient();
     const { data, error } = await supabase
@@ -27,9 +31,12 @@ export async function GET() {
 /**
  * POST /api/meseros
  * Crea un nuevo mesero.
- * Body: { nombre: string, telefono?: string, pin?: string }
+ * Auth: admin
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const supabase = createServerClient();
@@ -47,6 +54,7 @@ export async function POST(request: NextRequest) {
         nombre: body.nombre.trim(),
         telefono: body.telefono?.trim() || null,
         pin: body.pin?.trim() || null,
+        foto_url: body.foto_url?.trim() || null,
         activo: true,
       })
       .select()
@@ -62,9 +70,12 @@ export async function POST(request: NextRequest) {
 /**
  * PUT /api/meseros
  * Actualiza un mesero existente.
- * Body: { id: string, nombre?: string, telefono?: string, pin?: string, activo?: boolean }
+ * Auth: admin
  */
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const supabase = createServerClient();
@@ -81,6 +92,7 @@ export async function PUT(request: NextRequest) {
     if (body.telefono !== undefined) updateFields.telefono = body.telefono?.trim() || null;
     if (body.pin !== undefined) updateFields.pin = body.pin?.trim() || null;
     if (body.activo !== undefined) updateFields.activo = body.activo;
+    if (body.foto_url !== undefined) updateFields.foto_url = body.foto_url?.trim() || null;
 
     const { data, error } = await supabase
       .from('mesero')
@@ -99,8 +111,12 @@ export async function PUT(request: NextRequest) {
 /**
  * DELETE /api/meseros?id=xxx
  * Desactiva (soft-delete) un mesero.
+ * Auth: admin
  */
 export async function DELETE(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
