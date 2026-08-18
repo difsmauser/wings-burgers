@@ -233,16 +233,46 @@ export default function DemoPage() {
         />
 
         {/* ═══════════════════════════════════════════════ */}
-        {/* MÓDULO: COCINA / CAJA */}
+        {/* MÓDULO: COCINA */}
         {/* ═══════════════════════════════════════════════ */}
         <ModuloSection
           color="orange"
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>}
-          titulo="Cocina / Caja"
-          descripcion="Pantalla de pedidos entrantes para la cocina. Vista en tiempo real de órdenes por preparar."
+          titulo="Pantalla de Cocina"
+          descripcion="Pantalla en tiempo real para el cocinero. Muestra los pedidos entrantes con detalle de productos e instrucciones especiales. El cocinero marca cada pedido como 'listo' cuando termina."
           credenciales={{ usuario: 'admin@alaburguer.com', password: 'Admin123!', nota: 'Mismo acceso que admin' }}
           links={[
-            { nombre: 'Pantalla Cocina', desc: 'Pedidos entrantes en tiempo real', url: `${base}/caja` },
+            { nombre: 'Cocina', desc: 'Pedidos entrantes — preparación en tiempo real', url: `${base}/caja` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: BAR */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="brand"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>}
+          titulo="Pantalla de Bar"
+          descripcion="Pantalla independiente para el barman. Muestra solo los pedidos que incluyen bebidas del bar (cervezas, micheladas, cocteles). Opera separado de cocina para no cruzar órdenes."
+          credenciales={{ usuario: 'admin@alaburguer.com', password: 'Admin123!', nota: 'Mismo acceso que admin' }}
+          links={[
+            { nombre: 'Bar', desc: 'Pedidos de bebidas — preparación independiente', url: `${base}/bar` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: CAJA */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="emerald"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
+          titulo="Módulo Caja"
+          descripcion="Validación de pagos por transferencia (comprobantes), cobro de efectivo, liberación de mesas. Caja controla que todo pago sea confirmado antes de entregar."
+          credenciales={{ usuario: 'admin@alaburguer.com', password: 'Admin123!', nota: 'Mismo acceso que admin' }}
+          links={[
+            { nombre: 'Caja / Comprobantes', desc: 'Validar transferencias y gestionar pagos', url: `${base}/admin/comprobantes` },
           ]}
           baseUrl={base}
         />
