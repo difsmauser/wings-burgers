@@ -72,6 +72,8 @@ interface CarritoContextValue {
 }
 
 const STORAGE_KEY = 'wings-burgers-carrito';
+const STORAGE_TTL_KEY = 'wings-burgers-carrito-ts';
+const TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 const IVA_RATE = 0;
 
 const CarritoContext = createContext<CarritoContextValue | null>(null);
@@ -96,11 +98,26 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
   });
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount (with 12h TTL)
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
+      const timestamp = localStorage.getItem(STORAGE_TTL_KEY);
+
+      if (stored && timestamp) {
+        const age = Date.now() - parseInt(timestamp, 10);
+        if (age < TTL_MS) {
+          // Still valid — restore state
+          const parsed = JSON.parse(stored) as CarritoState;
+          setState(parsed);
+        } else {
+          // Expired — clear stale cart
+          localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(STORAGE_TTL_KEY);
+        }
+      } else if (stored) {
+        // No timestamp (legacy) — set one now but use existing data
+        localStorage.setItem(STORAGE_TTL_KEY, String(Date.now()));
         const parsed = JSON.parse(stored) as CarritoState;
         setState(parsed);
       }
@@ -110,11 +127,21 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
   }, []);
 
-  // Persist to localStorage on state change
+  // Persist to localStorage on state change (with timestamp)
   useEffect(() => {
     if (hydrated) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        // Update timestamp only when items change (not on every render)
+        if (state.items.length > 0) {
+          const existing = localStorage.getItem(STORAGE_TTL_KEY);
+          if (!existing) {
+            localStorage.setItem(STORAGE_TTL_KEY, String(Date.now()));
+          }
+        } else {
+          // Empty cart — remove timestamp so next session starts fresh
+          localStorage.removeItem(STORAGE_TTL_KEY);
+        }
       } catch {
         // Storage full or unavailable
       }
