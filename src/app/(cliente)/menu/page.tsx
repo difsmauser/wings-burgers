@@ -472,20 +472,21 @@ export default function MenuPage() {
   const [userReset, setUserReset] = useState(false);
 
   // Reset stale confirmado so user can add items again
+  // Also reset modalidad since it will be set correctly by the QR/domicilio logic
   useEffect(() => {
     if (confirmado) limpiarParaNuevoPedido();
   }, [confirmado, limpiarParaNuevoPedido]);
 
   // Restore modalidad from CarritoContext (persisted in localStorage)
-  // This ensures navigating back from /pedido skips the welcome screen
+  // Restore modalidad from context (e.g., navigating back from /pedido)
+  // But NOT if there's a QR code — QR always means LOCAL
   useEffect(() => {
-    if (carritoModalidad && !modalidad && !userReset) {
+    if (carritoModalidad && !modalidad && !userReset && !qrCodigo && !qrMesa) {
       setModalidadLocal(carritoModalidad);
     }
-  }, [carritoModalidad, modalidad, userReset]);
+  }, [carritoModalidad, modalidad, userReset, qrCodigo, qrMesa]);
 
-  // If QR mesa is already in context (from localStorage), mark as valid without re-fetching
-  // This handles returning to /menu after navigating to /pedido
+  // If QR mesa is already in context (from localStorage), mark as valid and set LOCAL
   useEffect(() => {
     if (qrMesa && qrEstado === 'idle' && !qrCodigo) {
       setQrEstado('valido');
@@ -494,8 +495,11 @@ export default function MenuPage() {
         mesaZona: qrMesa.mesaZona,
         valido: true,
       });
+      // QR in context = client is at a table = force LOCAL
+      setModalidadContext('LOCAL');
+      setModalidadLocal('LOCAL');
     }
-  }, [qrMesa, qrEstado, qrCodigo]);
+  }, [qrMesa, qrEstado, qrCodigo, setModalidadContext]);
 
   // Derive categories dynamically from fetched products
   const categoriasDinamicas = [
@@ -571,7 +575,9 @@ export default function MenuPage() {
             codigo: json.data.codigo,
             mesaZona: json.data.mesaZona,
           });
-          // Don't auto-set modalidad, let user choose between LOCAL and RETIRO
+          // QR válido = el cliente está en una mesa = modalidad LOCAL
+          setModalidadContext('LOCAL');
+          setModalidadLocal('LOCAL');
         } else {
           setQrEstado('invalido');
         }
