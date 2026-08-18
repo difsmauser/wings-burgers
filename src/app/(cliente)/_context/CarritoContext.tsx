@@ -152,12 +152,29 @@ export function CarritoProvider({ children }: { children: ReactNode }) {
     setState((prev) => {
       if (prev.confirmado) return prev;
 
+      // Check if the same product already exists in the cart (same productoId, same personalizations)
+      const existingIndex = prev.items.findIndex(
+        (existing) => existing.productoId === item.productoId &&
+          JSON.stringify(existing.personalizaciones) === JSON.stringify(item.personalizaciones ?? [])
+      );
+
+      if (existingIndex >= 0) {
+        // Product already in cart — increment quantity
+        const updatedItems = prev.items.map((existing, idx) =>
+          idx === existingIndex
+            ? { ...existing, cantidad: existing.cantidad + (item.cantidad || 1) }
+            : existing
+        );
+        return { ...prev, items: updatedItems };
+      }
+
+      // New product — add to cart
       const newItem: ItemCarrito = {
         id: crypto.randomUUID(),
         productoId: item.productoId,
         nombre: item.nombre,
         precioUnitario: item.precioUnitario,
-        cantidad: item.cantidad,
+        cantidad: item.cantidad || 1,
         imagenUrl: item.imagenUrl,
         personalizaciones: item.personalizaciones ?? [],
         comentario: item.comentario ?? '',
