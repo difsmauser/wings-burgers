@@ -57,6 +57,7 @@ function isPublicPath(pathname: string): boolean {
   // Client module routes are public (no login required)
   if (
     pathname.startsWith('/menu') ||
+    pathname.startsWith('/para-llevar') ||
     pathname === '/pedido' ||
     pathname.startsWith('/pagar') ||
     pathname.startsWith('/pago') ||
