@@ -176,6 +176,22 @@ export default function CortesPage() {
     return { label: 'Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
   };
 
+  // === Cocina vs Bar breakdown ===
+  const categoriasBar = ['bar'];
+  const ventasBar = pagados.reduce((s, p) => {
+    const barTotal = p.items.filter(i => {
+      const nombre = i.nombre.toLowerCase();
+      return nombre.includes('cerveza') || nombre.includes('michelada') || nombre.includes('margarita') || nombre.includes('tequila') || nombre.includes('vino');
+    }).reduce((sum, i) => sum + i.cantidad * i.precioUnitario, 0);
+    return s + barTotal;
+  }, 0);
+  const ventasCocina = totalVentas - ventasBar;
+  const pedidosConBar = pagados.filter(p => p.items.some(i => {
+    const n = i.nombre.toLowerCase();
+    return n.includes('cerveza') || n.includes('michelada') || n.includes('margarita') || n.includes('tequila') || n.includes('vino');
+  })).length;
+  const pedidosCocina = pagados.length - pedidosConBar + pedidosConBar; // All orders go through cocina, some also have bar items
+
   const fmt = (v: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v);
 
   if (loading) return (
@@ -296,6 +312,76 @@ export default function CortesPage() {
                 );
               })}
             </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cocina vs Bar Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Cocina */}
+        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Cocina</h3>
+              <p className="text-[10px] text-gray-500">Alitas, hamburguesas, platillos, complementos</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ventas Cocina</p>
+              <p className="text-lg font-bold text-orange-400 mt-1">{fmt(ventasCocina)}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Pedidos</p>
+              <p className="text-lg font-bold text-white mt-1">{pagados.length}</p>
+              <p className="text-[9px] text-gray-600">todos pasan por cocina</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-white/5">
+            <p className="text-[10px] text-gray-500 mb-2">Incluye:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['Alitas', 'Hamburguesas', 'Boneless', 'Combos', 'Platillos', 'Complementos'].map(cat => (
+                <span key={cat} className="px-2 py-0.5 rounded text-[9px] font-medium bg-orange-500/5 text-orange-400/80 border border-orange-500/10">{cat}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bar */}
+        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">Bar</h3>
+              <p className="text-[10px] text-gray-500">Cervezas, micheladas, cocteles, vinos</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Ventas Bar</p>
+              <p className="text-lg font-bold text-purple-400 mt-1">{fmt(ventasBar)}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Pedidos c/ Bar</p>
+              <p className="text-lg font-bold text-white mt-1">{pedidosConBar}</p>
+              <p className="text-[9px] text-gray-600">incluyen bebidas bar</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-3 border-t border-white/5">
+            <p className="text-[10px] text-gray-500 mb-2">Incluye:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {['Cerveza', 'Michelada', 'Margarita', 'Tequila', 'Vino'].map(cat => (
+                <span key={cat} className="px-2 py-0.5 rounded text-[9px] font-medium bg-purple-500/5 text-purple-400/80 border border-purple-500/10">{cat}</span>
+              ))}
+            </div>
+          </div>
+          {ventasBar === 0 && (
+            <p className="text-[10px] text-gray-600 mt-3 text-center italic">Sin ventas de bar en este período</p>
           )}
         </div>
       </div>
