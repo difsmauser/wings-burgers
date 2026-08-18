@@ -32,6 +32,60 @@ export default function DemoPage() {
         </div>
 
         {/* ═══════════════════════════════════════════════ */}
+        {/* DESCRIPCIÓN DEL SISTEMA */}
+        {/* ═══════════════════════════════════════════════ */}
+        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
+          <h2 className="text-lg font-bold text-white mb-4">Descripción del Sistema</h2>
+          <p className="text-sm text-gray-300 leading-relaxed mb-4">
+            Sistema enterprise de gestión integral diseñado específicamente para restaurantes de alitas, hamburguesas y bar. Digitaliza la operación completa del negocio: desde que el cliente ordena hasta que paga, pasando por cocina, bar y servicio de meseros.
+          </p>
+          <p className="text-sm text-gray-300 leading-relaxed mb-4">
+            Opera con <span className="text-brand-400 font-medium">3 canales de venta independientes</span>: menú QR en mesa (el cliente escanea y ordena solo), captura por mesero (presencial o vía WhatsApp), y pedidos a domicilio con ticket automático por WhatsApp. Los tres canales conviven sin mezclarse, cada uno con su flujo optimizado.
+          </p>
+          <p className="text-sm text-gray-300 leading-relaxed mb-6">
+            El panel administrativo incluye dashboard con KPIs en tiempo real, corte de caja con desglose por canal y método de pago, inventario con alertas de stock, control de gastos con tendencias, y gestión de personal (meseros con PIN + foto, repartidores). Todo accesible desde cualquier dispositivo — se instala como app nativa (PWA).
+          </p>
+
+          {/* Highlights */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <HighlightCard emoji="📱" valor="3" label="Canales de Venta" desc="QR / Mesero / Domicilio" />
+            <HighlightCard emoji="🧩" valor="12+" label="Módulos" desc="Admin, Cocina, Bar, Mesero..." />
+            <HighlightCard emoji="🍗" valor="40" label="Productos" desc="Menú real con personalización" />
+            <HighlightCard emoji="⚡" valor="30s" label="Auto-Refresh" desc="Datos en tiempo real" />
+          </div>
+
+          {/* Features grid */}
+          <div className="mt-6 pt-6 border-t border-white/[0.06]">
+            <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-3">Funcionalidades Principales</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+              {[
+                'Dashboard con gráficas animadas de ventas por hora',
+                'Corte de caja: dona por canal, método de pago, Cocina vs Bar',
+                'Menú QR: cliente escanea y ordena sin mesero',
+                'Captura mesero: selector inteligente de mesas disponibles',
+                'Pedidos domicilio con ticket WhatsApp automático',
+                'Inventario con alertas de stock bajo/crítico',
+                'Gastos con dona por categoría y tendencia mensual',
+                'Meseros con foto y login por PIN numérico',
+                'Mapa interactivo de mesas con estados',
+                'Multi-método de pago (efectivo / transferencia)',
+                'PWA instalable — funciona offline',
+                'Seguridad: JWT, roles, rate limiting, validación',
+                'Arquitectura hexagonal (clean code, testable)',
+                'Responsive design (móvil + tablet + escritorio)',
+                'Carrito con TTL de 12h (auto-limpieza)',
+                'Sesiones aisladas — múltiples clientes simultáneos',
+              ].map((feat, i) => (
+                <div key={i} className="flex items-start gap-2 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-1.5 flex-shrink-0" />
+                  <span className="text-xs text-gray-400">{feat}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════ */}
         {/* MÓDULO: ADMIN PANEL */}
         {/* ═══════════════════════════════════════════════ */}
         <ModuloSection
@@ -179,6 +233,17 @@ export default function DemoPage() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Componente de sección de módulo
 // ═══════════════════════════════════════════════════════════════════════════════
+
+function HighlightCard({ emoji, valor, label, desc }: { emoji: string; valor: string; label: string; desc: string }) {
+  return (
+    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+      <span className="text-lg">{emoji}</span>
+      <p className="text-xl font-black text-white mt-1">{valor}</p>
+      <p className="text-[11px] text-gray-400 mt-0.5">{label}</p>
+      <p className="text-[9px] text-gray-600">{desc}</p>
+    </div>
+  );
+}
 
 function ModuloSection({ color, icon, titulo, descripcion, credenciales, links, baseUrl }: {
   color: string;
