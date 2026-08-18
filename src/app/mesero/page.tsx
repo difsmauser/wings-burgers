@@ -549,19 +549,30 @@ export default function MeseroPage() {
             <p className="text-[10px] text-gray-500 mb-4">¿Cómo paga el cliente?</p>
 
             <div className="space-y-2">
-              <button
-                onClick={() => procesarPago(cobroModal.id, 'transferencia')}
-                disabled={procesandoId === cobroModal.id}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all"
-              >
-                📱 Transferencia — Libera inmediato
-              </button>
+              <label className="block w-full">
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setProcesandoId(cobroModal.id);
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('pedidoId', cobroModal.id);
+                  formData.append('mesaZona', cobroModal.mesaZona || '');
+                  formData.append('total', cobroModal.total.toString());
+                  formData.append('metodoPago', 'transferencia');
+                  await fetch('/api/pagos/comprobante-upload', { method: 'POST', body: formData });
+                  await procesarPago(cobroModal.id, 'transferencia');
+                }} />
+                <span className="block w-full py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all text-center cursor-pointer">
+                  📱 Transferencia + Subir Comprobante
+                </span>
+              </label>
               <button
                 onClick={() => procesarPago(cobroModal.id, 'efectivo')}
                 disabled={procesandoId === cobroModal.id}
                 className="w-full py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all"
               >
-                💵 Efectivo — Ir a mesa → Caja → Cambio
+                💵 Efectivo — Cobrar y reportar a Caja
               </button>
               <button
                 onClick={() => setCobroModal(null)}
