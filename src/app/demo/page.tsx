@@ -48,7 +48,7 @@ export default function DemoPage() {
 
           {/* Highlights */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <HighlightCard emoji="📱" valor="3" label="Canales de Venta" desc="QR / Mesero / Domicilio" />
+            <HighlightCard emoji="📱" valor="4" label="Canales de Venta" desc="QR Mesa / Mesero / Para Llevar / Domicilio" />
             <HighlightCard emoji="🧩" valor="12+" label="Módulos" desc="Admin, Cocina, Bar, Mesero..." />
             <HighlightCard emoji="🍗" valor="40" label="Productos" desc="Menú real con personalización" />
             <HighlightCard emoji="⚡" valor="30s" label="Auto-Refresh" desc="Datos en tiempo real" />
@@ -159,6 +159,21 @@ export default function DemoPage() {
         />
 
         {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: PARA LLEVAR */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="amber"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>}
+          titulo="QR Para Llevar — Sin Mesero"
+          descripcion="QR genérico en mostrador. El cliente escanea, arma su pedido, pone nombre y WhatsApp. Va a cocina, se le avisa cuando está listo y paga en caja."
+          credenciales={{ usuario: 'Sin login', password: 'QR público en mostrador', nota: 'Múltiples clientes simultáneos, cada uno con su carrito' }}
+          links={[
+            { nombre: 'Menú Para Llevar', desc: 'Link/QR para pedidos para llevar sin mesero', url: `${base}/para-llevar` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
         {/* MÓDULO: COCINA / CAJA */}
         {/* ═══════════════════════════════════════════════ */}
         <ModuloSection
@@ -197,29 +212,7 @@ export default function DemoPage() {
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════ */}
-        {/* VALUACIÓN */}
-        {/* ═══════════════════════════════════════════════ */}
-        <div className="rounded-2xl bg-gradient-to-br from-[#12121a] to-[#1a1a24] border border-brand-500/20 p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-2">Valuación del Sistema</h2>
-          <p className="text-xs text-gray-500 mb-6">Precio como producto terminado (licencia única, 1 restaurante)</p>
-          <div className="p-6 rounded-2xl bg-brand-500/5 border border-brand-500/20 text-center mb-5">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Licencia Única</p>
-            <p className="text-3xl sm:text-4xl font-black text-brand-400">$85,000 — $120,000 MXN</p>
-            <p className="text-xs text-gray-400 mt-1">≈ $5,000 — $7,000 USD</p>
-            <p className="text-[10px] text-gray-600 mt-2">Incluye: código fuente, setup, deploy, 1 mes soporte</p>
-          </div>
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Modelo SaaS (alternativa)</p>
-                <p className="text-sm font-bold text-white mt-1">$3,500 — $5,000 MXN/mes</p>
-                <p className="text-[10px] text-gray-500">Hosting + soporte + actualizaciones incluidas</p>
-              </div>
-              <span className="px-3 py-1.5 rounded-lg text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Mensual</span>
-            </div>
-          </div>
-        </div>
+        {/* Valuación oculta por el momento */}
 
         {/* Footer */}
         <div className="text-center py-4">
@@ -260,6 +253,7 @@ function ModuloSection({ color, icon, titulo, descripcion, credenciales, links, 
     emerald: { border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
     green: { border: 'border-green-500/20', iconBg: 'bg-green-500/10', iconText: 'text-green-400', badge: 'bg-green-500/10 text-green-400 border-green-500/20' },
     orange: { border: 'border-orange-500/20', iconBg: 'bg-orange-500/10', iconText: 'text-orange-400', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+    amber: { border: 'border-amber-500/20', iconBg: 'bg-amber-500/10', iconText: 'text-amber-400', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
   };
   const s = colorMap[color] || colorMap.brand;
 
