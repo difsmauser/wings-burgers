@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import DireccionAutocomplete from '@/app/(cliente)/_components/DireccionAutocomplete';
 
 interface Producto {
   id: string;
@@ -278,8 +279,12 @@ export default function DomicilioCaptura() {
             </div>
             <div>
               <label className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Dirección completa *</label>
-              <textarea value={direccion} onChange={e => setDireccion(e.target.value)} placeholder="Calle, número, colonia..." rows={2}
-                className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-400/30 resize-none transition-all" />
+              <DireccionAutocomplete
+                value={direccion}
+                onChange={setDireccion}
+                placeholder="Escribe la calle... (autocomplete Toluca)"
+                className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-400/30 transition-all"
+              />
             </div>
             <div>
               <label className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">Referencia</label>

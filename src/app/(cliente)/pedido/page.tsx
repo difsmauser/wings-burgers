@@ -9,6 +9,7 @@ import {
   OpcionPersonalizacionProducto,
 } from '../_context/CarritoContext';
 import { useQrMesa } from '../_context/QrMesaContext';
+import DireccionAutocomplete from '../_components/DireccionAutocomplete';
 
 /**
  * Formats a number as Mexican Peso currency.
@@ -1133,15 +1134,12 @@ export default function PedidoPage() {
                 <label htmlFor="direccion" className="block text-xs font-semibold text-gray-400/80 mb-1.5">
                   Dirección de entrega *
                 </label>
-                <input
-                  id="direccion"
-                  type="text"
+                <DireccionAutocomplete
                   value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                  placeholder="Calle, número, colonia, referencias"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/50 focus:border-brand-400/30 transition-all duration-200"
+                  onChange={setDireccion}
+                  placeholder="Escribe tu calle... (autocomplete Toluca)"
                 />
+                <p className="text-[9px] text-gray-600 mt-1">📍 Servicio disponible solo en Toluca, Estado de México</p>
               </div>
             )}
           </div>
