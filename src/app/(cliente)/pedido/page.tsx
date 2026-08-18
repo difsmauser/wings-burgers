@@ -932,7 +932,7 @@ export default function PedidoPage() {
         telefono,
         modalidad: (modalidad || 'LOCAL').toLowerCase(),
         canal,
-        mesaZona: qrMesa?.mesaZona || undefined,
+        mesaZona: modalidad === 'DOMICILIO' ? undefined : (qrMesa?.mesaZona || undefined),
         direccion: modalidad === 'DOMICILIO' ? direccion : undefined,
         items: items.map((item) => ({
           productoId: item.productoId,
@@ -1033,7 +1033,7 @@ export default function PedidoPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-white">
-            {qrMesa ? `${qrMesa.mesaZona}` : 'Mi Pedido'}
+            {modalidad === 'DOMICILIO' ? 'Mi Pedido' : qrMesa ? `${qrMesa.mesaZona}` : 'Mi Pedido'}
           </h2>
           <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
             {items.length} {items.length === 1 ? 'producto' : 'productos'}
@@ -1206,7 +1206,7 @@ export default function PedidoPage() {
               focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
             "
           >
-            {qrMesa ? '➕ Pedir algo más a esta mesa' : 'Hacer nuevo pedido'}
+            {modalidad === 'DOMICILIO' ? '➕ Agregar más productos' : qrMesa ? '➕ Pedir algo más a esta mesa' : 'Hacer nuevo pedido'}
           </Link>
         </div>
       )}

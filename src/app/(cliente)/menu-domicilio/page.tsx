@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCarrito } from '../_context/CarritoContext';
+import { useQrMesa } from '../_context/QrMesaContext';
 
 /**
  * /menu-domicilio — Menú digital para pedidos a domicilio.
@@ -155,15 +156,17 @@ function ProductoSkeleton() {
 
 export default function MenuDomicilioPage() {
   const { setModalidad, cantidadTotal } = useCarrito();
+  const { setQrMesa } = useQrMesa();
   const [todosProductos, setTodosProductos] = useState<ProductoMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categoriaActiva, setCategoriaActiva] = useState('todas');
 
-  // Siempre DOMICILIO
+  // Siempre DOMICILIO — clear any QR mesa data
   useEffect(() => {
     setModalidad('DOMICILIO');
-  }, [setModalidad]);
+    setQrMesa(null); // Clear stale QR mesa from localStorage
+  }, [setModalidad, setQrMesa]);
 
   const fetchProductos = useCallback(async () => {
     setLoading(true);
