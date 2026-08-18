@@ -152,11 +152,13 @@ export default function CortesPage() {
 
   // === By canal (donut data) ===
   const ventasDomicilio = pagados.filter(p => p.modalidad === 'domicilio').reduce((s, p) => s + p.total, 0);
-  const ventasQR = pagados.filter(p => p.modalidad === 'local' && p.observaciones.includes('[QR]')).reduce((s, p) => s + p.total, 0);
-  const ventasMesero = pagados.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[QR]')).reduce((s, p) => s + p.total, 0);
+  const ventasParaLlevar = pagados.filter(p => p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
+  const ventasQR = pagados.filter(p => p.modalidad === 'local' && p.observaciones.includes('[QR]') && !p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
+  const ventasMesero = pagados.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[QR]') && !p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
   const canalData = [
     { label: 'QR Mesa', value: ventasQR, color: '#eab308' },
     { label: 'Mesero', value: ventasMesero, color: '#3b82f6' },
+    { label: 'Para Llevar', value: ventasParaLlevar, color: '#f59e0b' },
     { label: 'Domicilio', value: ventasDomicilio, color: '#22c55e' },
   ].filter(d => d.value > 0);
 
@@ -172,6 +174,7 @@ export default function CortesPage() {
   // === Canal classification for table ===
   const getCanal = (p: PedidoCorte): { label: string; color: string } => {
     if (p.modalidad === 'domicilio') return { label: 'Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (p.observaciones.includes('[PARA_LLEVAR]')) return { label: 'Para Llevar', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
     if (p.observaciones.includes('[QR]')) return { label: 'QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
     return { label: 'Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
   };

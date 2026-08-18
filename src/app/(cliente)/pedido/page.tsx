@@ -925,7 +925,7 @@ export default function PedidoPage() {
 
     try {
       // Determine canal based on context
-      const canal = modalidad === 'DOMICILIO' ? 'QR_REDES' : 'QR';
+      const canal = modalidad === 'DOMICILIO' ? 'QR_REDES' : modalidad === 'RETIRO' ? 'PARA_LLEVAR' : 'QR';
 
       const payload = {
         nombre,

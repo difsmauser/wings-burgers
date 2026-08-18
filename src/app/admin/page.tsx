@@ -359,10 +359,12 @@ export default function AdminDashboardPage() {
               {recientes.map((p, idx) => {
                 const isQR = p.observaciones.includes('[QR]');
                 const isDomicilio = p.modalidad === 'domicilio';
+                const isParaLlevar = p.observaciones.includes('[PARA_LLEVAR]');
                 const canalColor = isDomicilio ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  isParaLlevar ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                   isQR ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                   'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                const canalLabel = isDomicilio ? 'Domicilio' : isQR ? 'QR Mesa' : 'Mesero';
+                const canalLabel = isDomicilio ? 'Domicilio' : isParaLlevar ? 'Para Llevar' : isQR ? 'QR Mesa' : 'Mesero';
                 const timeAgo = getTimeAgo(p.creadoEn);
 
                 return (

@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     // Store canal info in observaciones field as prefix: [CANAL:XX]
     const canal = body.canal as string | undefined;
     let observaciones = body.observaciones || '';
-    if (canal && ['QR', 'QR_REDES', 'MESERO'].includes(canal)) {
+    if (canal && ['QR', 'QR_REDES', 'MESERO', 'PARA_LLEVAR'].includes(canal)) {
       observaciones = `[${canal}] ${observaciones}`.trim();
     }
 
