@@ -2,241 +2,256 @@
 
 import { useState } from 'react';
 
-function CopyButton({ text }: { text: string }) {
+function CopyBtn({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
   return (
-    <button onClick={handleCopy} className={`px-2 py-0.5 rounded text-[10px] transition-all ${copied ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}`}>
-      {copied ? '✓ Copiado' : 'Copiar'}
+    <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className={`px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${copied ? 'bg-green-500/20 text-green-400 border border-green-500/20' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10 border border-white/5'}`}>
+      {copied ? '✓' : 'Copiar'}
     </button>
   );
 }
 
 export default function DemoPage() {
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://wings-burgers-mocha.vercel.app';
+  const base = typeof window !== 'undefined' ? window.location.origin : 'https://wings-burgers-mocha.vercel.app';
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] p-6 sm:p-10">
-      <div className="max-w-5xl mx-auto space-y-10 animate-fade-in">
+    <div className="min-h-screen bg-[#0a0a0f] p-5 sm:p-10">
+      <div className="max-w-5xl mx-auto space-y-8 animate-fade-in">
 
-        {/* Header */}
-        <div className="text-center">
-          <img src="/logo.png" alt="A-la Burguer" className="h-20 w-20 mx-auto rounded-full border-2 border-brand-400/30 shadow-lg shadow-brand-500/20 mb-4" />
-          <h1 className="text-3xl font-extrabold text-white">A-la Burguer</h1>
-          <p className="text-base text-gray-400 mt-2">Sistema Integral de Gestión para Restaurantes</p>
-          <div className="mt-3 w-20 h-0.5 bg-gradient-to-r from-fire-500 via-brand-400 to-fire-500 mx-auto rounded-full" />
-        </div>
-
-        {/* Descripción del Sistema */}
-        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-4">Sobre el Sistema</h2>
-          <p className="text-sm text-gray-300 leading-relaxed mb-4">
-            Sistema enterprise completo para la operación de un restaurante de alitas y hamburguesas. Cubre todo el ciclo de operación: desde que el cliente ordena (por QR, mesero o domicilio), la preparación en cocina y bar, hasta el cobro y la entrega. Incluye administración de inventario, gastos, corte de caja, y reportes financieros en tiempo real.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-            <div className="p-4 rounded-xl bg-brand-500/5 border border-brand-500/10 text-center">
-              <p className="text-2xl font-black text-brand-400">3</p>
-              <p className="text-xs text-gray-400 mt-1">Canales de Venta</p>
-              <p className="text-[10px] text-gray-600">QR Mesa / Mesero / Domicilio</p>
-            </div>
-            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 text-center">
-              <p className="text-2xl font-black text-blue-400">12+</p>
-              <p className="text-xs text-gray-400 mt-1">Módulos</p>
-              <p className="text-[10px] text-gray-600">Admin, Cocina, Bar, Mesero, etc.</p>
-            </div>
-            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
-              <p className="text-2xl font-black text-green-400">40</p>
-              <p className="text-xs text-gray-400 mt-1">Productos</p>
-              <p className="text-[10px] text-gray-600">Menú real con personalización</p>
-            </div>
+        {/* Hero */}
+        <div className="text-center py-8">
+          <img src="/logo.png" alt="A-la Burguer" className="h-16 w-16 mx-auto rounded-2xl border border-brand-400/20 shadow-lg shadow-brand-500/20 mb-5" />
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">A-la Burguer</h1>
+          <p className="text-sm text-gray-400 mt-2 max-w-md mx-auto">Sistema Integral de Gestión para Restaurantes — Enterprise Edition</p>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <span className="px-3 py-1 rounded-full text-[10px] font-medium bg-brand-500/10 text-brand-400 border border-brand-500/20">v1.0</span>
+            <span className="px-3 py-1 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Production Ready</span>
+            <span className="px-3 py-1 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">PWA</span>
           </div>
         </div>
 
-        {/* Módulos del Sistema */}
-        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-6">Módulos del Sistema</h2>
-          <div className="space-y-3">
-            <ModuloLink icon="📊" nombre="Admin Dashboard" desc="KPIs, gráficas de ventas, actividad en tiempo real" url={`${baseUrl}/admin`} />
-            <ModuloLink icon="📈" nombre="Corte de Caja" desc="Reportes financieros, donas por canal/método, Cocina vs Bar" url={`${baseUrl}/admin/cortes`} />
-            <ModuloLink icon="🪑" nombre="Mesas (Admin)" desc="Mapa del local, estados, QR codes" url={`${baseUrl}/admin/mesas`} />
-            <ModuloLink icon="🧑‍🍳" nombre="Meseros (Admin)" desc="CRUD con foto y PIN de acceso" url={`${baseUrl}/admin/meseros`} />
-            <ModuloLink icon="📦" nombre="Inventario" desc="Stock valorizado, alertas, movimientos" url={`${baseUrl}/admin/inventario`} />
-            <ModuloLink icon="💰" nombre="Gastos" desc="Dona por categoría, tendencia mensual, registros" url={`${baseUrl}/admin/gastos`} />
-            <ModuloLink icon="🍗" nombre="Productos" desc="Menú con imágenes, precios, personalización" url={`${baseUrl}/admin/productos`} />
-            <div className="border-t border-white/5 my-4" />
-            <ModuloLink icon="🧑‍🍳" nombre="Panel Mesero" desc="Login con PIN + foto, tomar órdenes, cobrar" url={`${baseUrl}/mesero`} />
-            <ModuloLink icon="📝" nombre="Captura Pedido" desc="Orden presencial con selector de mesa" url={`${baseUrl}/mesero/captura`} />
-            <ModuloLink icon="🛵" nombre="Domicilio (Mesero)" desc="Captura de pedido WhatsApp + ticket auto" url={`${baseUrl}/mesero/domicilio`} />
-            <div className="border-t border-white/5 my-4" />
-            <ModuloLink icon="📱" nombre="Menú QR (Cliente)" desc="Cliente escanea QR de mesa y ordena solo" url={`${baseUrl}/menu?qr=MESA-1`} />
-            <ModuloLink icon="🛵" nombre="Menú Domicilio" desc="Link público para pedidos a domicilio" url={`${baseUrl}/menu-domicilio`} />
-            <ModuloLink icon="🍳" nombre="Cocina" desc="Pantalla de pedidos entrantes para cocina" url={`${baseUrl}/caja`} />
-          </div>
-        </div>
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: ADMIN PANEL */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="brand"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
+          titulo="Panel de Administración"
+          descripcion="Dashboard enterprise con KPIs, gráficas en tiempo real, corte de caja, inventario, gastos, productos y meseros."
+          credenciales={{ usuario: 'admin@alaburguer.com', password: 'Admin123!', nota: 'Acceso total al sistema' }}
+          links={[
+            { nombre: 'Dashboard', desc: 'KPIs, ventas por hora, actividad reciente', url: `${base}/admin` },
+            { nombre: 'Corte de Caja', desc: 'Donas por canal/método, Cocina vs Bar, tabla de pedidos', url: `${base}/admin/cortes` },
+            { nombre: 'Mesas', desc: 'Mapa del local, estados, QR codes', url: `${base}/admin/mesas` },
+            { nombre: 'Meseros', desc: 'CRUD con foto y PIN de 4 dígitos', url: `${base}/admin/meseros` },
+            { nombre: 'Inventario', desc: 'Stock valorizado, alertas, timeline movimientos', url: `${base}/admin/inventario` },
+            { nombre: 'Gastos', desc: 'Dona por categoría, tendencia mensual', url: `${base}/admin/gastos` },
+            { nombre: 'Productos', desc: 'Menú completo con imágenes y personalización', url: `${base}/admin/productos` },
+            { nombre: 'Repartidores', desc: 'CRUD de repartidores activos', url: `${base}/admin/repartidores` },
+          ]}
+          baseUrl={base}
+        />
 
-        {/* Credenciales */}
-        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-4">Credenciales de Prueba</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Rol</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Usuario</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Contraseña</th>
-                  <th className="text-left py-2 px-3 text-gray-500 font-medium">Acceso</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                <tr>
-                  <td className="py-3 px-3 text-white font-medium">Admin</td>
-                  <td className="py-3 px-3 text-gray-300 font-mono">admin@alaburguer.com</td>
-                  <td className="py-3 px-3 text-gray-300 font-mono">Admin123!</td>
-                  <td className="py-3 px-3"><code className="text-brand-400">/admin</code></td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-3 text-white font-medium">Mesero</td>
-                  <td className="py-3 px-3 text-gray-400">Sin login — PIN</td>
-                  <td className="py-3 px-3 text-gray-300 font-mono">1234 / 5678 / 0000</td>
-                  <td className="py-3 px-3"><code className="text-brand-400">/mesero</code></td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-3 text-white font-medium">Cliente</td>
-                  <td className="py-3 px-3 text-gray-400">Sin login</td>
-                  <td className="py-3 px-3 text-gray-400">—</td>
-                  <td className="py-3 px-3"><code className="text-brand-400">/menu-domicilio</code></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: MESERO */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="blue"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+          titulo="Módulo Mesero"
+          descripcion="Login con foto y PIN numérico. Captura de pedidos presenciales y por WhatsApp. Selector de mesa inteligente."
+          credenciales={{ usuario: 'Selecciona perfil + PIN', password: '1234 (Carlos) / 5678 (María) / 0000 (Pedro)', nota: 'Sin email — acceso por PIN' }}
+          links={[
+            { nombre: 'Panel Mesero', desc: 'Login PIN + foto, ver pedidos listos, cobrar', url: `${base}/mesero` },
+            { nombre: 'Captura Presencial', desc: 'Tomar orden en mesa con selector inteligente', url: `${base}/mesero/captura` },
+            { nombre: 'Pedido Domicilio', desc: 'Captura de pedido WhatsApp + ticket automático', url: `${base}/mesero/domicilio` },
+          ]}
+          baseUrl={base}
+        />
 
-        {/* Tech Stack */}
-        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-4">Stack Tecnológico</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <TechBadge nombre="Next.js 14" desc="App Router, SSR/SSG" />
-            <TechBadge nombre="React 18" desc="Server + Client Components" />
-            <TechBadge nombre="TypeScript" desc="Tipado estricto end-to-end" />
-            <TechBadge nombre="Tailwind CSS v4" desc="Utility-first, dark theme" />
-            <TechBadge nombre="Supabase" desc="PostgreSQL + Auth + Storage + Realtime" />
-            <TechBadge nombre="Vercel" desc="Deploy, Edge Functions, CDN" />
-            <TechBadge nombre="PWA" desc="Offline-ready, instalable" />
-            <TechBadge nombre="Hexagonal Arch" desc="Domain-driven, testable" />
-            <TechBadge nombre="WhatsApp API" desc="Tickets automáticos" />
-          </div>
-        </div>
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: CLIENTE QR */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="emerald"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>}
+          titulo="Menú QR — Cliente en Mesa"
+          descripcion="El cliente escanea el QR de su mesa y ordena directo sin intervención del mesero. Cada mesa tiene su QR único."
+          credenciales={{ usuario: 'Sin login', password: 'Acceso público via QR', nota: 'Cada QR identifica la mesa automáticamente' }}
+          links={[
+            { nombre: 'Mesa 1 (Interior)', desc: 'Simula escanear QR de Mesa 1', url: `${base}/menu?qr=MESA-1` },
+            { nombre: 'Mesa 2 (Interior)', desc: 'Simula escanear QR de Mesa 2', url: `${base}/menu?qr=MESA-2` },
+            { nombre: 'Mesa 3 (Terraza)', desc: 'Simula escanear QR de Mesa 3', url: `${base}/menu?qr=MESA-3` },
+            { nombre: 'Mesa 4 (Terraza)', desc: 'Simula escanear QR de Mesa 4', url: `${base}/menu?qr=MESA-4` },
+            { nombre: 'Mesa 5 (Bar)', desc: 'Simula escanear QR de Mesa 5', url: `${base}/menu?qr=MESA-5` },
+          ]}
+          baseUrl={base}
+        />
 
-        {/* Características */}
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: DOMICILIO */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="green"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>}
+          titulo="Menú Domicilio — Link Público"
+          descripcion="Link único que se comparte en redes sociales y WhatsApp. Cada cliente en su celular tiene su propio carrito aislado."
+          credenciales={{ usuario: 'Sin login', password: 'Link público compartible', nota: 'Soporta múltiples clientes simultáneos' }}
+          links={[
+            { nombre: 'Menú Domicilio', desc: 'Link público para pedidos a domicilio', url: `${base}/menu-domicilio` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: COCINA / CAJA */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="orange"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>}
+          titulo="Cocina / Caja"
+          descripcion="Pantalla de pedidos entrantes para la cocina. Vista en tiempo real de órdenes por preparar."
+          credenciales={{ usuario: 'admin@alaburguer.com', password: 'Admin123!', nota: 'Mismo acceso que admin' }}
+          links={[
+            { nombre: 'Pantalla Cocina', desc: 'Pedidos entrantes en tiempo real', url: `${base}/caja` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
+        {/* TECH STACK */}
+        {/* ═══════════════════════════════════════════════ */}
         <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-white mb-4">Características Enterprise</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+          <h2 className="text-lg font-bold text-white mb-5">Stack Tecnológico</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {[
-              '3 canales de venta (QR, Mesero, Domicilio)',
-              'Dashboard con KPIs y gráficas en tiempo real',
-              'Corte de caja con dona por canal y método',
-              'Desglose Cocina vs Bar independiente',
-              'Inventario con alertas de stock',
-              'Gastos con tendencia mensual',
-              'Meseros con foto y PIN numérico',
-              'Menú digital con personalización por producto',
-              'Pedidos a domicilio con ticket WhatsApp',
-              'Mapa interactivo de mesas con QR',
-              'Notificaciones push (PWA)',
-              'Seguridad: rate limiting, auth JWT, roles',
-              'Responsive (móvil + escritorio)',
-              'Arquitectura hexagonal (testable)',
-              'Auto-refresh en tiempo real (30s)',
-              'Multi-método de pago (efectivo/transferencia)',
-            ].map((feat, i) => (
-              <div key={i} className="flex items-center gap-2 py-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-400 flex-shrink-0" />
-                <span className="text-xs text-gray-300">{feat}</span>
+              { name: 'Next.js 14', desc: 'App Router, SSR' },
+              { name: 'React 18', desc: 'Server + Client' },
+              { name: 'TypeScript', desc: 'End-to-end types' },
+              { name: 'Tailwind CSS v4', desc: 'Dark theme system' },
+              { name: 'Supabase', desc: 'DB + Auth + Storage' },
+              { name: 'Vercel', desc: 'Deploy + CDN' },
+              { name: 'PWA', desc: 'Instalable, offline' },
+              { name: 'Hexagonal Arch', desc: 'Clean code, testable' },
+            ].map(t => (
+              <div key={t.name} className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                <p className="text-xs font-semibold text-white">{t.name}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{t.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Valuación */}
+        {/* ═══════════════════════════════════════════════ */}
+        {/* VALUACIÓN */}
+        {/* ═══════════════════════════════════════════════ */}
         <div className="rounded-2xl bg-gradient-to-br from-[#12121a] to-[#1a1a24] border border-brand-500/20 p-6 sm:p-8">
           <h2 className="text-lg font-bold text-white mb-2">Valuación del Sistema</h2>
-          <p className="text-xs text-gray-400 mb-6">Precio de venta como producto terminado para un solo cliente (licencia única)</p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Desarrollo</p>
-              <p className="text-xs text-gray-400 mt-2">+500 horas de desarrollo</p>
-              <p className="text-xs text-gray-400">12+ módulos funcionales</p>
-              <p className="text-xs text-gray-400">40 productos reales</p>
-              <p className="text-xs text-gray-400">Arquitectura enterprise</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Infraestructura</p>
-              <p className="text-xs text-gray-400 mt-2">Supabase (DB + Auth + Storage)</p>
-              <p className="text-xs text-gray-400">Vercel (Hosting + CDN)</p>
-              <p className="text-xs text-gray-400">Dominio personalizable</p>
-              <p className="text-xs text-gray-400">SSL + PWA incluido</p>
-            </div>
-            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
-              <p className="text-[10px] text-gray-500 uppercase tracking-wider">Soporte</p>
-              <p className="text-xs text-gray-400 mt-2">Código fuente completo</p>
-              <p className="text-xs text-gray-400">Documentación técnica</p>
-              <p className="text-xs text-gray-400">Personalización de marca</p>
-              <p className="text-xs text-gray-400">Setup inicial incluido</p>
-            </div>
+          <p className="text-xs text-gray-500 mb-6">Precio como producto terminado (licencia única, 1 restaurante)</p>
+          <div className="p-6 rounded-2xl bg-brand-500/5 border border-brand-500/20 text-center mb-5">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Licencia Única</p>
+            <p className="text-3xl sm:text-4xl font-black text-brand-400">$85,000 — $120,000 MXN</p>
+            <p className="text-xs text-gray-400 mt-1">≈ $5,000 — $7,000 USD</p>
+            <p className="text-[10px] text-gray-600 mt-2">Incluye: código fuente, setup, deploy, 1 mes soporte</p>
           </div>
-
-          <div className="p-6 rounded-2xl bg-brand-500/5 border border-brand-500/20 text-center">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Precio Licencia Única (1 restaurante)</p>
-            <p className="text-4xl font-black text-brand-400">$85,000 — $120,000 MXN</p>
-            <p className="text-xs text-gray-400 mt-2">Equivalente: $5,000 — $7,000 USD</p>
-            <p className="text-[10px] text-gray-600 mt-3">Incluye: código fuente, setup, 1 mes de soporte, deploy en producción</p>
-          </div>
-
-          <div className="mt-6 p-4 rounded-xl bg-white/[0.02] border border-white/5">
-            <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Modelo SaaS (mensualidad)</p>
+          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">$3,500 — $5,000 MXN/mes</p>
-                <p className="text-[10px] text-gray-500">Incluye hosting, soporte, actualizaciones</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider">Modelo SaaS (alternativa)</p>
+                <p className="text-sm font-bold text-white mt-1">$3,500 — $5,000 MXN/mes</p>
+                <p className="text-[10px] text-gray-500">Hosting + soporte + actualizaciones incluidas</p>
               </div>
-              <span className="px-3 py-1 rounded-lg text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Alternativa</span>
+              <span className="px-3 py-1.5 rounded-lg text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Mensual</span>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center py-6">
-          <p className="text-xs text-gray-600">Sistema desarrollado con arquitectura enterprise.</p>
-          <p className="text-[10px] text-gray-700 mt-1">Next.js + Supabase + Vercel — {new Date().getFullYear()}</p>
+        <div className="text-center py-4">
+          <p className="text-[10px] text-gray-700">Next.js + Supabase + Vercel — {new Date().getFullYear()}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function ModuloLink({ icon, nombre, desc, url }: { icon: string; nombre: string; desc: string; url: string }) {
-  return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.03] transition-all group">
-      <span className="text-xl w-8 text-center">{icon}</span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white group-hover:text-brand-400 transition-colors">{nombre}</p>
-        <p className="text-[11px] text-gray-500 truncate">{desc}</p>
-      </div>
-      <svg className="w-4 h-4 text-gray-600 group-hover:text-brand-400 transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-    </a>
-  );
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Componente de sección de módulo
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function TechBadge({ nombre, desc }: { nombre: string; desc: string }) {
+function ModuloSection({ color, icon, titulo, descripcion, credenciales, links, baseUrl }: {
+  color: string;
+  icon: React.ReactNode;
+  titulo: string;
+  descripcion: string;
+  credenciales: { usuario: string; password: string; nota: string };
+  links: Array<{ nombre: string; desc: string; url: string }>;
+  baseUrl: string;
+}) {
+  const colorMap: Record<string, { border: string; iconBg: string; iconText: string; badge: string }> = {
+    brand: { border: 'border-brand-500/20', iconBg: 'bg-brand-500/10', iconText: 'text-brand-400', badge: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
+    blue: { border: 'border-blue-500/20', iconBg: 'bg-blue-500/10', iconText: 'text-blue-400', badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+    emerald: { border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-400', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    green: { border: 'border-green-500/20', iconBg: 'bg-green-500/10', iconText: 'text-green-400', badge: 'bg-green-500/10 text-green-400 border-green-500/20' },
+    orange: { border: 'border-orange-500/20', iconBg: 'bg-orange-500/10', iconText: 'text-orange-400', badge: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+  };
+  const s = colorMap[color] || colorMap.brand;
+
   return (
-    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-brand-400/20 transition-all">
-      <p className="text-xs font-semibold text-white">{nombre}</p>
-      <p className="text-[10px] text-gray-500 mt-0.5">{desc}</p>
+    <div className={`rounded-2xl bg-[#12121a] border ${s.border} overflow-hidden`}>
+      {/* Header */}
+      <div className="p-6 pb-4 border-b border-white/[0.04]">
+        <div className="flex items-start gap-4">
+          <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center ${s.iconText} flex-shrink-0`}>
+            {icon}
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-bold text-white">{titulo}</h2>
+            <p className="text-xs text-gray-400 mt-1 leading-relaxed">{descripcion}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Credenciales */}
+      <div className="px-6 py-4 bg-white/[0.01] border-b border-white/[0.04]">
+        <div className="flex items-center gap-2 mb-2">
+          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Credenciales</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <p className="text-[9px] text-gray-600 uppercase">Usuario</p>
+            <p className="text-xs text-white font-mono mt-0.5">{credenciales.usuario}</p>
+          </div>
+          <div>
+            <p className="text-[9px] text-gray-600 uppercase">Contraseña / PIN</p>
+            <p className="text-xs text-white font-mono mt-0.5">{credenciales.password}</p>
+          </div>
+          <div>
+            <p className="text-[9px] text-gray-600 uppercase">Nota</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">{credenciales.nota}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Links */}
+      <div className="p-4 space-y-1">
+        {links.map((link) => (
+          <div key={link.url} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-all group">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white group-hover:text-brand-400 transition-colors">{link.nombre}</p>
+              <p className="text-[10px] text-gray-500 truncate">{link.desc}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <CopyBtn text={link.url} />
+              <a href={link.url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-all">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
