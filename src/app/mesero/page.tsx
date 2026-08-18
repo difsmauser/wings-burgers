@@ -354,7 +354,8 @@ export default function MeseroPage() {
 
   const handleLogout = async () => {
     localStorage.removeItem(MESERO_STORAGE_KEY);
-    router.push('/login');
+    setMeseroNombre('');
+    setRegistrado(false);
   };
 
   // ========== Registration Screen ==========
@@ -526,6 +527,12 @@ export default function MeseroPage() {
             className="w-full py-3 rounded-xl text-sm font-medium text-brand-400 bg-brand-500/5 border border-brand-400/20 hover:bg-brand-500/10 transition-all"
           >
             📝 Tomar nueva orden de cliente
+          </button>
+          <button
+            onClick={() => router.push('/mesero/domicilio')}
+            className="w-full py-3 rounded-xl text-sm font-medium text-green-400 bg-green-500/5 border border-green-400/20 hover:bg-green-500/10 transition-all"
+          >
+            🛵 Pedido a domicilio (WhatsApp)
           </button>
         </div>
       </div>
