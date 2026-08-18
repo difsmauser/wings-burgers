@@ -930,7 +930,7 @@ export default function PedidoPage() {
       const payload = {
         nombre,
         telefono,
-        modalidad: modalidad || 'LOCAL',
+        modalidad: (modalidad || 'LOCAL').toLowerCase(),
         canal,
         mesaZona: qrMesa?.mesaZona || undefined,
         direccion: modalidad === 'DOMICILIO' ? direccion : undefined,

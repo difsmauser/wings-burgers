@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const pedido = await useCase.ejecutar({
       nombre: body.nombre,
       telefono: body.telefono,
-      modalidad: body.modalidad,
+      modalidad: (body.modalidad as string || 'local').toLowerCase() as 'local' | 'retiro' | 'domicilio',
       items: body.items,
       mesaZona: body.mesaZona,
       observaciones,

@@ -88,9 +88,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { monto, concepto, categoria, fecha, adminId } = body;
+    const { monto, concepto, categoria, fecha } = body;
+    // Accept adminId optionally (not required for direct admin usage)
+    const adminId = body.adminId || 'admin';
 
-    if (monto === undefined || typeof monto !== 'number') {
+    if (monto === undefined || isNaN(parseFloat(monto))) {
       throw new ValidacionError('Se requiere el campo monto (número)', ['monto']);
     }
 
@@ -102,13 +104,9 @@ export async function POST(request: NextRequest) {
       throw new ValidacionError('Se requiere el campo categoria', ['categoria']);
     }
 
-    // Validar que la categoría sea un valor válido del enum
-    if (!Object.values(CategoriaGasto).includes(categoria as CategoriaGasto)) {
-      throw new ValidacionError(
-        `Categoría inválida. Valores permitidos: ${Object.values(CategoriaGasto).join(', ')}`,
-        ['categoria']
-      );
-    }
+    // Normalize category to uppercase for enum validation
+    const categoriaUpper = (categoria as string).toUpperCase();
+    const categoriaEnum = Object.values(CategoriaGasto).find(v => v === categoriaUpper) || CategoriaGasto.OTROS;
 
     if (!fecha || typeof fecha !== 'string') {
       throw new ValidacionError('Se requiere el campo fecha (ISO string)', ['fecha']);
@@ -119,17 +117,24 @@ export async function POST(request: NextRequest) {
       throw new ValidacionError('fecha debe ser una fecha ISO válida', ['fecha']);
     }
 
-    if (!adminId || typeof adminId !== 'string') {
-      throw new ValidacionError('Se requiere el campo adminId', ['adminId']);
-    }
+    const container = getContainer();
+    const useCase = container.getRegistrarGasto();
+    const gasto = await useCase.ejecutar({
+      id: crypto.randomUUID(),
+      monto: parseFloat(monto),
+      concepto,
+      categoria: categoriaEnum,
+      fecha: fechaParsed,
+      adminId,
+    });
 
     const container = getContainer();
     const useCase = container.getRegistrarGasto();
     const gasto = await useCase.ejecutar({
       id: crypto.randomUUID(),
-      monto,
+      monto: parseFloat(monto),
       concepto,
-      categoria: categoria as CategoriaGasto,
+      categoria: categoriaEnum,
       fecha: fechaParsed,
       adminId,
     });
