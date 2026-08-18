@@ -148,9 +148,9 @@ export async function POST(request: NextRequest) {
 
     // Validate modalidad
     const modalidadRaw = (body.modalidad as string || 'local').toLowerCase();
-    if (!['local', 'domicilio'].includes(modalidadRaw)) {
+    if (!['local', 'domicilio', 'retiro'].includes(modalidadRaw)) {
       return NextResponse.json(
-        { error: { code: 'VALIDACION', message: 'Modalidad debe ser "local" o "domicilio"' } },
+        { error: { code: 'VALIDACION', message: 'Modalidad debe ser "local", "retiro" o "domicilio"' } },
         { status: 400 }
       );
     }
