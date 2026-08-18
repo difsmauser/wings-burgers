@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
 import { getContainer } from '@/shared/container';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
+import { ModalidadServicio } from '@/domain/value-objects';
 import type { EstadoPedido } from '@/shared/domain-types';
 
 export const dynamic = 'force-dynamic';
@@ -90,7 +91,11 @@ export async function POST(request: NextRequest) {
     const pedido = await useCase.ejecutar({
       nombre: body.nombre,
       telefono: body.telefono,
-      modalidad: (body.modalidad as string || 'local').toLowerCase() as 'local' | 'retiro' | 'domicilio',
+      modalidad: (() => {
+        const m = (body.modalidad as string || 'local').toLowerCase();
+        if (m === 'domicilio') return ModalidadServicio.DOMICILIO;
+        return ModalidadServicio.LOCAL;
+      })(),
       items: body.items,
       mesaZona: body.mesaZona,
       observaciones,
