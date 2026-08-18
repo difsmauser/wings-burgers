@@ -223,31 +223,32 @@ export default function AdminDashboardPage() {
               const height = v > 0 ? Math.max((v / maxVentaHora) * 100, 4) : 2;
               const isCurrentHour = (i + 8) === horaActual;
               return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative">
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group relative h-full">
                   {/* Tooltip */}
                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                     <div className="px-2 py-1 rounded-md bg-white/10 backdrop-blur-sm border border-white/10 whitespace-nowrap">
                       <span className="text-[10px] font-medium text-white">{fmt(v)}</span>
                     </div>
                   </div>
-                  {/* Bar */}
-                  <div
-                    className={`w-full rounded-t-md transition-all duration-700 ease-out relative overflow-hidden ${
-                      isCurrentHour
-                        ? 'bg-gradient-to-t from-brand-500 to-brand-300 shadow-[0_0_12px_rgba(245,166,35,0.3)]'
-                        : v > 0
-                          ? 'bg-gradient-to-t from-brand-500/80 to-brand-400/60 group-hover:from-brand-400 group-hover:to-brand-300'
-                          : 'bg-white/[0.04]'
-                    }`}
-                    style={{
-                      height: `${height}%`,
-                      animationDelay: `${i * 50}ms`,
-                    }}
-                  >
-                    {/* Shimmer effect on current hour */}
-                    {isCurrentHour && (
-                      <div className="absolute inset-0 animate-shimmer" />
-                    )}
+                  {/* Bar container */}
+                  <div className="flex-1 w-full flex items-end">
+                    <div
+                      className={`w-full rounded-t-md transition-all duration-700 ease-out relative overflow-hidden ${
+                        isCurrentHour
+                          ? 'bg-gradient-to-t from-brand-500 to-brand-300 shadow-[0_0_12px_rgba(245,166,35,0.3)]'
+                          : v > 0
+                            ? 'bg-gradient-to-t from-brand-500/80 to-brand-400/60 group-hover:from-brand-400 group-hover:to-brand-300'
+                            : 'bg-white/[0.04]'
+                      }`}
+                      style={{
+                        height: `${height}%`,
+                        animationDelay: `${i * 50}ms`,
+                      }}
+                    >
+                      {isCurrentHour && (
+                        <div className="absolute inset-0 animate-shimmer" />
+                      )}
+                    </div>
                   </div>
                   {/* Label */}
                   <span className={`text-[9px] ${isCurrentHour ? 'text-brand-400 font-bold' : 'text-gray-600'}`}>
