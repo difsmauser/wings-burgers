@@ -237,16 +237,17 @@ function ModalidadSelector({
 
 /**
  * Individual product card component.
- * Shows image (or placeholder), name, description, price, and availability (Req 10.1, 10.3, 10.5).
+ * Shows image (or placeholder), name, description, price, and availability.
+ * Tap on image opens detail modal with full description.
  */
-function ProductoCard({ producto }: { producto: ProductoMenu }) {
+function ProductoCard({ producto, onDetail }: { producto: ProductoMenu; onDetail: (p: ProductoMenu) => void }) {
   const { agregarItem } = useCarrito();
 
   const precioFormateado = new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(producto.precio);
 
   return (
@@ -258,10 +259,9 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
         shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)]
         ${!producto.disponible ? 'opacity-60' : ''}
       `}
-      aria-label={`${producto.nombre} - ${precioFormateado}${!producto.disponible ? ' - No disponible' : ''}`}
     >
-      {/* Product Image */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24]">
+      {/* Product Image — tap to open detail */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24] cursor-pointer" onClick={() => onDetail(producto)}>
         {producto.imagenUrl ? (
           <Image
             src={producto.imagenUrl}
@@ -274,36 +274,36 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
           <PlaceholderImage />
         )}
 
-        {/* Availability Badge */}
-        <div className="absolute top-2 right-2">
+        {/* Availability indicator — small dot on mobile, text on desktop */}
+        <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
           {producto.disponible ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20 shadow-sm shadow-green-500/10">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-              Disponible
+            <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-bold bg-green-500/20 text-green-400 border border-green-500/30 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="hidden sm:inline">Disponible</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 shadow-sm shadow-red-500/10">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" aria-hidden="true" />
-              No disponible
+            <span className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span className="hidden sm:inline">Agotado</span>
             </span>
           )}
         </div>
       </div>
 
       {/* Product Info */}
-      <div className="p-3 sm:p-4">
-        <h3 className="text-sm sm:text-base font-semibold text-white line-clamp-1">
+      <div className="p-2.5 sm:p-4">
+        <h3 className="text-xs sm:text-base font-bold text-white line-clamp-1">
           {producto.nombre}
         </h3>
 
         {producto.descripcion && (
-          <p className="mt-1 text-xs sm:text-sm text-gray-400 line-clamp-4">
+          <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-500 line-clamp-2">
             {producto.descripcion}
           </p>
         )}
 
         <div className="mt-2 sm:mt-3 flex items-center justify-between">
-          <span className="text-lg sm:text-xl font-extrabold text-brand-400 drop-shadow-[0_0_8px_rgba(245,166,35,0.3)]">
+          <span className="text-base sm:text-xl font-extrabold text-brand-400">
             {precioFormateado}
           </span>
 
@@ -454,12 +454,13 @@ export default function MenuPage() {
   const searchParams = useSearchParams();
   const qrCodigo = searchParams.get('qr');
   const { setQrMesa, qrMesa } = useQrMesa();
-  const { setModalidad: setModalidadContext, modalidad: carritoModalidad } = useCarrito();
+  const { setModalidad: setModalidadContext, modalidad: carritoModalidad, agregarItem } = useCarrito();
 
   const [modalidad, setModalidadLocal] = useState<Modalidad>(null);
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todas');
   const [todosProductos, setTodosProductos] = useState<ProductoMenu[]>([]);
   const [productos, setProductos] = useState<ProductoMenu[]>([]);
+  const [selectedProducto, setSelectedProducto] = useState<ProductoMenu | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -760,7 +761,7 @@ export default function MenuPage() {
       {!loading && !error && productosFiltrados.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 stagger-children">
           {productosFiltrados.map((producto) => (
-            <ProductoCard key={producto.id} producto={producto} />
+            <ProductoCard key={producto.id} producto={producto} onDetail={setSelectedProducto} />
           ))}
         </div>
       )}
@@ -822,6 +823,44 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      {selectedProducto && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setSelectedProducto(null)}>
+          <div className="w-full sm:max-w-md bg-[#12121a] sm:rounded-2xl rounded-t-3xl border border-white/[0.06] overflow-hidden animate-scale-in shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            {selectedProducto.imagenUrl && (
+              <div className="relative w-full aspect-[16/10] bg-[#1a1a24]">
+                <Image src={selectedProducto.imagenUrl} alt={selectedProducto.nombre} fill className="object-cover" sizes="100vw" />
+                <button onClick={() => setSelectedProducto(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center text-sm">✕</button>
+              </div>
+            )}
+            <div className="p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <h2 className="text-lg font-bold text-white">{selectedProducto.nombre}</h2>
+                <span className="text-xl font-extrabold text-brand-400 shrink-0">${selectedProducto.precio}</span>
+              </div>
+              {selectedProducto.descripcion && (
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">{selectedProducto.descripcion}</p>
+              )}
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${selectedProducto.disponible ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                  <span className={`w-2 h-2 rounded-full ${selectedProducto.disponible ? 'bg-green-400' : 'bg-red-400'}`} />
+                  {selectedProducto.disponible ? 'Disponible' : 'Agotado'}
+                </span>
+                <span className="text-xs text-gray-600 capitalize">{selectedProducto.categoria}</span>
+              </div>
+              {selectedProducto.disponible && (
+                <button
+                  onClick={() => { agregarItem({ productoId: selectedProducto.id, nombre: selectedProducto.nombre, precioUnitario: selectedProducto.precio, cantidad: 1, imagenUrl: selectedProducto.imagenUrl, opcionesDisponibles: [] }); setSelectedProducto(null); }}
+                  className="w-full py-4 rounded-2xl font-black text-sm text-black bg-gradient-to-r from-brand-400 via-brand-500 to-fire-500 shadow-[0_0_20px_rgba(245,166,35,0.3)] active:scale-[0.97] transition-all"
+                >
+                  Agregar al pedido — ${selectedProducto.precio}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
