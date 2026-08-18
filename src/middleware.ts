@@ -111,7 +111,10 @@ export async function middleware(request: NextRequest) {
   if (!accessToken) {
     // No hay sesión, redirigir a login
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
+    // Only pass internal paths as redirect (prevent open redirect)
+    if (pathname.startsWith('/') && !pathname.startsWith('//') && !pathname.includes('://')) {
+      loginUrl.searchParams.set('redirect', pathname);
+    }
     return NextResponse.redirect(loginUrl);
   }
 

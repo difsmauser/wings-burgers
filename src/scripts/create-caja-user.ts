@@ -1,16 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://evhyieblmtivcnfqxwxc.supabase.co';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 if (!serviceRoleKey) { console.error('❌ SUPABASE_SERVICE_ROLE_KEY required'); process.exit(1); }
+if (!supabaseUrl) { console.error('❌ NEXT_PUBLIC_SUPABASE_URL required'); process.exit(1); }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
 
 async function main() {
   console.log('💰 Creando usuario de Caja...\n');
 
-  const email = 'caja@alaburguer.com';
-  const password = 'Caja123!';
+  const email = process.env.CAJA_EMAIL || 'caja@alaburguer.com';
+  const password = process.env.CAJA_PASSWORD || 'ChangeMeNow!2024';
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({

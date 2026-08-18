@@ -15,6 +15,14 @@ export const dynamic = 'force-dynamic';
  * - Registros QR de ejemplo
  */
 export async function GET() {
+  // SECURITY: Only allow in development or when explicitly enabled
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SETUP !== 'true') {
+    return NextResponse.json(
+      { error: { message: 'Setup endpoint is disabled in production. Set ALLOW_SETUP=true to enable.' } },
+      { status: 403 }
+    );
+  }
+
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

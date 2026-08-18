@@ -440,7 +440,11 @@ describe('Flujo QR: Escanear → Ver Menú → Personalizar → Confirmar → Ra
     let pedidoActualizado = await pedidoRepo.obtenerPorId(pedido.id);
     expect(pedidoActualizado!.estado).toBe('empacado');
 
-    // Para modalidad local, el siguiente estado es SERVIDO
+    // Para modalidad local, pasamos por LISTO_PARA_SERVIR antes de SERVIDO
+    await actualizarEstado.ejecutar(pedido.id, 'LISTO_PARA_SERVIR' as any);
+    pedidoActualizado = await pedidoRepo.obtenerPorId(pedido.id);
+    expect(pedidoActualizado!.estado).toBe('listo_para_servir');
+
     await actualizarEstado.ejecutar(pedido.id, 'SERVIDO' as any);
     pedidoActualizado = await pedidoRepo.obtenerPorId(pedido.id);
     expect(pedidoActualizado!.estado).toBe('servido');
@@ -449,7 +453,7 @@ describe('Flujo QR: Escanear → Ver Menú → Personalizar → Confirmar → Ra
     const cambiosEstado = notificacionService.notificaciones.filter(
       (n) => n.tipo === 'cambio_estado'
     );
-    expect(cambiosEstado.length).toBeGreaterThanOrEqual(3); // en_preparacion, empacado, servido
+    expect(cambiosEstado.length).toBeGreaterThanOrEqual(4); // en_preparacion, empacado, listo_para_servir, servido
   });
 
   it('debe rechazar QR inválido con mensaje de error', () => {

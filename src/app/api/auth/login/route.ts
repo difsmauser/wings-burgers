@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.json(
-      { error: { message: 'Error de configuración del servidor. Contacta al administrador.', debug: { hasUrl: !!supabaseUrl, hasAnon: !!supabaseAnonKey, hasService: !!serviceRoleKey } } },
+      { error: { message: 'Error de configuración del servidor. Contacta al administrador.' } },
       { status: 500 }
     );
   }
@@ -111,8 +111,9 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (err) {
+    console.error('Login error:', err);
     return NextResponse.json(
-      { error: { message: 'Error del servidor al procesar login', detail: err instanceof Error ? err.message : 'unknown' } },
+      { error: { message: 'Error del servidor al procesar login. Intenta de nuevo.' } },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/app/api/_lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +9,14 @@ export const dynamic = 'force-dynamic';
  * Marca el comprobante como validado, todos los pedidos de la mesa como pagados,
  * y libera la mesa automáticamente.
  * 
+ * Auth: admin, caja
  * Body: { comprobanteId: string, pedidoId: string, mesaZona: string }
  */
 export async function POST(request: NextRequest) {
+  // Auth: solo admin y caja pueden validar pagos
+  const auth = await requireAuth(request, ['admin', 'caja']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { comprobanteId, pedidoId, mesaZona } = await request.json();
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

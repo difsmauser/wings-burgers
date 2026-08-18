@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://evhyieblmtivcnfqxwxc.supabase.co';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+if (!serviceRoleKey || !supabaseUrl) { console.error('❌ SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL required'); process.exit(1); }
 
 if (!serviceRoleKey) {
   console.error('❌ SUPABASE_SERVICE_ROLE_KEY required');

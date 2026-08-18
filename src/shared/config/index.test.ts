@@ -3,7 +3,7 @@ import { APP_CONFIG } from './index';
 
 describe('APP_CONFIG', () => {
   it('should have correct app name', () => {
-    expect(APP_CONFIG.name).toBe('Wings & Burgers');
+    expect(APP_CONFIG.name).toBe('A-la Burguer');
   });
 
   it('should have a version string', () => {

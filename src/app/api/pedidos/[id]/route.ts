@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/app/api/_lib/auth';
+import { isValidUUID } from '@/app/api/_lib/validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,14 +13,24 @@ function getSupabaseConfig() {
 /**
  * GET /api/pedidos/[id]
  * Obtiene un pedido por su ID con detalles y nombres de producto.
- * Usa fetch directo a Supabase REST (sin SDK cache).
+ * Auth: cualquier usuario autenticado del staff puede ver pedidos.
+ * Los clientes acceden a su propio pedido vía /api/pedidos/[id]/estado (público).
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Auth: solo staff autenticado puede ver detalle completo de pedidos
+  const auth = await requireAuth(request, ['admin', 'vendedor', 'caja', 'bar', 'repartidor']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { id } = await params;
+
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: { message: 'ID de pedido inválido' } }, { status: 400 });
+    }
+
     const { url, key } = getSupabaseConfig();
 
     const res = await fetch(
@@ -71,8 +83,9 @@ export async function GET(
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
   } catch (error) {
+    console.error('Error GET pedido:', error);
     return NextResponse.json(
-      { error: { message: error instanceof Error ? error.message : 'Error' } },
+      { error: { message: 'Error al obtener pedido' } },
       { status: 500 }
     );
   }
@@ -81,15 +94,23 @@ export async function GET(
 /**
  * PUT /api/pedidos/[id]
  * Actualiza estado, pago, y/o mesero de un pedido.
- * Usa fetch directo a Supabase REST (sin SDK cache).
- * Valida transiciones de estado antes de actualizar.
+ * Auth: admin, vendedor, caja, bar
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Auth: staff puede actualizar pedidos
+  const auth = await requireAuth(request, ['admin', 'vendedor', 'caja', 'bar']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { id } = await params;
+
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: { message: 'ID de pedido inválido' } }, { status: 400 });
+    }
+
     const body = await request.json();
     const { url, key } = getSupabaseConfig();
 

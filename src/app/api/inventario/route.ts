@@ -2,18 +2,18 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../_lib/errorHandler';
+import { requireAuth } from '../_lib/auth';
 import { getContainer } from '@/shared/container';
 
 /**
  * GET /api/inventario
  * Lista artículos de inventario. Opcionalmente filtra los que están bajo mínimo.
- *
- * Query params:
- * - bajoMinimo: "true" para listar solo artículos bajo nivel mínimo
- *
- * Requirements: 4.1, 4.3
+ * Auth: admin
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const bajoMinimo = searchParams.get('bajoMinimo') === 'true';
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
     if (bajoMinimo) {
       articulos = await inventarioRepo.listarBajoMinimo();
     } else {
-      // List all items - query directly since repository only exposes listarBajoMinimo
       const { createServerClient } = await import('@/adapters/driven/persistence/supabase/SupabaseClient');
       const supabase = createServerClient();
       const { data, error } = await supabase
@@ -56,17 +55,12 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/inventario
  * Registra un nuevo artículo de inventario.
- * Auth is handled by the admin UI middleware — API is open.
- *
- * Body (JSON):
- * - nombre: string (requerido, max 100)
- * - cantidad: number (requerido, 0-999999)
- * - unidadMedida: string (requerido)
- * - nivelMinimo: number (requerido, >= 1)
- *
- * Requirements: 4.1, 4.7
+ * Auth: admin
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
 

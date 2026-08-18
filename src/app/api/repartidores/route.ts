@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/app/api/_lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,12 @@ function getConfig() {
 
 /**
  * GET /api/repartidores — Lista repartidores activos
+ * Auth: admin
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { url, key } = getConfig();
     const res = await fetch(`${url}/rest/v1/repartidor?activo=eq.true&select=*&order=nombre.asc`, {
@@ -26,8 +31,12 @@ export async function GET() {
 
 /**
  * POST /api/repartidores — Crea un repartidor
+ * Auth: admin
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const { url, key } = getConfig();
@@ -49,8 +58,12 @@ export async function POST(request: NextRequest) {
 
 /**
  * PUT /api/repartidores — Actualiza un repartidor
+ * Auth: admin
  */
 export async function PUT(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const { url, key } = getConfig();
@@ -77,8 +90,12 @@ export async function PUT(request: NextRequest) {
 
 /**
  * DELETE /api/repartidores?id=xxx — Desactiva (soft delete)
+ * Auth: admin
  */
 export async function DELETE(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

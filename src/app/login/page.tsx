@@ -6,8 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || null;
+  const rawRedirect = searchParams.get('redirect') || null;
   const errorParam = searchParams.get('error');
+
+  // Sanitize redirect URL: only allow internal paths (starts with / and no protocol-relative //)
+  const redirectTo = rawRedirect && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('://') 
+    ? rawRedirect 
+    : null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,18 +36,21 @@ function LoginContent() {
       const data = await response.json();
       if (!response.ok) { setError(data.error?.message || 'Credenciales inválidas'); return; }
 
-      if (redirectTo) { router.push(redirectTo); return; }
-      switch (data.data.rol) {
-        case 'admin': router.push('/admin'); break;
-        case 'vendedor': router.push('/pedidos'); break;
-        case 'bar': router.push('/bar'); break;
-        case 'repartidor': router.push('/entregas'); break;
-        case 'caja': router.push('/caja'); break;
-        default: router.push('/menu-domicilio');
-      }
+      // Use full page navigation (not client-side) to ensure cookies are sent with the next request
+      const destino = redirectTo || (() => {
+        switch (data.data.rol) {
+          case 'admin': return '/admin';
+          case 'vendedor': return '/pedidos';
+          case 'bar': return '/bar';
+          case 'repartidor': return '/entregas';
+          case 'caja': return '/caja';
+          default: return '/menu-domicilio';
+        }
+      })();
+      window.location.href = destino;
+      return; // Don't reach finally's setLoading(false) during navigation
     } catch {
       setError('Error de conexión. Intenta de nuevo.');
-    } finally {
       setLoading(false);
     }
   };

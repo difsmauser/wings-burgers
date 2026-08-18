@@ -40,7 +40,7 @@ export class ActualizarEstadoPedido {
 
     // 4. Persistir el cambio de estado
     await this.pedidoRepo.actualizar(pedidoId, {
-      estado: nuevoEstado.toLowerCase() as 'recibido' | 'en_preparacion' | 'empacado' | 'servido' | 'en_camino' | 'entregado',
+      estado: nuevoEstado.toLowerCase() as 'recibido' | 'en_preparacion' | 'empacado' | 'listo_para_servir' | 'servido' | 'en_camino' | 'entregado',
       actualizadoEn: new Date(),
     });
 

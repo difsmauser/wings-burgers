@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/app/api/_lib/rateLimit';
+import { requireAuth } from '@/app/api/_lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -6,15 +8,19 @@ export const dynamic = 'force-dynamic';
  * POST /api/pagos/comprobante-upload
  * Sube un comprobante de pago (imagen) y lo asocia a un pedido.
  * El comprobante queda pendiente de validación por caja.
- * 
- * Body: FormData con campos:
- * - file: imagen del comprobante
- * - pedidoId: ID del pedido
- * - mesaZona: mesa del cliente
- * - total: monto total
- * - metodoPago: 'transferencia' | 'efectivo'
+ * Rate limited: 5 uploads per minute per IP.
  */
 export async function POST(request: NextRequest) {
+  // Rate limit uploads
+  const ip = getClientIp(request);
+  const rl = rateLimit(`comprobante:${ip}`, RATE_LIMITS.upload.max, RATE_LIMITS.upload.windowMs);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: { code: 'RATE_LIMITED', message: 'Demasiadas subidas. Intenta en un momento.' } },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -23,6 +29,14 @@ export async function POST(request: NextRequest) {
     const total = formData.get('total') as string || '0';
     const metodoPago = formData.get('metodoPago') as string || 'transferencia';
 
+    // Validate pedidoId
+    if (!pedidoId || pedidoId.trim().length === 0) {
+      return NextResponse.json(
+        { error: { message: 'pedidoId es requerido' } },
+        { status: 400 }
+      );
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -30,8 +44,27 @@ export async function POST(request: NextRequest) {
 
     // Upload file to Supabase Storage if provided
     if (file && file.size > 0) {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `comprobantes/${pedidoId}-${Date.now()}.${ext}`;
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        return NextResponse.json(
+          { error: { message: 'Tipo de archivo no permitido. Use JPG, PNG, WebP, GIF o PDF.' } },
+          { status: 400 }
+        );
+      }
+
+      // Max 10MB for receipts
+      if (file.size > 10 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: { message: 'El archivo no debe superar 10MB' } },
+          { status: 400 }
+        );
+      }
+
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      // Sanitize extension
+      const safeExt = ext.replace(/[^a-z0-9]/g, '').slice(0, 5) || 'jpg';
+      const fileName = `comprobantes/${pedidoId}-${Date.now()}.${safeExt}`;
       const fileBuffer = await file.arrayBuffer();
 
       const uploadRes = await fetch(
@@ -72,8 +105,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!insertRes.ok) {
-      const errText = await insertRes.text();
-      return NextResponse.json({ error: { message: errText } }, { status: 500 });
+      console.error('Comprobante insert error:', await insertRes.text());
+      return NextResponse.json({ error: { message: 'Error al registrar comprobante' } }, { status: 500 });
     }
 
     const data = await insertRes.json();
@@ -95,8 +128,13 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/pagos/comprobante-upload?estado=pendiente
  * Lista comprobantes (para caja).
+ * Auth: admin, caja
  */
 export async function GET(request: NextRequest) {
+  // Auth: solo caja/admin pueden ver comprobantes pendientes
+  const auth = await requireAuth(request, ['admin', 'caja']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const estado = searchParams.get('estado') || 'pendiente';

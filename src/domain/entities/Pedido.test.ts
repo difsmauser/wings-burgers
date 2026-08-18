@@ -203,10 +203,12 @@ describe('Pedido', () => {
       expect(pedido.estado).toBe(EstadoPedido.EMPACADO);
     });
 
-    it('transición EMPACADO → SERVIDO para LOCAL', () => {
+    it('transición EMPACADO → LISTO_PARA_SERVIR → SERVIDO para LOCAL', () => {
       const pedido = crearPedidoBase({ modalidad: ModalidadServicio.LOCAL });
       pedido.cambiarEstado(EstadoPedido.EN_PREPARACION);
       pedido.cambiarEstado(EstadoPedido.EMPACADO);
+      pedido.cambiarEstado(EstadoPedido.LISTO_PARA_SERVIR);
+      expect(pedido.estado).toBe(EstadoPedido.LISTO_PARA_SERVIR);
       pedido.cambiarEstado(EstadoPedido.SERVIDO);
       expect(pedido.estado).toBe(EstadoPedido.SERVIDO);
     });

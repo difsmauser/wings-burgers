@@ -2,14 +2,17 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../_lib/auth';
 
 /**
  * POST /api/upload
  * Uploads a file to Supabase Storage bucket "productos".
- * Accepts multipart/form-data with a "file" field.
- * Returns the public URL of the uploaded file.
+ * Auth: admin (only admin can upload product images)
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

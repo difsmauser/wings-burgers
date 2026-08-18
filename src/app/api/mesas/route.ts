@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../_lib/errorHandler';
+import { requireAuth } from '../_lib/auth';
 
 async function getSupabase() {
   const { createServerClient } = await import('@/adapters/driven/persistence/supabase/SupabaseClient');
@@ -25,6 +26,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  // Auth: solo admin puede crear mesas
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const supabase = await getSupabase();
@@ -60,6 +65,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  // Auth: admin y vendedor pueden modificar estado de mesas
+  const auth = await requireAuth(request, ['admin', 'vendedor', 'caja']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const supabase = await getSupabase();
@@ -93,6 +102,10 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  // Auth: solo admin puede eliminar mesas
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

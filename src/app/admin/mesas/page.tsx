@@ -85,8 +85,30 @@ export default function MesasPage() {
           nombre: nombre.trim(),
           zona,
           capacidad: parseInt(capacidad) || 4,
-          pos_x: Math.random() * 80,
-          pos_y: Math.random() * 80,
+          pos_x: (() => {
+            // Find a free position that doesn't overlap existing mesas
+            const occupied = mesas.map(m => ({ x: m.pos_x, y: m.pos_y }));
+            let x = 20 + Math.random() * 60;
+            let y = 20 + Math.random() * 60;
+            for (let attempt = 0; attempt < 20; attempt++) {
+              const tooClose = occupied.some(o => Math.abs(o.x - x) < 12 && Math.abs(o.y - y) < 12);
+              if (!tooClose) break;
+              x = 10 + Math.random() * 80;
+              y = 10 + Math.random() * 80;
+            }
+            return Math.round(x * 10) / 10;
+          })(),
+          pos_y: (() => {
+            const occupied = mesas.map(m => ({ x: m.pos_x, y: m.pos_y }));
+            let y = 20 + Math.random() * 60;
+            for (let attempt = 0; attempt < 20; attempt++) {
+              const x = 20 + Math.random() * 60;
+              const tooClose = occupied.some(o => Math.abs(o.x - x) < 12 && Math.abs(o.y - y) < 12);
+              if (!tooClose) return Math.round(y * 10) / 10;
+              y = 10 + Math.random() * 80;
+            }
+            return Math.round(y * 10) / 10;
+          })(),
         }),
       });
       if (!res.ok) {
@@ -134,7 +156,10 @@ export default function MesasPage() {
     fetchMesas();
   };
 
-  // Drag handlers
+  // Drag handlers — improved with collision detection and drag threshold
+  const DRAG_THRESHOLD = 5; // pixels before considering it a drag (vs click)
+  const MESA_SIZE = 10; // % — minimum distance between mesa centers to avoid overlap
+  
   const handleMouseDown = (e: React.MouseEvent, mesa: Mesa) => {
     e.preventDefault();
     e.stopPropagation();
@@ -144,22 +169,67 @@ export default function MesasPage() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!dragging || !mapRef.current) return;
+    
+    // Check if drag threshold is met
+    const dx = Math.abs(e.clientX - dragging.startX);
+    const dy = Math.abs(e.clientY - dragging.startY);
+    if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+
     const rect = mapRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setDragPos({ x: Math.max(5, Math.min(95, x)), y: Math.max(5, Math.min(95, y)) });
+    // Clamp to keep mesa fully inside the map
+    setDragPos({ x: Math.max(8, Math.min(92, x)), y: Math.max(8, Math.min(92, y)) });
   };
 
   const handleMouseUp = async () => {
     if (!dragging || !dragPos) { setDragging(null); setDragPos(null); return; }
+    
+    // Check if it was actually a drag (threshold met) or just a click
+    const mesa = mesas.find(m => m.id === dragging.id);
+    if (!mesa) { setDragging(null); setDragPos(null); return; }
+    
+    const movedX = Math.abs(dragPos.x - mesa.pos_x);
+    const movedY = Math.abs(dragPos.y - mesa.pos_y);
+    
+    if (movedX < 2 && movedY < 2) {
+      // It was a click, not a drag — open edit modal
+      setDragging(null);
+      setDragPos(null);
+      openEditModal(mesa);
+      return;
+    }
+
+    // Collision detection: snap away from other mesas
+    let finalX = dragPos.x;
+    let finalY = dragPos.y;
+    
+    for (const other of mesas) {
+      if (other.id === dragging.id) continue;
+      const distX = Math.abs(finalX - other.pos_x);
+      const distY = Math.abs(finalY - other.pos_y);
+      // If too close, nudge away
+      if (distX < MESA_SIZE && distY < MESA_SIZE) {
+        const angleToOther = Math.atan2(finalY - other.pos_y, finalX - other.pos_x);
+        finalX = other.pos_x + Math.cos(angleToOther) * MESA_SIZE;
+        finalY = other.pos_y + Math.sin(angleToOther) * MESA_SIZE;
+        // Re-clamp
+        finalX = Math.max(8, Math.min(92, finalX));
+        finalY = Math.max(8, Math.min(92, finalY));
+      }
+    }
+
+    // Optimistic update (no flash)
+    setMesas(prev => prev.map(m => m.id === dragging.id ? { ...m, pos_x: finalX, pos_y: finalY } : m));
+    setDragging(null);
+    setDragPos(null);
+
+    // Persist to DB
     await fetch('/api/mesas', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: dragging.id, pos_x: dragPos.x, pos_y: dragPos.y }),
+      body: JSON.stringify({ id: dragging.id, pos_x: finalX, pos_y: finalY }),
     });
-    setDragging(null);
-    setDragPos(null);
-    fetchMesas();
   };
 
   // Stats
@@ -269,8 +339,7 @@ export default function MesasPage() {
                 className={`absolute w-16 h-16 rounded-xl ${colors.bg} border ${colors.border} flex flex-col items-center justify-center cursor-grab transition-all duration-200 shadow-lg select-none ${isDragging ? 'cursor-grabbing scale-110 z-20 ring-2 ring-brand-400' : ''}`}
                 style={{ left: `${posX}%`, top: `${posY}%`, transform: 'translate(-50%, -50%)', transition: isDragging ? 'none' : undefined }}
                 onMouseDown={(e) => handleMouseDown(e, mesa)}
-                onClick={(e) => { if (!dragging) { e.stopPropagation(); openEditModal(mesa); } }}
-                title={`${mesa.nombre} - Arrastra para mover`}
+                title={`${mesa.nombre} - Arrastra para mover, click para editar`}
               >
                 <span className={`text-xs font-bold ${colors.text}`}>
                   {mesa.nombre.replace('Mesa ', 'M').replace('Terraza ', 'T').replace('Barra ', 'B')}

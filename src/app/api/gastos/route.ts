@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
+import { requireAuth } from '@/app/api/_lib/auth';
 import { getContainer } from '@/shared/container';
 import { ValidacionError } from '@/shared/errors';
 import { CategoriaGasto } from '@/domain/value-objects';
@@ -10,8 +11,13 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/gastos
  * Consulta gastos con filtros opcionales.
+ * Auth: admin
  */
 export async function GET(request: NextRequest) {
+  // Auth: solo admin puede ver gastos
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { searchParams } = new URL(request.url);
     const filtros: FiltroGasto = {};
@@ -58,10 +64,14 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/gastos
  * Registra un nuevo gasto.
+ * Auth: admin
  * Body: { monto: number, concepto: string, categoria: string, fecha: string }
- * adminId es opcional (no requerido desde el panel admin).
  */
 export async function POST(request: NextRequest) {
+  // Auth: solo admin puede registrar gastos
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const body = await request.json();
     const { monto, concepto, categoria, fecha } = body;
@@ -70,8 +80,15 @@ export async function POST(request: NextRequest) {
     if (monto === undefined || isNaN(parseFloat(String(monto)))) {
       throw new ValidacionError('Se requiere monto (número)', ['monto']);
     }
+    const montoNum = parseFloat(String(monto));
+    if (montoNum <= 0 || montoNum > 9999999.99) {
+      throw new ValidacionError('Monto debe ser entre $0.01 y $9,999,999.99', ['monto']);
+    }
     if (!concepto?.trim()) {
       throw new ValidacionError('Se requiere concepto', ['concepto']);
+    }
+    if (concepto.trim().length > 200) {
+      throw new ValidacionError('Concepto no debe superar 200 caracteres', ['concepto']);
     }
     if (!categoria?.trim()) {
       throw new ValidacionError('Se requiere categoria', ['categoria']);

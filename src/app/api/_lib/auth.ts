@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 /**
  * Roles disponibles en el sistema.
  */
-export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor';
+export type Rol = 'admin' | 'vendedor' | 'cliente' | 'repartidor' | 'caja' | 'bar';
 
 /**
  * Información del usuario autenticado extraída del contexto de autenticación.
@@ -42,18 +42,21 @@ export async function verificarAutenticacion(
     null;
 
   // Fallback para desarrollo/testing: headers manuales
-  const devUserId = request.headers.get('x-user-id');
-  const devUserRol = request.headers.get('x-user-rol') as Rol | null;
+  // ONLY allow in development/test mode to prevent production bypass
+  if (process.env.NODE_ENV !== 'production') {
+    const devUserId = request.headers.get('x-user-id');
+    const devUserRol = request.headers.get('x-user-rol') as Rol | null;
 
-  if (devUserId && devUserRol) {
-    return {
-      autenticado: true,
-      usuario: {
-        id: devUserId,
-        rol: devUserRol,
-        nombre: request.headers.get('x-user-nombre') ?? 'Usuario',
-      },
-    };
+    if (devUserId && devUserRol) {
+      return {
+        autenticado: true,
+        usuario: {
+          id: devUserId,
+          rol: devUserRol,
+          nombre: request.headers.get('x-user-nombre') ?? 'Usuario',
+        },
+      };
+    }
   }
 
   if (!accessToken) {
@@ -161,4 +164,34 @@ export function verificarRol(
   }
 
   return null;
+}
+
+
+/**
+ * Helper compacto: verifica autenticación + rol en una sola llamada.
+ * Retorna el usuario si todo es correcto, o un NextResponse de error si no.
+ * 
+ * Uso:
+ * ```ts
+ * const auth = await requireAuth(request, ['admin', 'caja']);
+ * if ('respuesta' in auth) return auth.respuesta;
+ * // auth.usuario está disponible
+ * ```
+ */
+export async function requireAuth(
+  request: NextRequest,
+  rolesPermitidos?: Rol[]
+): Promise<{ usuario: UsuarioAutenticado } | { respuesta: NextResponse }> {
+  const result = await verificarAutenticacion(request);
+
+  if (!result.autenticado) {
+    return { respuesta: result.respuesta };
+  }
+
+  if (rolesPermitidos) {
+    const errorRol = verificarRol(result.usuario, rolesPermitidos);
+    if (errorRol) return { respuesta: errorRol };
+  }
+
+  return { usuario: result.usuario };
 }

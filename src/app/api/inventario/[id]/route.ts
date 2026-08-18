@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '../../_lib/errorHandler';
+import { requireAuth } from '../../_lib/auth';
+import { isValidUUID } from '../../_lib/validation';
 import { getContainer } from '@/shared/container';
 import { ValidacionError } from '@/shared/errors';
 import type { TipoMovimiento } from '@/shared/types';
@@ -12,21 +14,21 @@ interface RouteParams {
 /**
  * PUT /api/inventario/[id]
  * Actualiza la cantidad de un artículo de inventario.
- * Auth is handled by the admin UI middleware — API is open.
- *
- * Body (JSON):
- * - cantidad: number (requerido) - the new absolute quantity
- * - tipoMovimiento: 'entrada' | 'salida' | 'ajuste' (requerido)
- * - motivo: string (optional)
- *
- * Requirements: 4.3
+ * Auth: admin
  */
 export async function PUT(
   request: NextRequest,
   { params }: RouteParams
 ) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { id } = await params;
+
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: { message: 'ID inválido' } }, { status: 400 });
+    }
 
     const body = await request.json();
 
@@ -75,14 +77,21 @@ export async function PUT(
 /**
  * DELETE /api/inventario/[id]
  * Elimina un artículo de inventario.
- * Auth is handled by the admin UI middleware — API is open.
+ * Auth: admin
  */
 export async function DELETE(
   request: NextRequest,
   { params }: RouteParams
 ) {
+  const auth = await requireAuth(request, ['admin']);
+  if ('respuesta' in auth) return auth.respuesta;
+
   try {
     const { id } = await params;
+
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: { message: 'ID inválido' } }, { status: 400 });
+    }
 
     const supabase = createServerClient();
 

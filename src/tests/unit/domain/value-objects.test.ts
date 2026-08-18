@@ -180,11 +180,12 @@ describe('Enums', () => {
     expect(Categoria.OTROS).toBe('OTROS');
   });
 
-  it('EstadoPedido tiene 6 valores', () => {
-    expect(Object.values(EstadoPedido)).toHaveLength(6);
+  it('EstadoPedido tiene 7 valores', () => {
+    expect(Object.values(EstadoPedido)).toHaveLength(7);
     expect(EstadoPedido.RECIBIDO).toBe('RECIBIDO');
     expect(EstadoPedido.EN_PREPARACION).toBe('EN_PREPARACION');
     expect(EstadoPedido.EMPACADO).toBe('EMPACADO');
+    expect(EstadoPedido.LISTO_PARA_SERVIR).toBe('LISTO_PARA_SERVIR');
     expect(EstadoPedido.SERVIDO).toBe('SERVIDO');
     expect(EstadoPedido.EN_CAMINO).toBe('EN_CAMINO');
     expect(EstadoPedido.ENTREGADO).toBe('ENTREGADO');

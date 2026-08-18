@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
+import { rateLimit, getClientIp, RATE_LIMITS } from '@/app/api/_lib/rateLimit';
 import { getContainer } from '@/shared/container';
 import { createServerClient } from '@/adapters/driven/persistence/supabase/SupabaseClient';
 import { ModalidadServicio } from '@/domain/value-objects';
@@ -75,8 +76,92 @@ export async function GET(request: NextRequest) {
  * Requirements: 7.1, 7.3, 7.4
  */
 export async function POST(request: NextRequest) {
+  // Rate limit: max 10 orders per minute per IP
+  const ip = getClientIp(request);
+  const rl = rateLimit(`pedidos:post:${ip}`, RATE_LIMITS.createOrder.max, RATE_LIMITS.createOrder.windowMs);
+  if (rl.limited) {
+    return NextResponse.json(
+      { error: { code: 'RATE_LIMITED', message: 'Demasiadas solicitudes. Intenta en un momento.' } },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    );
+  }
+
   try {
     const body = await request.json();
+
+    // === INPUT VALIDATION ===
+    // Validate nombre
+    if (!body.nombre || typeof body.nombre !== 'string' || body.nombre.trim().length === 0) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Se requiere nombre del cliente' } },
+        { status: 400 }
+      );
+    }
+    if (body.nombre.length > 100) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Nombre no debe superar 100 caracteres' } },
+        { status: 400 }
+      );
+    }
+
+    // Validate telefono
+    if (!body.telefono || typeof body.telefono !== 'string' || body.telefono.trim().length < 7) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Se requiere teléfono válido (mínimo 7 dígitos)' } },
+        { status: 400 }
+      );
+    }
+    if (body.telefono.length > 20) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Teléfono no debe superar 20 caracteres' } },
+        { status: 400 }
+      );
+    }
+
+    // Validate items
+    if (!Array.isArray(body.items) || body.items.length === 0) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Se requiere al menos un producto en el pedido' } },
+        { status: 400 }
+      );
+    }
+    if (body.items.length > 50) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'No se permiten más de 50 productos por pedido' } },
+        { status: 400 }
+      );
+    }
+    for (const item of body.items) {
+      if (!item.productoId || typeof item.productoId !== 'string') {
+        return NextResponse.json(
+          { error: { code: 'VALIDACION', message: 'Cada item requiere productoId válido' } },
+          { status: 400 }
+        );
+      }
+      if (!item.cantidad || typeof item.cantidad !== 'number' || item.cantidad < 1 || item.cantidad > 99) {
+        return NextResponse.json(
+          { error: { code: 'VALIDACION', message: 'Cantidad debe ser entre 1 y 99' } },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate modalidad
+    const modalidadRaw = (body.modalidad as string || 'local').toLowerCase();
+    if (!['local', 'domicilio'].includes(modalidadRaw)) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Modalidad debe ser "local" o "domicilio"' } },
+        { status: 400 }
+      );
+    }
+
+    // Validate observaciones length
+    if (body.observaciones && typeof body.observaciones === 'string' && body.observaciones.length > 500) {
+      return NextResponse.json(
+        { error: { code: 'VALIDACION', message: 'Observaciones no debe superar 500 caracteres' } },
+        { status: 400 }
+      );
+    }
 
     const container = getContainer();
     const useCase = container.getCrearPedido();

@@ -12,6 +12,6 @@ describe('Project setup verification', () => {
 
   it('path aliases resolve correctly', async () => {
     const { APP_CONFIG } = await import('@/shared/config/index');
-    expect(APP_CONFIG.name).toBe('Wings & Burgers');
+    expect(APP_CONFIG.name).toBe('A-la Burguer');
   });
 });
