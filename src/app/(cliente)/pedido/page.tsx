@@ -875,8 +875,18 @@ export default function PedidoPage() {
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
+  const [nombre, setNombre] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('alaburguer-cliente-nombre') || '';
+    }
+    return '';
+  });
+  const [telefono, setTelefono] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('alaburguer-cliente-telefono') || '';
+    }
+    return '';
+  });
   const [direccion, setDireccion] = useState('');
 
   // Multi-order support: store array of pedido IDs for the mesa session
@@ -972,6 +982,11 @@ export default function PedidoPage() {
       if (newPedidoId) {
         setPedidoIds(prev => [...prev, newPedidoId]);
       }
+      // Persist client info for repeat orders at the same session
+      try {
+        localStorage.setItem('alaburguer-cliente-nombre', nombre.trim());
+        localStorage.setItem('alaburguer-cliente-telefono', telefono.trim());
+      } catch { /* storage full */ }
       confirmarPedido();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
