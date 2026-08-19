@@ -132,13 +132,75 @@ export async function PUT(request: NextRequest) {
     });
     const allItems = await allItemsRes.json();
 
-    // 3. If ALL items are 'listo', advance pedido to listo_para_servir
+    // 3. If ALL items are 'listo', advance pedido through proper state chain to listo_para_servir
+    //    and auto-assign an available mesero for LOCAL orders
     const allListo = (allItems || []).every((i: { item_estado: string }) => i.item_estado === 'listo');
     if (allListo && allItems.length > 0) {
-      await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&estado=neq.listo_para_servir&estado=neq.servido`, {
-        method: 'PATCH', headers, cache: 'no-store',
-        body: JSON.stringify({ estado: 'listo_para_servir', actualizado_en: new Date().toISOString() }),
+      // Get current pedido state and modalidad
+      const pedidoRes = await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=estado,modalidad,mesero_id,mesero_nombre`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
       });
+      const pedidoData = await pedidoRes.json();
+      const pedido = pedidoData?.[0];
+
+      if (pedido) {
+        // Advance through intermediate states to reach listo_para_servir
+        const stateChain: string[] = [];
+        if (pedido.estado === 'recibido') stateChain.push('en_preparacion', 'empacado', 'listo_para_servir');
+        else if (pedido.estado === 'en_preparacion') stateChain.push('empacado', 'listo_para_servir');
+        else if (pedido.estado === 'empacado') stateChain.push('listo_para_servir');
+        // If already listo_para_servir or beyond, no change needed
+
+        for (const nextState of stateChain) {
+          await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`, {
+            method: 'PATCH', headers, cache: 'no-store',
+            body: JSON.stringify({ estado: nextState, actualizado_en: new Date().toISOString() }),
+          });
+        }
+
+        // Auto-assign a mesero if this is a LOCAL order and none is assigned yet
+        if ((pedido.modalidad === 'LOCAL' || pedido.modalidad === 'RETIRO') && !pedido.mesero_id && !pedido.mesero_nombre) {
+          try {
+            // Get available meseros
+            const meserosRes = await fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre&order=nombre.asc`, {
+              headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
+            });
+            const meseros = await meserosRes.json();
+
+            if (meseros && meseros.length > 0) {
+              // Find mesero with fewest active orders (listo_para_servir state)
+              const assignmentsRes = await fetch(`${supabaseUrl}/rest/v1/pedido?estado=eq.listo_para_servir&select=mesero_id`, {
+                headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
+              });
+              const assignments = await assignmentsRes.json() || [];
+
+              // Count assignments per mesero
+              const countMap: Record<string, number> = {};
+              for (const m of meseros) {
+                countMap[m.id] = 0;
+              }
+              for (const a of assignments) {
+                if (a.mesero_id && countMap[a.mesero_id] !== undefined) {
+                  countMap[a.mesero_id]++;
+                }
+              }
+
+              // Pick mesero with least assignments (round-robin)
+              const sorted = meseros.sort((a: { id: string }, b: { id: string }) =>
+                (countMap[a.id] || 0) - (countMap[b.id] || 0)
+              );
+              const chosen = sorted[0];
+
+              await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`, {
+                method: 'PATCH', headers, cache: 'no-store',
+                body: JSON.stringify({ mesero_id: chosen.id, mesero_nombre: chosen.nombre }),
+              });
+            }
+          } catch {
+            // Mesero assignment is best-effort, don't fail the whole operation
+          }
+        }
+      }
     } else {
       // At least one item is being prepared, ensure pedido is in en_preparacion
       const somePrep = (allItems || []).some((i: { item_estado: string }) => i.item_estado === 'preparando' || i.item_estado === 'listo');
