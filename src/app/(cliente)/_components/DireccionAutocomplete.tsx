@@ -90,21 +90,29 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
 
   // Select a suggestion
   const handleSelect = (sugerencia: Sugerencia) => {
-    // Format address nicely
+    // Format address nicely, preserving the user's typed number if Nominatim didn't return one
     const addr = sugerencia.address;
     let formatted = '';
 
     if (addr) {
       const parts = [];
       if (addr.road) parts.push(addr.road);
-      if (addr.house_number) parts.push(`#${addr.house_number}`);
+      // If Nominatim has house_number, use it. Otherwise try to extract from user input.
+      if (addr.house_number) {
+        parts.push(`#${addr.house_number}`);
+      } else {
+        // Try to find a number in what the user typed (e.g., "108" from "Calle Plutarco 108")
+        const numMatch = value.match(/\b(\d{1,5})\b/);
+        if (numMatch) parts.push(`#${numMatch[1]}`);
+      }
       if (addr.neighbourhood || addr.suburb) parts.push(addr.neighbourhood || addr.suburb);
+      if (addr.city) parts.push(addr.city);
       if (addr.postcode) parts.push(`CP ${addr.postcode}`);
       formatted = parts.join(', ');
     }
 
-    // Use formatted if we got address parts, otherwise use display_name
-    const finalAddress = formatted || sugerencia.display_name.split(',').slice(0, 4).join(',').trim();
+    // Use formatted if we got address parts, otherwise use display_name cleaned up
+    const finalAddress = formatted || sugerencia.display_name.split(',').slice(0, 5).join(',').trim();
     onChange(finalAddress);
     setShowDropdown(false);
     setSugerencias([]);
@@ -158,12 +166,18 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
         <div className="absolute z-50 w-full mt-1 rounded-xl bg-[#1a1a24] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden animate-fade-in">
           {sugerencias.map((s, i) => {
             const addr = s.address;
+            // Main line: street + number (if available)
             const mainText = addr?.road
-              ? `${addr.road}${addr.house_number ? ' #' + addr.house_number : ''}`
+              ? `${addr.road}${addr.house_number ? ' ' + addr.house_number : ''}`
               : s.display_name.split(',')[0];
-            const secondaryText = addr
-              ? [addr.neighbourhood || addr.suburb, addr.postcode ? `CP ${addr.postcode}` : ''].filter(Boolean).join(' · ')
-              : s.display_name.split(',').slice(1, 3).join(',').trim();
+            // Secondary line: neighbourhood/suburb, city, CP — all useful context
+            const secondaryParts = [];
+            if (addr?.neighbourhood || addr?.suburb) secondaryParts.push(addr.neighbourhood || addr.suburb);
+            if (addr?.city && addr.city !== (addr?.neighbourhood || addr?.suburb)) secondaryParts.push(addr.city);
+            if (addr?.postcode) secondaryParts.push(`CP ${addr.postcode}`);
+            const secondaryText = secondaryParts.length > 0
+              ? secondaryParts.join(', ')
+              : s.display_name.split(',').slice(1, 4).join(',').trim();
 
             return (
               <button
