@@ -343,7 +343,9 @@ function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
 }) {
   const canal = getCanal(pedido);
   const estado = getEstadoLabel(pedido.estado);
-  const canPay = ['servido', 'entregado', 'listo_para_servir', 'empacado'].includes(pedido.estado);
+  // Payment is only allowed AFTER the order has been served/delivered
+  const canPay = ['servido', 'entregado'].includes(pedido.estado);
+  const isWaiting = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir'].includes(pedido.estado);
 
   return (
     <div className="rounded-xl bg-[#0d0d14] border border-white/[0.06] p-3 hover:border-white/10 transition-all">
@@ -364,19 +366,44 @@ function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
       <div className="text-[10px] text-gray-500 mb-2 line-clamp-2">
         {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
       </div>
-      {/* Pay buttons */}
-      {canPay && pedido.estadoPago !== 'pagado' && (
-        <div className="flex gap-2">
-          <button onClick={() => onPay(pedido.id, 'efectivo')} disabled={procesandoId === pedido.id}
-            className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-95">
-            💵 Efectivo
-          </button>
-          <button onClick={() => onPay(pedido.id, 'transferencia')} disabled={procesandoId === pedido.id}
-            className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all active:scale-95">
-            🏦 Transfer
-          </button>
+
+      {/* Status: waiting for delivery */}
+      {isWaiting && pedido.estadoPago !== 'pagado' && (
+        <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+          <span className="text-[10px] text-amber-400 font-medium">
+            ⏳ Esperando entrega del mesero
+          </span>
         </div>
       )}
+
+      {/* Status: ready for payment (mesero delivered) */}
+      {canPay && pedido.estadoPago !== 'pagado' && pedido.estadoPago !== 'validando' && (
+        <div className="space-y-2">
+          <div className="py-1.5 rounded-lg bg-green-500/5 border border-green-500/10 text-center mb-2">
+            <span className="text-[10px] text-green-400 font-bold">✓ Entregado — Listo para cobrar</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => onPay(pedido.id, 'efectivo')} disabled={procesandoId === pedido.id}
+              className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-95">
+              💵 Efectivo (mesero)
+            </button>
+            <button onClick={() => onPay(pedido.id, 'transferencia')} disabled={procesandoId === pedido.id}
+              className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all active:scale-95">
+              🏦 Transfer (voucher)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Waiting for transfer validation */}
+      {pedido.estadoPago === 'validando' && (
+        <div className="py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center">
+          <span className="text-[10px] text-purple-400 font-bold animate-pulse">
+            📎 Voucher pendiente de validación
+          </span>
+        </div>
+      )}
+
       {pedido.estadoPago === 'pagado' && (
         <div className="text-center py-1.5 rounded-lg bg-green-500/5 border border-green-500/10">
           <span className="text-[10px] text-green-400 font-bold">✓ Pagado — {pedido.metodoPago}</span>
