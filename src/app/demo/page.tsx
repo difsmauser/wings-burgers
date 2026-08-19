@@ -233,6 +233,22 @@ export default function DemoPage() {
         />
 
         {/* ═══════════════════════════════════════════════ */}
+        {/* MÓDULO: REPARTIDOR */}
+        {/* ═══════════════════════════════════════════════ */}
+        <ModuloSection
+          color="brand"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>}
+          titulo="Módulo Repartidor"
+          descripcion="Panel para el repartidor de domicilio. Ve sus entregas asignadas, dirección del cliente, monto a cobrar, y mapa de ruta. Marca entregas como completadas."
+          credenciales={{ usuario: 'repartidor@alaburguer.com', password: 'Repartidor123!', nota: 'Rol repartidor — solo entregas asignadas' }}
+          links={[
+            { nombre: 'Entregas', desc: 'Lista de pedidos asignados para entregar', url: `${base}/entregas` },
+            { nombre: 'Mapa', desc: 'Mapa con rutas de entrega', url: `${base}/mapa` },
+          ]}
+          baseUrl={base}
+        />
+
+        {/* ═══════════════════════════════════════════════ */}
         {/* MÓDULO: COCINA */}
         {/* ═══════════════════════════════════════════════ */}
         <ModuloSection
