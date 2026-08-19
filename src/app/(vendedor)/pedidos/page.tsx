@@ -25,21 +25,23 @@ interface Pedido {
   stationEstado: string;
 }
 
-function getCanal(pedido: Pedido): { label: string; color: string } {
+function getCanal(pedido: Pedido): { label: string; icon: string; color: string; bg: string } {
   const obs = pedido.observaciones || '';
-  if (pedido.modalidad === 'domicilio') return { label: '🛵 Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-  if (obs.includes('[PARA_LLEVAR]')) return { label: '🛍️ Para Llevar', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
-  if (obs.includes('[MESERO]')) return { label: '🧑‍🍳 Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
-  if (obs.includes('[QR]')) return { label: '📱 QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
-  return { label: '📋 Local', color: 'bg-white/5 text-gray-400 border-white/10' };
+  if (pedido.modalidad === 'domicilio') return { label: 'Domicilio', icon: '🛵', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' };
+  if (obs.includes('[PARA_LLEVAR]')) return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
+  if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' };
+  if (obs.includes('[QR]')) return { label: 'QR Mesa', icon: '📱', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' };
+  return { label: 'Local', icon: '📋', color: 'text-gray-400', bg: 'bg-white/5 border-white/10' };
 }
 
-function getTimeSince(dateStr: string): string {
+function getTimeSince(dateStr: string): { text: string; urgent: boolean; critical: boolean } {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Ahora';
-  if (mins < 60) return `${mins} min`;
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  if (mins < 1) return { text: '< 1 min', urgent: false, critical: false };
+  if (mins < 10) return { text: `${mins} min`, urgent: false, critical: false };
+  if (mins < 20) return { text: `${mins} min`, urgent: true, critical: false };
+  if (mins < 60) return { text: `${mins} min`, urgent: true, critical: true };
+  return { text: `${Math.floor(mins / 60)}h ${mins % 60}m`, urgent: true, critical: true };
 }
 
 export default function CocinaPage() {
@@ -55,11 +57,9 @@ export default function CocinaPage() {
       if (res.ok) {
         const json = await res.json();
         const data = (json.data || []) as Pedido[];
-
         const newCount = data.filter(p => p.stationEstado === 'pendiente').length;
         if (newCount > prevNewCount.current && prevNewCount.current > 0) playSound();
         prevNewCount.current = newCount;
-
         setPedidos(data);
       }
     } catch { /* */ }
@@ -68,7 +68,7 @@ export default function CocinaPage() {
 
   useEffect(() => {
     fetchPedidos();
-    const interval = setInterval(fetchPedidos, 8000);
+    const interval = setInterval(fetchPedidos, 6000);
     return () => clearInterval(interval);
   }, [fetchPedidos]);
 
@@ -105,149 +105,174 @@ export default function CocinaPage() {
     finally { setUpdatingId(null); }
   };
 
-  // Categorize by station status
   const pendientes = pedidos.filter(p => p.stationEstado === 'pendiente');
   const preparando = pedidos.filter(p => p.stationEstado === 'preparando');
-  const isToday = (d: string) => new Date(d).toDateString() === new Date().toDateString();
-  const listos = pedidos.filter(p => p.stationEstado === 'listo' && isToday(p.creadoEn));
+  const listos = pedidos.filter(p => p.stationEstado === 'listo');
 
   if (loading) return (
-    <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-      <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
+    <div className="flex items-center justify-center h-screen bg-[#08080d]">
+      <div className="w-12 h-12 rounded-full border-2 border-brand-500/20 border-t-brand-400 animate-spin" />
     </div>
   );
 
   return (
-    <div className="h-[calc(100vh-56px)] overflow-hidden p-4 sm:p-6">
-      {/* Stats */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-red-400 animate-pulse" />
-            <span className="text-xs text-gray-400">Nuevas: <span className="text-white font-bold">{pendientes.length}</span></span>
+    <div className="h-screen overflow-hidden bg-[#08080d] flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between px-5 py-3 bg-[#0c0c14] border-b border-white/[0.04]">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center">
+            <span className="text-lg">🔥</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-amber-400" />
-            <span className="text-xs text-gray-400">Cocinando: <span className="text-white font-bold">{preparando.length}</span></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-green-400" />
-            <span className="text-xs text-gray-400">Listas: <span className="text-white font-bold">{listos.length}</span></span>
+          <div>
+            <h1 className="text-sm font-bold text-white">Cocina</h1>
+            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Kitchen Display System</p>
           </div>
         </div>
-        <button onClick={fetchPedidos} className="px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all">
-          🔄 Actualizar
-        </button>
-      </div>
+        <div className="flex items-center gap-4">
+          <Stat label="Nuevas" value={pendientes.length} color="text-red-400" dot="bg-red-400" pulse />
+          <Stat label="Preparando" value={preparando.length} color="text-amber-400" dot="bg-amber-400" />
+          <Stat label="Listas" value={listos.length} color="text-green-400" dot="bg-green-400" />
+          <button onClick={fetchPedidos} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+        </div>
+      </header>
 
-      {/* Kanban */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 md:h-[calc(100%-48px)] overflow-auto md:overflow-hidden">
-        <Column title="🔴 Nuevas Órdenes" color="border-red-500/30" headerColor="text-red-400" pedidos={pendientes}
-          buttonLabel="→ Preparar" buttonColor="bg-amber-500 hover:bg-amber-400"
-          onAdvance={(p) => advanceAllItems(p, 'preparando')} updatingId={updatingId} />
-
-        <Column title="🟡 Cocinando" color="border-amber-500/30" headerColor="text-amber-400" pedidos={preparando}
-          buttonLabel="✓ Listo" buttonColor="bg-green-500 hover:bg-green-400"
-          onAdvance={(p) => advanceAllItems(p, 'listo')} updatingId={updatingId} />
-
-        <Column title="🟢 Entregadas" color="border-green-500/30" headerColor="text-green-400" pedidos={listos}
-          buttonLabel="" buttonColor="" onAdvance={() => {}} updatingId={null} readonly />
+      {/* Kanban Grid */}
+      <div className="flex-1 grid grid-cols-3 gap-0 overflow-hidden">
+        {/* Nuevas */}
+        <KDSColumn
+          title="Nuevas" icon="🔴" color="red"
+          pedidos={pendientes}
+          buttonLabel="Preparar"
+          onAction={(p) => advanceAllItems(p, 'preparando')}
+          updatingId={updatingId}
+        />
+        {/* Preparando */}
+        <KDSColumn
+          title="Preparando" icon="🟡" color="amber"
+          pedidos={preparando}
+          buttonLabel="✓ Listo"
+          onAction={(p) => advanceAllItems(p, 'listo')}
+          updatingId={updatingId}
+        />
+        {/* Listas */}
+        <KDSColumn
+          title="Listas" icon="🟢" color="green"
+          pedidos={listos}
+          buttonLabel=""
+          onAction={() => {}}
+          updatingId={null}
+        />
       </div>
     </div>
   );
 }
 
-function Column({ title, color, headerColor, pedidos, buttonLabel, buttonColor, onAdvance, updatingId, readonly = false }: {
-  title: string; color: string; headerColor: string; pedidos: Pedido[];
-  buttonLabel: string; buttonColor: string; onAdvance: (p: Pedido) => void;
-  updatingId: string | null; readonly?: boolean;
-}) {
+function Stat({ label, value, color, dot, pulse }: { label: string; value: number; color: string; dot: string; pulse?: boolean }) {
   return (
-    <div className={`flex flex-col rounded-2xl bg-[#0a0a12]/80 backdrop-blur-sm border ${color} overflow-hidden shadow-[0_4px_30px_-10px_rgba(0,0,0,0.5)]`}>
-      <div className="px-4 py-3.5 border-b border-white/[0.04] flex items-center justify-between bg-white/[0.01]">
-        <h2 className={`text-[11px] font-black uppercase tracking-[0.15em] ${headerColor}`}>{title}</h2>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${color} ${headerColor}`}>{pedidos.length}</span>
+    <div className="flex items-center gap-2">
+      <span className={`w-2.5 h-2.5 rounded-full ${dot} ${pulse && value > 0 ? 'animate-pulse' : ''}`} />
+      <span className="text-[11px] text-gray-500">{label}: <span className={`font-bold ${color}`}>{value}</span></span>
+    </div>
+  );
+}
+
+function KDSColumn({ title, icon, color, pedidos, buttonLabel, onAction, updatingId }: {
+  title: string; icon: string; color: string; pedidos: Pedido[];
+  buttonLabel: string; onAction: (p: Pedido) => void; updatingId: string | null;
+}) {
+  const borderMap: Record<string, string> = { red: 'border-red-500/20', amber: 'border-amber-500/20', green: 'border-green-500/20' };
+  const headerMap: Record<string, string> = { red: 'text-red-400', amber: 'text-amber-400', green: 'text-green-400' };
+  const btnMap: Record<string, string> = { red: 'bg-amber-500 hover:bg-amber-400', amber: 'bg-green-500 hover:bg-green-400', green: '' };
+
+  return (
+    <div className={`flex flex-col border-r border-white/[0.04] last:border-r-0 bg-[#0a0a11]`}>
+      {/* Column header */}
+      <div className={`px-4 py-3 border-b ${borderMap[color]} flex items-center justify-between`}>
+        <h2 className={`text-[11px] font-black uppercase tracking-wider ${headerMap[color]}`}>{icon} {title}</h2>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${borderMap[color]} ${headerMap[color]}`}>{pedidos.length}</span>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+      {/* Orders */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin">
         {pedidos.length === 0 ? (
-          <div className="text-center py-12">
-            <span className="text-3xl block mb-2 opacity-20">🍳</span>
-            <p className="text-gray-700 text-[10px] uppercase tracking-wider">Sin pedidos</p>
+          <div className="flex flex-col items-center justify-center h-full opacity-30">
+            <span className="text-4xl mb-2">🍳</span>
+            <p className="text-[10px] text-gray-600 uppercase tracking-wider">Sin pedidos</p>
           </div>
-        ) : (
-          pedidos.map((pedido, i) => (
-            <div key={pedido.id} className="animate-card-enter" style={{ animationDelay: `${i * 80}ms` }}>
-              <OrderCard pedido={pedido} buttonLabel={buttonLabel} buttonColor={buttonColor}
-                onAdvance={() => onAdvance(pedido)} updating={updatingId === pedido.id} readonly={readonly} />
-            </div>
-          ))
-        )}
+        ) : pedidos.map((pedido) => (
+          <KDSCard key={pedido.id} pedido={pedido} buttonLabel={buttonLabel} buttonColor={btnMap[color]} onAction={() => onAction(pedido)} updating={updatingId === pedido.id} />
+        ))}
       </div>
     </div>
   );
 }
 
-function OrderCard({ pedido, buttonLabel, buttonColor, onAdvance, updating, readonly }: {
-  pedido: Pedido; buttonLabel: string; buttonColor: string;
-  onAdvance: () => void; updating: boolean; readonly: boolean;
+function KDSCard({ pedido, buttonLabel, buttonColor, onAction, updating }: {
+  pedido: Pedido; buttonLabel: string; buttonColor: string; onAction: () => void; updating: boolean;
 }) {
+  const canal = getCanal(pedido);
+  const timer = getTimeSince(pedido.creadoEn);
+
   return (
-    <div className="rounded-xl bg-[#0d0d16] border border-white/[0.05] p-3.5 hover:border-brand-400/20 hover:shadow-[0_0_20px_rgba(245,166,35,0.05)] transition-all duration-300 group">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-black text-white tracking-wide">#{pedido.numero.split('-').pop()}</span>
+    <div className={`rounded-2xl border p-4 transition-all duration-300 ${
+      timer.critical ? 'bg-red-500/[0.03] border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.1)]' :
+      timer.urgent ? 'bg-amber-500/[0.02] border-amber-500/20' :
+      'bg-[#0d0d16] border-white/[0.06] hover:border-white/10'
+    }`}>
+      {/* Header: number + canal + timer */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-black text-white">#{pedido.numero.split('-').pop()}</span>
+          <span className={`text-[9px] px-2 py-0.5 rounded-lg border font-semibold ${canal.bg} ${canal.color}`}>
+            {canal.icon} {canal.label}
+          </span>
           {pedido.mesaZona && (
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-bold">
+            <span className="text-[9px] px-2 py-0.5 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">
               📍 {pedido.mesaZona.split(' - ')[0]}
             </span>
           )}
-          {/* Canal badge — always visible */}
-          {(() => {
-            const canal = getCanal(pedido);
-            return (
-              <span className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${canal.color}`}>
-                {canal.label}
-              </span>
-            );
-          })()}
         </div>
-        <span className="text-[9px] text-gray-600 font-mono">{getTimeSince(pedido.creadoEn)}</span>
+        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg ${
+          timer.critical ? 'bg-red-500/20 text-red-400' :
+          timer.urgent ? 'bg-amber-500/10 text-amber-400' :
+          'text-gray-500'
+        }`}>
+          {timer.text}
+        </span>
       </div>
 
-      <div className="space-y-1 mb-3">
+      {/* Items */}
+      <div className="space-y-1.5 mb-3">
         {pedido.items.map((item) => (
-          <div key={item.id} className="group/item">
-            <p className="text-[11px] text-gray-300">
-              <span className="text-brand-400 font-black">{item.cantidad}x</span> {item.nombre}
-            </p>
-            {item.personalizaciones && item.personalizaciones.length > 0 && (
-              <p className="text-[9px] text-amber-400/80 ml-4 flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-amber-400" />
-                {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}
-              </p>
-            )}
-            {item.comentario && (
-              <p className="text-[9px] text-cyan-400/80 ml-4 italic flex items-center gap-1">
-                <span className="w-1 h-1 rounded-full bg-cyan-400" />
-                {item.comentario}
-              </p>
-            )}
+          <div key={item.id} className="flex items-start gap-2">
+            <span className="text-xs font-black text-brand-400 w-6">{item.cantidad}×</span>
+            <div className="flex-1">
+              <p className="text-xs text-white font-medium">{item.nombre}</p>
+              {item.personalizaciones && item.personalizaciones.length > 0 && (
+                <p className="text-[9px] text-amber-400/80 mt-0.5">⚡ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}</p>
+              )}
+              {item.comentario && (
+                <p className="text-[9px] text-cyan-400/80 mt-0.5 italic">💬 {item.comentario}</p>
+              )}
+            </div>
           </div>
         ))}
       </div>
 
-      {!readonly && buttonLabel && (
-        <button onClick={onAdvance} disabled={updating}
-          className={`relative w-full mt-1 py-2.5 rounded-xl text-xs font-black text-black ${buttonColor} disabled:opacity-50 transition-all duration-300 active:scale-[0.95] overflow-hidden group/btn`}>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700" />
-          <span className="relative">{updating ? '⏳' : buttonLabel}</span>
+      {/* Action button */}
+      {buttonLabel && (
+        <button onClick={onAction} disabled={updating}
+          className={`w-full py-3 rounded-xl text-xs font-black text-black ${buttonColor} disabled:opacity-50 transition-all active:scale-[0.96] shadow-lg`}>
+          {updating ? '⏳ Procesando...' : buttonLabel}
         </button>
       )}
 
-      {readonly && (
-        <div className="mt-2 py-2 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
+      {/* Listo state */}
+      {!buttonLabel && (
+        <div className="py-2 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
           <span className="text-[10px] text-green-400 font-bold">
-            {pedido.meseroNombre ? `✓ ${pedido.meseroNombre}` : '⏳ Esperando mesero'}
+            ✓ {pedido.meseroNombre ? `Para ${pedido.meseroNombre}` : 'Lista para entregar'}
           </span>
         </div>
       )}
