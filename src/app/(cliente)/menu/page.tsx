@@ -544,13 +544,12 @@ export default function MenuPage() {
     }
 
     // Cart is empty — allow the change
+    // Only reset modalidad so the selector shows again.
+    // Keep the QR/mesa context (the client is still at the same table)
+    // — they just want to change between "Comer aquí" and "Para llevar"
     setModalidadLocal(null);
     setUserReset(true);
-    // Clear QR/mesa context so they can start fresh
-    setQrMesa(null);
-    setQrEstado('idle');
-    setQrMesaInfo(null);
-  }, [carritoItems.length, setQrMesa]);
+  }, [carritoItems.length]);
 
   /**
    * Validates QR code against the API (Req 8.1, 8.4).
@@ -565,7 +564,8 @@ export default function MenuPage() {
 
     // If QR is already validated and matches current context, skip re-validation
     // This handles the case where user navigates back from /pedido via nav link
-    if (qrMesa && qrMesa.codigo === qrCodigo) {
+    // But NOT if user explicitly clicked "Cambiar" (userReset=true)
+    if (qrMesa && qrMesa.codigo === qrCodigo && !userReset) {
       setQrEstado('valido');
       setQrMesaInfo({
         codigo: qrMesa.codigo,
