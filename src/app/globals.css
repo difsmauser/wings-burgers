@@ -192,175 +192,27 @@
 
   /* === PREMIUM FIRE FLAME SYSTEM === */
 
-  /**
-   * Realistic flame effect using layered pseudo-elements with gradient animation.
-   * Used on the client menu header and login page for premium restaurant branding.
-   */
-
-  /* Header flame bar — appears as a bottom border of living fire */
-  .flame-bar {
-    position: relative;
-    overflow: visible;
-  }
-
-  .flame-bar::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 6px;
-    background: linear-gradient(90deg,
-      transparent 0%,
-      #dc2626 8%,
-      #f97316 20%,
-      #fbbf24 35%,
-      #f97316 50%,
-      #fbbf24 65%,
-      #f97316 80%,
-      #dc2626 92%,
-      transparent 100%
-    );
-    filter: blur(1.5px);
-    animation: flameBarPulse 2.5s ease-in-out infinite alternate;
-    mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
-    -webkit-mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
-  }
-
-  @keyframes flameBarPulse {
-    0% {
-      opacity: 0.7;
-      filter: blur(1.5px) brightness(0.9);
-      transform: scaleY(1);
-    }
-    33% {
-      opacity: 1;
-      filter: blur(1px) brightness(1.2);
-      transform: scaleY(1.4);
-    }
-    66% {
-      opacity: 0.85;
-      filter: blur(2px) brightness(1);
-      transform: scaleY(1.1);
-    }
-    100% {
-      opacity: 0.95;
-      filter: blur(1.2px) brightness(1.1);
-      transform: scaleY(1.3);
-    }
-  }
-
-  /* Premium flame tongues — small individual flames rising */
-  .flame-tongues {
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 16px;
-    pointer-events: none;
-    overflow: visible;
-  }
-
-  .flame-tongue {
-    position: absolute;
-    bottom: 0;
-    width: 8px;
-    height: 14px;
-    border-radius: 50% 50% 20% 20%;
+  /* SVG flame path animations for header — subtle vertical dance */
+  .animate-flames-1 {
+    animation: flameDance1 2s ease-in-out infinite alternate;
     transform-origin: center bottom;
-    animation: flameTongueRise 1.8s ease-in-out infinite alternate;
   }
 
-  .flame-tongue:nth-child(1) { left: 12%; background: radial-gradient(ellipse at bottom, #fbbf24, #f97316 60%, transparent); animation-delay: 0s; animation-duration: 1.6s; }
-  .flame-tongue:nth-child(2) { left: 25%; background: radial-gradient(ellipse at bottom, #f97316, #dc2626 60%, transparent); animation-delay: 0.3s; animation-duration: 2s; height: 12px; }
-  .flame-tongue:nth-child(3) { left: 38%; background: radial-gradient(ellipse at bottom, #fbbf24, #ef4444 60%, transparent); animation-delay: 0.6s; animation-duration: 1.7s; height: 16px; }
-  .flame-tongue:nth-child(4) { left: 50%; background: radial-gradient(ellipse at bottom, #fcd34d, #f97316 60%, transparent); animation-delay: 0.2s; animation-duration: 1.9s; }
-  .flame-tongue:nth-child(5) { left: 62%; background: radial-gradient(ellipse at bottom, #f97316, #dc2626 60%, transparent); animation-delay: 0.5s; animation-duration: 1.5s; height: 12px; }
-  .flame-tongue:nth-child(6) { left: 75%; background: radial-gradient(ellipse at bottom, #fbbf24, #f97316 60%, transparent); animation-delay: 0.8s; animation-duration: 2.1s; height: 15px; }
-  .flame-tongue:nth-child(7) { left: 88%; background: radial-gradient(ellipse at bottom, #fcd34d, #ef4444 60%, transparent); animation-delay: 0.4s; animation-duration: 1.8s; height: 11px; }
-
-  @keyframes flameTongueRise {
-    0% { transform: scaleY(0.6) scaleX(1) translateY(2px); opacity: 0.6; }
-    50% { transform: scaleY(1.2) scaleX(0.8) translateY(-3px); opacity: 1; }
-    100% { transform: scaleY(0.8) scaleX(1.1) translateY(0px); opacity: 0.75; }
+  .animate-flames-2 {
+    animation: flameDance2 2.5s ease-in-out infinite alternate-reverse;
+    transform-origin: center bottom;
   }
 
-  /* Static premium flames for login — uses layered glow instead of spinning */
-  .flame-aura {
-    position: absolute;
-    inset: -12px;
-    border-radius: 50%;
-    background: conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      #dc2626 30deg,
-      #f97316 60deg,
-      #fbbf24 90deg,
-      #f97316 120deg,
-      #dc2626 150deg,
-      transparent 180deg,
-      #dc2626 210deg,
-      #f97316 240deg,
-      #fbbf24 270deg,
-      #f97316 300deg,
-      #dc2626 330deg,
-      transparent 360deg
-    );
-    opacity: 0.4;
-    filter: blur(8px);
-    animation: flameAuraPulse 3s ease-in-out infinite alternate;
+  @keyframes flameDance1 {
+    0% { transform: scaleY(1) translateY(0); opacity: 0.8; }
+    50% { transform: scaleY(1.3) translateY(-2px); opacity: 1; }
+    100% { transform: scaleY(0.9) translateY(1px); opacity: 0.7; }
   }
 
-  .flame-aura-inner {
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    background: conic-gradient(
-      from 45deg,
-      transparent 0deg,
-      #fbbf24 40deg,
-      #f97316 80deg,
-      transparent 120deg,
-      #fbbf24 160deg,
-      #f97316 200deg,
-      transparent 240deg,
-      #fbbf24 280deg,
-      #f97316 320deg,
-      transparent 360deg
-    );
-    opacity: 0.3;
-    filter: blur(5px);
-    animation: flameAuraPulse 2.5s ease-in-out infinite alternate-reverse;
-  }
-
-  @keyframes flameAuraPulse {
-    0% { opacity: 0.3; transform: scale(1); }
-    50% { opacity: 0.55; transform: scale(1.04); }
-    100% { opacity: 0.35; transform: scale(0.98); }
-  }
-
-  /* Flame ember particles for header */
-  .flame-ember {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: #fbbf24;
-    animation: emberFloat 3s ease-out infinite;
-    opacity: 0;
-  }
-
-  .flame-ember:nth-child(1) { left: 20%; animation-delay: 0s; background: #f97316; }
-  .flame-ember:nth-child(2) { left: 35%; animation-delay: 0.7s; width: 2px; height: 2px; }
-  .flame-ember:nth-child(3) { left: 50%; animation-delay: 1.4s; background: #ef4444; }
-  .flame-ember:nth-child(4) { left: 65%; animation-delay: 0.3s; width: 2px; height: 2px; }
-  .flame-ember:nth-child(5) { left: 80%; animation-delay: 1s; background: #f97316; }
-
-  @keyframes emberFloat {
-    0% { transform: translateY(0) scale(1); opacity: 0; }
-    10% { opacity: 0.8; }
-    50% { transform: translateY(-12px) scale(0.7); opacity: 0.5; }
-    100% { transform: translateY(-24px) scale(0.3); opacity: 0; }
+  @keyframes flameDance2 {
+    0% { transform: scaleY(0.8) translateY(1px); opacity: 0.6; }
+    50% { transform: scaleY(1.1) translateY(-1px); opacity: 0.9; }
+    100% { transform: scaleY(1) translateY(0); opacity: 0.7; }
   }
 
   /* Staggered children animation */

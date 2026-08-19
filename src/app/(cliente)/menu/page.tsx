@@ -269,6 +269,7 @@ function ProductoCard({ producto, onDetail }: { producto: ProductoMenu; onDetail
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            unoptimized={!producto.imagenUrl.includes('supabase.co')}
           />
         ) : (
           <PlaceholderImage />
@@ -487,8 +488,9 @@ export default function MenuPage() {
   }, [carritoModalidad, modalidad, userReset, qrCodigo, qrMesa]);
 
   // If QR mesa is already in context (from localStorage), mark as valid and set LOCAL
+  // But NOT if the user explicitly clicked "Cambiar" (userReset=true)
   useEffect(() => {
-    if (qrMesa && qrEstado === 'idle' && !qrCodigo) {
+    if (qrMesa && qrEstado === 'idle' && !qrCodigo && !userReset) {
       setQrEstado('valido');
       setQrMesaInfo({
         codigo: qrMesa.codigo,
@@ -499,7 +501,7 @@ export default function MenuPage() {
       setModalidadContext('LOCAL');
       setModalidadLocal('LOCAL');
     }
-  }, [qrMesa, qrEstado, qrCodigo, setModalidadContext]);
+  }, [qrMesa, qrEstado, qrCodigo, userReset, setModalidadContext]);
 
   // Derive categories dynamically from fetched products
   const categoriasDinamicas = [
@@ -850,7 +852,7 @@ export default function MenuPage() {
           <div className="w-full sm:max-w-md bg-[#12121a] sm:rounded-2xl rounded-t-3xl border border-white/[0.06] overflow-hidden animate-scale-in shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {selectedProducto.imagenUrl && (
               <div className="relative w-full aspect-[16/10] bg-[#1a1a24]">
-                <Image src={selectedProducto.imagenUrl} alt={selectedProducto.nombre} fill className="object-cover" sizes="100vw" />
+                <Image src={selectedProducto.imagenUrl} alt={selectedProducto.nombre} fill className="object-cover" sizes="100vw" unoptimized={!selectedProducto.imagenUrl.includes('supabase.co')} />
                 <button onClick={() => setSelectedProducto(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center text-sm">✕</button>
               </div>
             )}

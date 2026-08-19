@@ -57,48 +57,36 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[#030306] relative overflow-hidden">
-      {/* Aurora animated background */}
+      {/* Static ambient background — no movement */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] top-[-200px] left-[-100px] rounded-full bg-gradient-to-br from-brand-500/15 to-fire-500/10 blur-[100px] animate-aurora" />
-        <div className="absolute w-[500px] h-[500px] bottom-[-150px] right-[-100px] rounded-full bg-gradient-to-tl from-purple-600/12 to-brand-400/8 blur-[120px] animate-aurora" style={{ animationDelay: '-5s' }} />
-        <div className="absolute w-[400px] h-[400px] top-[30%] left-[50%] rounded-full bg-gradient-to-r from-fire-600/8 to-purple-500/6 blur-[80px] animate-aurora" style={{ animationDelay: '-10s' }} />
+        <div className="absolute w-[600px] h-[600px] top-[-200px] left-[-100px] rounded-full bg-gradient-to-br from-brand-500/15 to-fire-500/10 blur-[100px]" />
+        <div className="absolute w-[500px] h-[500px] bottom-[-150px] right-[-100px] rounded-full bg-gradient-to-tl from-fire-600/12 to-brand-400/8 blur-[120px]" />
+        <div className="absolute w-[400px] h-[400px] top-[30%] left-[50%] rounded-full bg-gradient-to-r from-fire-600/8 to-brand-500/6 blur-[80px]" />
         {/* Noise texture */}
         <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="absolute w-1 h-1 rounded-full bg-brand-400/30 animate-float" style={{
-            left: `${15 + i * 15}%`,
-            top: `${20 + (i % 3) * 25}%`,
-            animationDelay: `${i * 0.8}s`,
-            animationDuration: `${4 + i}s`,
-          }} />
-        ))}
-      </div>
-
-      {/* Login card */}
-      <div className="w-full max-w-[420px] relative z-10 animate-float" style={{ animationDuration: '8s' }}>
+      {/* Login card — NO animate-float, completely static */}
+      <div className="w-full max-w-[420px] relative z-10">
         {/* Outer glow */}
-        <div className="absolute -inset-[2px] rounded-[28px] bg-gradient-to-b from-brand-400/25 via-white/5 to-purple-500/15 opacity-70" />
+        <div className="absolute -inset-[2px] rounded-[28px] bg-gradient-to-b from-brand-400/25 via-white/5 to-fire-500/15 opacity-70" />
         <div className="absolute -inset-[1px] rounded-[27px] bg-[#030306]" />
 
         <div className="relative bg-[#0a0a12]/80 backdrop-blur-2xl rounded-[26px] border border-white/[0.08] p-8 sm:p-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)]">
-          {/* Logo with premium flame aura (no spinning) */}
+          {/* Logo with premium static flame aura — zero motion */}
           <div className="text-center mb-8">
             <div className="relative inline-block">
-              {/* Static flame aura layers — premium, no rotation */}
-              <div className="flame-aura" />
-              <div className="flame-aura-inner" />
+              {/* Static flame aura layers — conic gradients, no animation */}
+              <div className="absolute -inset-4 rounded-full opacity-50 blur-[8px]" style={{ background: 'conic-gradient(from 0deg, transparent, #dc2626, #f97316, #fbbf24, #f97316, #dc2626, transparent, #dc2626, #f97316, #fbbf24, #f97316, #dc2626, transparent)' }} />
+              <div className="absolute -inset-3 rounded-full opacity-35 blur-[5px]" style={{ background: 'conic-gradient(from 45deg, transparent, #fbbf24, #f97316, transparent, #fbbf24, #f97316, transparent, #fbbf24, #f97316, transparent)' }} />
               {/* Dark mask to keep center clean */}
-              <div className="absolute -inset-3 rounded-full bg-[#030306]" />
-              <div className="relative animate-glow-pulse rounded-full">
+              <div className="absolute -inset-2 rounded-full bg-[#030306]" />
+              <div className="relative rounded-full">
                 <img src="/logo.png" alt="A-la Burguer" className="relative h-20 w-20 rounded-full border-2 border-brand-400/50 shadow-[0_0_30px_rgba(245,166,35,0.3)]" />
               </div>
             </div>
             <h1 className="mt-6 text-3xl font-black tracking-tight">
-              <span className="bg-gradient-to-r from-fire-400 via-brand-400 to-fire-400 bg-clip-text text-transparent animate-fire-slow">A-la</span>
+              <span className="bg-gradient-to-r from-fire-400 via-brand-400 to-fire-400 bg-clip-text text-transparent">A-la</span>
               <span className="text-white ml-2">Burguer</span>
             </h1>
             <div className="mt-2 flex items-center justify-center gap-2">
