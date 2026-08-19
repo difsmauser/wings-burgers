@@ -434,25 +434,30 @@ function ModuloSection({ color, icon, titulo, descripcion, credenciales, links, 
       </div>
 
       {/* Credenciales */}
-      <div className="px-6 py-4 bg-white/[0.01] border-b border-white/[0.04]">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="px-6 py-4 bg-white/[0.02] border-b border-white/[0.04]">
+        <div className="flex items-center gap-2 mb-3">
           <svg className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Credenciales</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <p className="text-[9px] text-gray-600 uppercase">Usuario</p>
-            <p className="text-xs text-white font-mono mt-0.5">{credenciales.usuario}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a12] border border-white/5">
+            <div>
+              <p className="text-[9px] text-gray-500 uppercase tracking-wider">Usuario</p>
+              <p className="text-xs text-brand-400 font-mono mt-0.5 select-all">{credenciales.usuario}</p>
+            </div>
+            <CopyBtn text={credenciales.usuario} />
           </div>
-          <div>
-            <p className="text-[9px] text-gray-600 uppercase">Contraseña / PIN</p>
-            <p className="text-xs text-white font-mono mt-0.5">{credenciales.password}</p>
-          </div>
-          <div>
-            <p className="text-[9px] text-gray-600 uppercase">Nota</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">{credenciales.nota}</p>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-[#0a0a12] border border-white/5">
+            <div>
+              <p className="text-[9px] text-gray-500 uppercase tracking-wider">Contraseña / PIN</p>
+              <p className="text-xs text-green-400 font-mono mt-0.5 select-all">{credenciales.password}</p>
+            </div>
+            <CopyBtn text={credenciales.password} />
           </div>
         </div>
+        {credenciales.nota && (
+          <p className="text-[10px] text-gray-500 mt-2 italic">💡 {credenciales.nota}</p>
+        )}
       </div>
 
       {/* Links */}
