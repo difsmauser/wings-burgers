@@ -8,7 +8,7 @@ interface ItemEstacion {
   cantidad: number;
   precioUnitario: number;
   comentario: string | null;
-  personalizaciones: string[] | null;
+  personalizaciones: Array<{ nombre?: string; opcion?: string; precioExtra?: number }> | string[] | null;
   itemEstado: string;
 }
 
@@ -241,7 +241,7 @@ function KDSCard({ pedido, buttonLabel, buttonColor, onAction, updating }: {
             <div className="flex-1">
               <p className="text-xs text-white font-medium">{item.nombre}</p>
               {item.personalizaciones && item.personalizaciones.length > 0 && (
-                <p className="text-[9px] text-amber-400/80 mt-0.5">⚡ {Array.isArray(item.personalizaciones) ? item.personalizaciones.join(', ') : ''}</p>
+                <p className="text-[9px] text-amber-400/80 mt-0.5">⚡ {Array.isArray(item.personalizaciones) ? item.personalizaciones.map((p) => typeof p === 'string' ? p : `${p.opcion || p.nombre || ''}`).filter(Boolean).join(', ') : ''}</p>
               )}
               {item.comentario && (
                 <p className="text-[9px] text-cyan-400/80 mt-0.5 italic">💬 {item.comentario}</p>

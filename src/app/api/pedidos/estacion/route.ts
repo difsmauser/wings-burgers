@@ -132,8 +132,9 @@ export async function PUT(request: NextRequest) {
     });
     const allItems = await allItemsRes.json();
 
-    // 3. If ALL items are 'listo', advance pedido through proper state chain to listo_para_servir
-    //    and auto-assign an available mesero for LOCAL orders
+    // 3. If ALL items are 'listo', advance pedido through proper state chain
+    //    For LOCAL/RETIRO: advance to listo_para_servir and auto-assign mesero
+    //    For DOMICILIO: advance only to empacado (repartidor picks it up from there)
     const allListo = (allItems || []).every((i: { item_estado: string }) => i.item_estado === 'listo');
     if (allListo && allItems.length > 0) {
       // Get current pedido state and modalidad
@@ -144,13 +145,28 @@ export async function PUT(request: NextRequest) {
       const pedido = pedidoData?.[0];
 
       if (pedido) {
-        // Advance through intermediate states to reach listo_para_servir
-        const stateChain: string[] = [];
-        if (pedido.estado === 'recibido') stateChain.push('en_preparacion', 'empacado', 'listo_para_servir');
-        else if (pedido.estado === 'en_preparacion') stateChain.push('empacado', 'listo_para_servir');
-        else if (pedido.estado === 'empacado') stateChain.push('listo_para_servir');
-        // If already listo_para_servir or beyond, no change needed
+        const isDomicilio = pedido.modalidad === 'DOMICILIO';
+        // Target state: empacado for domicilio, listo_para_servir for local/retiro
+        const targetState = isDomicilio ? 'empacado' : 'listo_para_servir';
 
+        // Build the state chain from current to target
+        const stateChain: string[] = [];
+        const fullChain = isDomicilio
+          ? ['en_preparacion', 'empacado']
+          : ['en_preparacion', 'empacado', 'listo_para_servir'];
+
+        const currentIdx = fullChain.indexOf(pedido.estado);
+        const targetIdx = fullChain.indexOf(targetState);
+
+        if (targetIdx >= 0) {
+          // Add states from current+1 to target (inclusive)
+          const startFrom = currentIdx >= 0 ? currentIdx + 1 : 0;
+          for (let i = startFrom; i <= targetIdx; i++) {
+            stateChain.push(fullChain[i]);
+          }
+        }
+
+        // Apply state transitions
         for (const nextState of stateChain) {
           await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`, {
             method: 'PATCH', headers, cache: 'no-store',
@@ -158,34 +174,26 @@ export async function PUT(request: NextRequest) {
           });
         }
 
-        // Auto-assign a mesero if this is a LOCAL order and none is assigned yet
-        if ((pedido.modalidad === 'LOCAL' || pedido.modalidad === 'RETIRO') && !pedido.mesero_id && !pedido.mesero_nombre) {
+        // Auto-assign a mesero only for LOCAL/RETIRO orders when reaching listo_para_servir
+        if (!isDomicilio && !pedido.mesero_id && !pedido.mesero_nombre) {
           try {
-            // Get available meseros
             const meserosRes = await fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre&order=nombre.asc`, {
               headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
             });
             const meseros = await meserosRes.json();
 
             if (meseros && meseros.length > 0) {
-              // Find mesero with fewest active orders (listo_para_servir state)
               const assignmentsRes = await fetch(`${supabaseUrl}/rest/v1/pedido?estado=eq.listo_para_servir&select=mesero_id`, {
                 headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
               });
               const assignments = await assignmentsRes.json() || [];
 
-              // Count assignments per mesero
               const countMap: Record<string, number> = {};
-              for (const m of meseros) {
-                countMap[m.id] = 0;
-              }
+              for (const m of meseros) countMap[m.id] = 0;
               for (const a of assignments) {
-                if (a.mesero_id && countMap[a.mesero_id] !== undefined) {
-                  countMap[a.mesero_id]++;
-                }
+                if (a.mesero_id && countMap[a.mesero_id] !== undefined) countMap[a.mesero_id]++;
               }
 
-              // Pick mesero with least assignments (round-robin)
               const sorted = meseros.sort((a: { id: string }, b: { id: string }) =>
                 (countMap[a.id] || 0) - (countMap[b.id] || 0)
               );
@@ -197,7 +205,7 @@ export async function PUT(request: NextRequest) {
               });
             }
           } catch {
-            // Mesero assignment is best-effort, don't fail the whole operation
+            // Mesero assignment is best-effort
           }
         }
       }
