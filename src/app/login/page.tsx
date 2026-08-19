@@ -88,20 +88,22 @@ function LoginContent() {
           {/* Logo with animated ring */}
           <div className="text-center mb-8">
             <div className="relative inline-block">
-              <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-brand-400/30 to-fire-500/20 animate-spin" style={{ animationDuration: '8s' }} />
+              {/* Fire glow rings */}
+              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-fire-500/20 via-brand-400/30 to-fire-500/20 animate-spin" style={{ animationDuration: '6s' }} />
+              <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-brand-400/20 to-fire-500/20 animate-spin" style={{ animationDuration: '8s', animationDirection: 'reverse' }} />
               <div className="absolute -inset-3 rounded-full bg-[#030306]" />
               <div className="relative animate-glow-pulse rounded-full">
-                <img src="/logo.png" alt="A-la Burguer" className="relative h-20 w-20 rounded-full border-2 border-brand-400/40" />
+                <img src="/logo.png" alt="A-la Burguer" className="relative h-20 w-20 rounded-full border-2 border-brand-400/50 shadow-[0_0_30px_rgba(245,166,35,0.3)]" />
               </div>
             </div>
             <h1 className="mt-6 text-3xl font-black tracking-tight">
-              <span className="bg-gradient-to-r from-brand-300 via-brand-400 to-fire-400 bg-clip-text text-transparent">A-la</span>
+              <span className="bg-gradient-to-r from-fire-400 via-brand-400 to-fire-400 bg-clip-text text-transparent animate-fire-slow">A-la</span>
               <span className="text-white ml-2">Burguer</span>
             </h1>
             <div className="mt-2 flex items-center justify-center gap-2">
-              <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-brand-400/50" />
+              <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-fire-500/50 to-brand-400/50" />
               <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em]">Panel de Gestión</p>
-              <div className="w-8 h-[1px] bg-gradient-to-l from-transparent to-brand-400/50" />
+              <div className="w-10 h-[1px] bg-gradient-to-l from-transparent via-fire-500/50 to-brand-400/50" />
             </div>
           </div>
 

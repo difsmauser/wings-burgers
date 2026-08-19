@@ -19,14 +19,14 @@ export default function CocinaLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col min-h-screen bg-[#0a0a0f]">
       {/* Header */}
-      <header className="bg-[#111118] border-b border-white/5">
+      <header className="bg-[#0c0c14] border-b border-orange-500/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="A-la Burguer" className="h-8 w-8 rounded-full" />
+              <img src="/logo.png" alt="A-la Burguer" className="h-9 w-9 rounded-full border border-brand-400/30" />
               <div>
-                <h1 className="text-sm font-bold text-white">A-la Burguer</h1>
-                <span className="text-[10px] text-brand-400 uppercase tracking-wider">Cocina</span>
+                <h1 className="text-sm font-black text-white">A-la Burguer</h1>
+                <span className="text-[10px] text-orange-400 uppercase tracking-wider font-bold animate-fire-slow">🔥 Cocina</span>
               </div>
             </div>
             <button

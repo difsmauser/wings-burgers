@@ -22,10 +22,14 @@ function ClienteLayoutInner({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Premium Header */}
-      <header className="bg-[#111118] text-white sticky top-0 z-40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-white/5">
+      <header className="bg-[#111118] text-white sticky top-0 z-40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-brand-500/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-center h-14 sm:h-16">
-            <img src="/logo.png" alt="A-la Burguer" className="h-10 sm:h-12 w-auto" />
+          <div className="flex items-center justify-center h-14 sm:h-16 relative">
+            <img src="/logo.png" alt="A-la Burguer" className="h-10 sm:h-12 w-auto drop-shadow-[0_0_8px_rgba(245,166,35,0.3)]" />
+            {/* Subtle fire glow behind logo */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-16 h-16 rounded-full bg-brand-500/5 blur-xl" />
+            </div>
           </div>
         </div>
       </header>

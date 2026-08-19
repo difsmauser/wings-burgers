@@ -110,33 +110,24 @@ export default function CocinaPage() {
   const listos = pedidos.filter(p => p.stationEstado === 'listo');
 
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-[#08080d]">
+    <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-[#08080d]">
       <div className="w-12 h-12 rounded-full border-2 border-brand-500/20 border-t-brand-400 animate-spin" />
     </div>
   );
 
   return (
-    <div className="h-screen overflow-hidden bg-[#08080d] flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3 bg-[#0c0c14] border-b border-white/[0.04]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center">
-            <span className="text-lg">🔥</span>
-          </div>
-          <div>
-            <h1 className="text-sm font-bold text-white">Cocina</h1>
-            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Kitchen Display System</p>
-          </div>
-        </div>
+    <div className="h-[calc(100vh-56px)] overflow-hidden bg-[#08080d] flex flex-col">
+      {/* Stats bar */}
+      <div className="flex items-center justify-between px-5 py-2.5 bg-[#0c0c14] border-b border-white/[0.04]">
         <div className="flex items-center gap-4">
           <Stat label="Nuevas" value={pendientes.length} color="text-red-400" dot="bg-red-400" pulse />
           <Stat label="Preparando" value={preparando.length} color="text-amber-400" dot="bg-amber-400" />
           <Stat label="Listas" value={listos.length} color="text-green-400" dot="bg-green-400" />
-          <button onClick={fetchPedidos} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </button>
         </div>
-      </header>
+        <button onClick={fetchPedidos} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-all" title="Actualizar">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        </button>
+      </div>
 
       {/* Kanban Grid */}
       <div className="flex-1 grid grid-cols-3 gap-0 overflow-hidden">

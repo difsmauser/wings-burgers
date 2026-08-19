@@ -168,6 +168,25 @@
   .animate-aurora { animation: aurora 15s ease-in-out infinite; }
   .animate-float { animation: float 6s ease-in-out infinite; }
   .animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+  .animate-fire { animation: fireFlicker 1.5s ease-in-out infinite alternate; }
+  .animate-fire-slow { animation: fireFlicker 3s ease-in-out infinite alternate; }
+
+  @keyframes fireFlicker {
+    0% { text-shadow: 0 0 4px #f97316, 0 0 11px #f97316, 0 0 19px #ef4444, 0 0 40px #ef4444; }
+    50% { text-shadow: 0 0 4px #fbbf24, 0 0 11px #f97316, 0 0 19px #f97316, 0 0 40px #dc2626; }
+    100% { text-shadow: 0 0 4px #f97316, 0 0 18px #ef4444, 0 0 25px #dc2626, 0 0 45px #991b1b; }
+  }
+
+  .fire-border {
+    border-image: linear-gradient(to right, #dc2626, #f97316, #fbbf24, #f97316, #dc2626) 1;
+    animation: fireBorder 3s linear infinite;
+  }
+
+  @keyframes fireBorder {
+    0% { border-image: linear-gradient(0deg, #dc2626, #f97316, #fbbf24, #f97316, #dc2626) 1; }
+    50% { border-image: linear-gradient(180deg, #fbbf24, #f97316, #dc2626, #f97316, #fbbf24) 1; }
+    100% { border-image: linear-gradient(360deg, #dc2626, #f97316, #fbbf24, #f97316, #dc2626) 1; }
+  }
   .animate-slide-in-right { animation: slide-in-right 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
   .animate-card-enter { animation: card-enter 500ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 
