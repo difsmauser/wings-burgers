@@ -21,16 +21,34 @@ function ClienteLayoutInner({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Premium Header */}
-      <header className="bg-[#111118] text-white sticky top-0 z-40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-brand-500/10">
+      {/* Premium Header with Fire Effects */}
+      <header className="bg-[#111118] text-white sticky top-0 z-40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-brand-500/10 flame-bar">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-center h-14 sm:h-16 relative">
-            <img src="/logo.png" alt="A-la Burguer" className="h-10 sm:h-12 w-auto drop-shadow-[0_0_8px_rgba(245,166,35,0.3)]" />
-            {/* Subtle fire glow behind logo */}
+            <img src="/logo.png" alt="A-la Burguer" className="h-10 sm:h-12 w-auto drop-shadow-[0_0_12px_rgba(245,166,35,0.4)] relative z-10" />
+            {/* Ambient fire glow behind logo */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 rounded-full bg-brand-500/5 blur-xl" />
+              <div className="w-20 h-14 rounded-full bg-gradient-to-t from-fire-500/10 via-brand-500/8 to-transparent blur-xl" />
+            </div>
+            {/* Ember particles rising from header */}
+            <div className="absolute inset-0 pointer-events-none overflow-visible">
+              <span className="flame-ember" />
+              <span className="flame-ember" />
+              <span className="flame-ember" />
+              <span className="flame-ember" />
+              <span className="flame-ember" />
             </div>
           </div>
+        </div>
+        {/* Flame tongues on the bottom edge */}
+        <div className="flame-tongues">
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
+          <span className="flame-tongue" />
         </div>
       </header>
 

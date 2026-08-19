@@ -85,12 +85,13 @@ function LoginContent() {
         <div className="absolute -inset-[1px] rounded-[27px] bg-[#030306]" />
 
         <div className="relative bg-[#0a0a12]/80 backdrop-blur-2xl rounded-[26px] border border-white/[0.08] p-8 sm:p-10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)]">
-          {/* Logo with animated ring */}
+          {/* Logo with premium flame aura (no spinning) */}
           <div className="text-center mb-8">
             <div className="relative inline-block">
-              {/* Fire glow rings */}
-              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-fire-500/20 via-brand-400/30 to-fire-500/20 animate-spin" style={{ animationDuration: '6s' }} />
-              <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-brand-400/20 to-fire-500/20 animate-spin" style={{ animationDuration: '8s', animationDirection: 'reverse' }} />
+              {/* Static flame aura layers — premium, no rotation */}
+              <div className="flame-aura" />
+              <div className="flame-aura-inner" />
+              {/* Dark mask to keep center clean */}
               <div className="absolute -inset-3 rounded-full bg-[#030306]" />
               <div className="relative animate-glow-pulse rounded-full">
                 <img src="/logo.png" alt="A-la Burguer" className="relative h-20 w-20 rounded-full border-2 border-brand-400/50 shadow-[0_0_30px_rgba(245,166,35,0.3)]" />

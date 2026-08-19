@@ -454,7 +454,7 @@ export default function MenuPage() {
   const searchParams = useSearchParams();
   const qrCodigo = searchParams.get('qr');
   const { setQrMesa, qrMesa } = useQrMesa();
-  const { setModalidad: setModalidadContext, modalidad: carritoModalidad, agregarItem, confirmado, limpiarParaNuevoPedido } = useCarrito();
+  const { setModalidad: setModalidadContext, modalidad: carritoModalidad, items: carritoItems, agregarItem, confirmado, limpiarParaNuevoPedido } = useCarrito();
 
   const [modalidad, setModalidadLocal] = useState<Modalidad>(null);
   const [categoriaActiva, setCategoriaActiva] = useState<string>('todas');
@@ -528,7 +528,16 @@ export default function MenuPage() {
   const handleCambiar = useCallback(() => {
     setModalidadLocal(null);
     setUserReset(true);
-  }, []);
+
+    // If the cart is empty, fully clear the QR/mesa context so the user
+    // can scan a different QR or choose another modalidad from scratch.
+    // If the cart has items, keep the mesa association to avoid losing the order.
+    if (carritoItems.length === 0) {
+      setQrMesa(null);
+      setQrEstado('idle');
+      setQrMesaInfo(null);
+    }
+  }, [carritoItems.length, setQrMesa]);
 
   /**
    * Validates QR code against the API (Req 8.1, 8.4).
