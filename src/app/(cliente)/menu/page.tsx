@@ -487,8 +487,9 @@ export default function MenuPage() {
     }
   }, [carritoModalidad, modalidad, userReset, qrCodigo, qrMesa]);
 
-  // If QR mesa is already in context (from localStorage), mark as valid and set LOCAL
-  // But NOT if the user explicitly clicked "Cambiar" (userReset=true)
+  // If QR mesa is already in context (from localStorage), mark as valid
+  // but do NOT auto-set modalidad — let user see the selector if modalidad is null
+  // Exception: if carritoModalidad already has a value (user already chose), restore it
   useEffect(() => {
     if (qrMesa && qrEstado === 'idle' && !qrCodigo && !userReset) {
       setQrEstado('valido');
@@ -497,11 +498,13 @@ export default function MenuPage() {
         mesaZona: qrMesa.mesaZona,
         valido: true,
       });
-      // QR in context = client is at a table = force LOCAL
-      setModalidadContext('LOCAL');
-      setModalidadLocal('LOCAL');
+      // Only auto-set modalidad if the cart already has one persisted
+      // (meaning user already chose before and is returning to this page)
+      if (carritoModalidad) {
+        setModalidadLocal(carritoModalidad);
+      }
     }
-  }, [qrMesa, qrEstado, qrCodigo, userReset, setModalidadContext]);
+  }, [qrMesa, qrEstado, qrCodigo, userReset, carritoModalidad]);
 
   // Derive categories dynamically from fetched products
   const categoriasDinamicas = [
@@ -527,18 +530,23 @@ export default function MenuPage() {
     }
   }, [setModalidadContext]);
 
+  // Modal state for "can't change with items in cart"
+  const [showCambiarModal, setShowCambiarModal] = useState(false);
+
   const handleCambiar = useCallback(() => {
+    // If cart has items, show a modal telling the user they can't change
+    if (carritoItems.length > 0) {
+      setShowCambiarModal(true);
+      return;
+    }
+
+    // Cart is empty — allow the change
     setModalidadLocal(null);
     setUserReset(true);
-
-    // If the cart is empty, fully clear the QR/mesa context so the user
-    // can scan a different QR or choose another modalidad from scratch.
-    // If the cart has items, keep the mesa association to avoid losing the order.
-    if (carritoItems.length === 0) {
-      setQrMesa(null);
-      setQrEstado('idle');
-      setQrMesaInfo(null);
-    }
+    // Clear QR/mesa context so they can start fresh
+    setQrMesa(null);
+    setQrEstado('idle');
+    setQrMesaInfo(null);
   }, [carritoItems.length, setQrMesa]);
 
   /**
@@ -586,9 +594,8 @@ export default function MenuPage() {
             codigo: json.data.codigo,
             mesaZona: json.data.mesaZona,
           });
-          // QR válido = el cliente está en una mesa = modalidad LOCAL
-          setModalidadContext('LOCAL');
-          setModalidadLocal('LOCAL');
+          // Do NOT auto-set modalidad here — let the ModalidadSelector show
+          // so the user can choose "Comer aquí" or "Para llevar"
         } else {
           setQrEstado('invalido');
         }
@@ -880,6 +887,35 @@ export default function MenuPage() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: No puedes cambiar con items en el carrito */}
+      {showCambiarModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setShowCambiarModal(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-[#12121a] rounded-2xl border border-white/10 p-6 sm:p-8 animate-scale-in shadow-2xl text-center"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-fire-500/10 border border-fire-500/20 flex items-center justify-center">
+              <span className="text-2xl">🛒</span>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">
+              No puedes cambiar
+            </h3>
+            <p className="text-sm text-gray-400 mb-6">
+              Vacía tu carrito primero para poder cambiar la modalidad de servicio.
+            </p>
+            <button
+              onClick={() => setShowCambiarModal(false)}
+              className="w-full py-3 rounded-xl font-bold text-sm text-black bg-gradient-to-r from-brand-400 to-brand-500 active:scale-[0.97] transition-transform"
+            >
+              Entendido
+            </button>
           </div>
         </div>
       )}
