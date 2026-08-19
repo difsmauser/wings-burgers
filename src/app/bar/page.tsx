@@ -20,9 +20,19 @@ interface PedidoEstacion {
   modalidad: string;
   mesaZona: string;
   meseroNombre: string;
+  observaciones: string;
   creadoEn: string;
   items: ItemEstacion[];
   stationEstado: string;
+}
+
+function getCanal(pedido: PedidoEstacion): { label: string; color: string } {
+  const obs = pedido.observaciones || '';
+  if (pedido.modalidad === 'domicilio') return { label: '🛵 Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+  if (obs.includes('[PARA_LLEVAR]')) return { label: '🛍️ Para Llevar', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+  if (obs.includes('[MESERO]')) return { label: '🧑‍🍳 Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+  if (obs.includes('[QR]')) return { label: '📱 QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
+  return { label: '📋 Local', color: 'bg-white/5 text-gray-400 border-white/10' };
 }
 
 function getTimeSince(dateStr: string): string {
@@ -197,6 +207,9 @@ function BarColumn({ title, color, headerColor, pedidos, buttonLabel, buttonColo
                         📍 {pedido.mesaZona.split(' - ')[0]}
                       </span>
                     )}
+                    {(() => { const canal = getCanal(pedido); return (
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${canal.color}`}>{canal.label}</span>
+                    ); })()}
                   </div>
                   <span className="text-[9px] text-gray-600 font-mono">{getTimeSince(pedido.creadoEn)}</span>
                 </div>

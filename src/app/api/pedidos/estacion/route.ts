@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter: only pedidos that have items for this station
-    const barCategories = ['bar'];
+    const barCategories = ['bar', 'bebidas'];
     const isBarItem = (item: Record<string, unknown>) => {
       const producto = item.producto as Record<string, unknown> | null;
       return barCategories.includes((producto?.categoria as string) || '');

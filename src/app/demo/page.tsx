@@ -319,6 +319,29 @@ export default function DemoPage() {
 
         {/* Valuación oculta por el momento */}
 
+        {/* ═══════════════════════════════════════════════ */}
+        {/* LIMPIEZA / MANTENIMIENTO */}
+        {/* ═══════════════════════════════════════════════ */}
+        <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-6 sm:p-8">
+          <h2 className="text-lg font-bold text-white mb-4">Limpieza y Mantenimiento</h2>
+          <p className="text-xs text-gray-400 mb-4">Si necesitas resetear la demo o limpiar datos de prueba:</p>
+
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <p className="text-xs font-bold text-white mb-2">1. Limpiar localStorage del navegador</p>
+              <p className="text-[10px] text-gray-500 mb-2">Abre la consola del navegador (F12 → Console) y pega:</p>
+              <code className="block text-[11px] text-brand-400 bg-black/30 p-3 rounded-lg font-mono select-all">localStorage.clear(); location.reload();</code>
+            </div>
+
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <p className="text-xs font-bold text-white mb-2">2. Limpiar base de datos (sin tocar productos)</p>
+              <p className="text-[10px] text-gray-500 mb-2">Ejecuta en la terminal del proyecto:</p>
+              <code className="block text-[11px] text-green-400 bg-black/30 p-3 rounded-lg font-mono select-all whitespace-pre-wrap">npx tsx src/scripts/setup-datos-base.ts</code>
+              <p className="text-[10px] text-gray-600 mt-2">Esto limpia pedidos, mesas, meseros, inventario, gastos y recrea 5 mesas + 3 meseros + 2 repartidores. No toca productos ni categorías.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="text-center py-4">
           <p className="text-[10px] text-gray-700">Next.js + Supabase + Vercel — {new Date().getFullYear()}</p>
