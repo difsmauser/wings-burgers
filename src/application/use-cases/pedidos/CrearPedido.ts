@@ -105,7 +105,8 @@ export class CrearPedido {
         pedido.agregarItem(
           { id: producto.id, nombre: producto.nombre, precio: Precio.crear(producto.precio) },
           item.cantidad,
-          item.personalizaciones
+          item.personalizaciones,
+          item.comentario
         );
       }
     }

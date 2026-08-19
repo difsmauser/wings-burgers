@@ -163,7 +163,8 @@ export class Pedido {
   agregarItem(
     producto: { id: string; nombre: string; precio: Precio },
     cantidad: number,
-    personalizaciones?: Personalizacion[]
+    personalizaciones?: Personalizacion[],
+    comentario?: string | null
   ): void {
     if (!ESTADOS_MODIFICABLES.includes(this.estado)) {
       throw new ValidacionError(
@@ -187,7 +188,7 @@ export class Pedido {
       cantidad,
       precioUnitario: producto.precio,
       personalizaciones: personalizaciones ?? [],
-      comentario: null,
+      comentario: comentario ?? null,
     };
 
     this.items.push(detalle);

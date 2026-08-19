@@ -393,7 +393,7 @@ function getOrderSteps(modalidad: string | null) {
     return [
       { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido' },
       { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
-      { key: 'listo_para_servir', label: 'Listo', icon: '🛍️', desc: '¡Pasa a recoger tu pedido!' },
+      { key: 'listo_para_servir', label: 'Mesero', icon: '🍽️', desc: 'Mesero lleva tu pedido al mostrador' },
       { key: 'servido', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
     ];
   }
@@ -679,7 +679,7 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 
   const totalMesa = pedidosMesa.reduce((sum, p) => sum + (p.total || 0), 0);
   const todosListos = pedidosMesa.every(p =>
-    ['listo', 'listo_para_servir', 'servido', 'entregado'].includes(p.estado)
+    ['servido', 'entregado'].includes(p.estado)
   );
 
   return (
