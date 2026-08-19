@@ -490,9 +490,10 @@ export default function MenuPage() {
     }
   }, [carritoModalidad, modalidad, userReset, qrCodigo, qrMesa]);
 
-  // If QR mesa is already in context (from localStorage), mark as valid
-  // but do NOT auto-set modalidad — let user see the selector if modalidad is null
-  // Exception: if carritoModalidad already has a value (user already chose), restore it
+  // If QR mesa is already in context (from localStorage), mark as valid.
+  // If the user already chose a modalidad before (carritoModalidad persisted),
+  // restore it. Otherwise default to LOCAL — the mesa is active, don't ask again
+  // unless the user explicitly clicked "Cambiar" (userReset=true).
   useEffect(() => {
     if (qrMesa && qrEstado === 'idle' && !qrCodigo && !userReset) {
       setQrEstado('valido');
@@ -501,13 +502,12 @@ export default function MenuPage() {
         mesaZona: qrMesa.mesaZona,
         valido: true,
       });
-      // Only auto-set modalidad if the cart already has one persisted
-      // (meaning user already chose before and is returning to this page)
-      if (carritoModalidad) {
-        setModalidadLocal(carritoModalidad);
-      }
+      // Restore persisted modalidad, or default to LOCAL since mesa = eating in
+      const restoredModalidad = carritoModalidad || 'LOCAL';
+      setModalidadLocal(restoredModalidad);
+      setModalidadContext(restoredModalidad);
     }
-  }, [qrMesa, qrEstado, qrCodigo, userReset, carritoModalidad]);
+  }, [qrMesa, qrEstado, qrCodigo, userReset, carritoModalidad, setModalidadContext]);
 
   // Derive categories dynamically from fetched products
   const categoriasDinamicas = [
@@ -556,9 +556,28 @@ export default function MenuPage() {
    * Validates QR code against the API (Req 8.1, 8.4).
    * If valid, sets mesa/zona info. If invalid, shows error.
    * Must complete within 5 seconds (Req 8.1).
+   * 
+   * If the QR code matches what's already in context (user navigated back
+   * from another page), skip API validation and restore directly.
    */
   useEffect(() => {
     if (!qrCodigo) return;
+
+    // If QR is already validated and matches current context, skip re-validation
+    // This handles the case where user navigates back from /pedido via nav link
+    if (qrMesa && qrMesa.codigo === qrCodigo) {
+      setQrEstado('valido');
+      setQrMesaInfo({
+        codigo: qrMesa.codigo,
+        mesaZona: qrMesa.mesaZona,
+        valido: true,
+      });
+      // Restore persisted modalidad or default to LOCAL
+      const restoredModalidad = carritoModalidad || 'LOCAL';
+      setModalidadLocal(restoredModalidad);
+      setModalidadContext(restoredModalidad);
+      return;
+    }
 
     let cancelled = false;
 
@@ -613,7 +632,8 @@ export default function MenuPage() {
     return () => {
       cancelled = true;
     };
-  }, [qrCodigo, setQrMesa]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrCodigo, setQrMesa, setModalidadContext]);
 
   /**
    * Fetches all products from the API.
