@@ -17,7 +17,7 @@ export async function GET(
 
   // Direct fetch to Supabase REST API — zero caching, zero SDK
   const res = await fetch(
-    `${supabaseUrl}/rest/v1/pedido?id=eq.${id}&select=id,estado,mesa_zona,modalidad,total,numero`,
+    `${supabaseUrl}/rest/v1/pedido?id=eq.${id}&select=id,estado,mesa_zona,modalidad,total,numero,mesero_nombre,pedido_detalle(item_estado,producto:producto_id(categoria))`,
     {
       headers: {
         'apikey': key,
@@ -37,6 +37,27 @@ export async function GET(
   }
 
   const pedido = data[0];
+
+  // Compute station progress from items
+  const barCategories = ['bar', 'bebidas'];
+  const detalles = Array.isArray(pedido.pedido_detalle) ? pedido.pedido_detalle : [];
+  const cocinaItems = detalles.filter((d: Record<string, unknown>) => {
+    const cat = (d.producto as Record<string, unknown> | null)?.categoria as string || '';
+    return !barCategories.includes(cat);
+  });
+  const barItems = detalles.filter((d: Record<string, unknown>) => {
+    const cat = (d.producto as Record<string, unknown> | null)?.categoria as string || '';
+    return barCategories.includes(cat);
+  });
+
+  const getStationStatus = (items: Array<Record<string, unknown>>): string | null => {
+    if (items.length === 0) return null; // No items for this station
+    const estados = items.map(i => (i.item_estado as string) || 'pendiente');
+    if (estados.every(e => e === 'listo')) return 'listo';
+    if (estados.some(e => e === 'preparando' || e === 'listo')) return 'preparando';
+    return 'pendiente';
+  };
+
   return NextResponse.json({
     data: {
       id: pedido.id,
@@ -45,6 +66,11 @@ export async function GET(
       modalidad: pedido.modalidad,
       total: pedido.total,
       numero: pedido.numero,
+      meseroNombre: pedido.mesero_nombre,
+      estaciones: {
+        cocina: getStationStatus(cocinaItems),
+        bar: getStationStatus(barItems),
+      },
     }
   }, {
     headers: {

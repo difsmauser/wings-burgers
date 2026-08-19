@@ -496,18 +496,30 @@ function PremiumOrderCard({
   modalidad,
   desc,
   polling = true,
+  estaciones,
 }: {
   numero: string;
   estado: string;
   modalidad: string | null;
   desc?: string;
   polling?: boolean;
+  estaciones?: { cocina: string | null; bar: string | null };
 }) {
   const pasos = getOrderSteps(modalidad);
   const mappedEstado = mapEstadoUnified(estado, modalidad);
   const currentIdx = Math.max(0, pasos.findIndex(p => p.key === mappedEstado));
   const currentPaso = pasos[currentIdx];
   const isTerminal = mappedEstado === 'servido' || mappedEstado === 'entregado';
+
+  // Station labels
+  const stationLabel = (status: string | null) => {
+    if (!status) return null;
+    if (status === 'listo') return { text: 'Listo', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20', icon: '✓' };
+    if (status === 'preparando') return { text: 'Preparando', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20', icon: '⏳' };
+    return { text: 'Pendiente', color: 'text-gray-500', bg: 'bg-white/5 border-white/10', icon: '○' };
+  };
+
+  const hasBothStations = estaciones && estaciones.cocina !== null && estaciones.bar !== null;
 
   return (
     <div className="rounded-2xl bg-[#0e0e16] border border-white/[0.06] p-4 sm:p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)]">
@@ -533,6 +545,54 @@ function PremiumOrderCard({
           {currentPaso.icon} {currentPaso.label}
         </span>
       </div>
+
+      {/* Station split progress — shows when order has items in both cocina AND bar */}
+      {hasBothStations && !isTerminal && (
+        <div className="flex items-center gap-2 mb-3">
+          {estaciones.cocina !== null && (() => {
+            const s = stationLabel(estaciones.cocina);
+            return s ? (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold ${s.bg} ${s.color}`}>
+                <span>🔥</span>
+                <span>Cocina: {s.text}</span>
+              </div>
+            ) : null;
+          })()}
+          {estaciones.bar !== null && (() => {
+            const s = stationLabel(estaciones.bar);
+            return s ? (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold ${s.bg} ${s.color}`}>
+                <span>🍸</span>
+                <span>Bar: {s.text}</span>
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
+
+      {/* Single station indicator when only one applies */}
+      {estaciones && !hasBothStations && !isTerminal && (
+        <div className="flex items-center gap-2 mb-3">
+          {estaciones.cocina !== null && (() => {
+            const s = stationLabel(estaciones.cocina);
+            return s ? (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold ${s.bg} ${s.color}`}>
+                <span>🔥</span>
+                <span>Cocina: {s.text}</span>
+              </div>
+            ) : null;
+          })()}
+          {estaciones.bar !== null && (() => {
+            const s = stationLabel(estaciones.bar);
+            return s ? (
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-semibold ${s.bg} ${s.color}`}>
+                <span>🍸</span>
+                <span>Bar: {s.text}</span>
+              </div>
+            ) : null;
+          })()}
+        </div>
+      )}
 
       {/* Current status description */}
       <p className="text-xs text-gray-400 mb-4">{currentPaso.desc}</p>
@@ -570,7 +630,7 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
     numero: string;
     estado: string;
     total: number;
-    items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
+    items: Array<{ nombre: string; categoria?: string; cantidad: number; precioUnitario: number; itemEstado?: string }>;
   }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -641,14 +701,33 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 
       {/* Individual order trackers */}
       <div className="space-y-3">
-        {pedidosMesa.map((pedido) => (
-          <PremiumOrderCard
-            key={pedido.id}
-            numero={pedido.numero}
-            estado={pedido.estado}
-            modalidad={modalidad}
-          />
-        ))}
+        {pedidosMesa.map((pedido) => {
+          // Compute per-station progress from items
+          const barCategories = ['bar', 'bebidas'];
+          const cocinaItems = pedido.items.filter(i => !barCategories.includes(i.categoria || ''));
+          const barItems = pedido.items.filter(i => barCategories.includes(i.categoria || ''));
+
+          const getStationStatus = (items: typeof pedido.items): string | null => {
+            if (items.length === 0) return null;
+            const estados = items.map(i => i.itemEstado || 'pendiente');
+            if (estados.every(e => e === 'listo')) return 'listo';
+            if (estados.some(e => e === 'preparando' || e === 'listo')) return 'preparando';
+            return 'pendiente';
+          };
+
+          return (
+            <PremiumOrderCard
+              key={pedido.id}
+              numero={pedido.numero}
+              estado={pedido.estado}
+              modalidad={modalidad}
+              estaciones={{
+                cocina: getStationStatus(cocinaItems),
+                bar: getStationStatus(barItems),
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* All done? Show pay button */}
@@ -686,6 +765,7 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
   const [estado, setEstado] = useState<string>('recibido');
   const [polling, setPolling] = useState(true);
   const [numero, setNumero] = useState<string>('');
+  const [estaciones, setEstaciones] = useState<{ cocina: string | null; bar: string | null }>({ cocina: null, bar: null });
 
   useEffect(() => {
     if (!pedidoId || !polling) return;
@@ -699,6 +779,7 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
           const nuevoEstado = pedidoData?.estado || 'recibido';
           setEstado(nuevoEstado);
           if (pedidoData?.numero) setNumero(pedidoData.numero);
+          if (pedidoData?.estaciones) setEstaciones(pedidoData.estaciones);
 
           if (['servido', 'entregado', 'listo'].includes(nuevoEstado)) {
             setPolling(false);
@@ -722,6 +803,7 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
         estado={estado}
         modalidad={modalidad}
         polling={polling}
+        estaciones={estaciones}
       />
     </div>
   );
