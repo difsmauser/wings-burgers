@@ -49,6 +49,7 @@ function PlaceholderImage() {
 
 function ProductoCard({ producto }: { producto: ProductoMenu }) {
   const { agregarItem } = useCarrito();
+  const [imgError, setImgError] = useState(false);
 
   const precioFormateado = new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -69,13 +70,15 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
       aria-label={`${producto.nombre} - ${precioFormateado}${!producto.disponible ? ' - No disponible' : ''}`}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24]">
-        {producto.imagenUrl ? (
+        {producto.imagenUrl && !imgError ? (
           <Image
             src={producto.imagenUrl}
             alt={producto.nombre}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            unoptimized={!producto.imagenUrl.includes('supabase.co')}
+            onError={() => setImgError(true)}
           />
         ) : (
           <PlaceholderImage />

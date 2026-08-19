@@ -39,6 +39,7 @@ function PlaceholderImage() {
 
 function ProductoCard({ producto }: { producto: ProductoMenu }) {
   const { agregarItem } = useCarrito();
+  const [imgError, setImgError] = useState(false);
 
   const precioFormateado = new Intl.NumberFormat('es-MX', {
     style: 'currency', currency: 'MXN', minimumFractionDigits: 2,
@@ -47,8 +48,8 @@ function ProductoCard({ producto }: { producto: ProductoMenu }) {
   return (
     <article className={`bg-[#12121a] rounded-2xl border border-white/[0.06] overflow-hidden transition-all duration-300 group hover:border-amber-400/30 hover:shadow-[0_8px_40px_-8px_rgba(245,166,35,0.15)] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)] ${!producto.disponible ? 'opacity-60' : ''}`}>
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24]">
-        {producto.imagenUrl ? (
-          <Image src={producto.imagenUrl} alt={producto.nombre} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" />
+        {producto.imagenUrl && !imgError ? (
+          <Image src={producto.imagenUrl} alt={producto.nombre} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" unoptimized={!producto.imagenUrl.includes('supabase.co')} onError={() => setImgError(true)} />
         ) : (
           <PlaceholderImage />
         )}

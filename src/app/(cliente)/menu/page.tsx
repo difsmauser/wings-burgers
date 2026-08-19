@@ -242,6 +242,7 @@ function ModalidadSelector({
  */
 function ProductoCard({ producto, onDetail }: { producto: ProductoMenu; onDetail: (p: ProductoMenu) => void }) {
   const { agregarItem } = useCarrito();
+  const [imgError, setImgError] = useState(false);
 
   const precioFormateado = new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -262,7 +263,7 @@ function ProductoCard({ producto, onDetail }: { producto: ProductoMenu; onDetail
     >
       {/* Product Image — tap to open detail */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#1a1a24] cursor-pointer" onClick={() => onDetail(producto)}>
-        {producto.imagenUrl ? (
+        {producto.imagenUrl && !imgError ? (
           <Image
             src={producto.imagenUrl}
             alt={producto.nombre}
@@ -270,6 +271,7 @@ function ProductoCard({ producto, onDetail }: { producto: ProductoMenu; onDetail
             className="object-cover group-hover:scale-105 transition-transform duration-500"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             unoptimized={!producto.imagenUrl.includes('supabase.co')}
+            onError={() => setImgError(true)}
           />
         ) : (
           <PlaceholderImage />
@@ -462,6 +464,7 @@ export default function MenuPage() {
   const [todosProductos, setTodosProductos] = useState<ProductoMenu[]>([]);
   const [productos, setProductos] = useState<ProductoMenu[]>([]);
   const [selectedProducto, setSelectedProducto] = useState<ProductoMenu | null>(null);
+  const [detailImgError, setDetailImgError] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -855,14 +858,19 @@ export default function MenuPage() {
 
       {/* Product Detail Modal */}
       {selectedProducto && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => setSelectedProducto(null)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4" onClick={() => { setSelectedProducto(null); setDetailImgError(false); }}>
           <div className="w-full sm:max-w-md bg-[#12121a] sm:rounded-2xl rounded-t-3xl border border-white/[0.06] overflow-hidden animate-scale-in shadow-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            {selectedProducto.imagenUrl && (
+            {selectedProducto.imagenUrl && !detailImgError ? (
               <div className="relative w-full aspect-[16/10] bg-[#1a1a24]">
-                <Image src={selectedProducto.imagenUrl} alt={selectedProducto.nombre} fill className="object-cover" sizes="100vw" unoptimized={!selectedProducto.imagenUrl.includes('supabase.co')} />
-                <button onClick={() => setSelectedProducto(null)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center text-sm">✕</button>
+                <Image src={selectedProducto.imagenUrl} alt={selectedProducto.nombre} fill className="object-cover" sizes="100vw" unoptimized={!selectedProducto.imagenUrl.includes('supabase.co')} onError={() => setDetailImgError(true)} />
+                <button onClick={() => { setSelectedProducto(null); setDetailImgError(false); }} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center text-sm">✕</button>
               </div>
-            )}
+            ) : selectedProducto.imagenUrl && detailImgError ? (
+              <div className="relative w-full aspect-[16/10]">
+                <PlaceholderImage />
+                <button onClick={() => { setSelectedProducto(null); setDetailImgError(false); }} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center text-sm">✕</button>
+              </div>
+            ) : null}
             <div className="p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <h2 className="text-lg font-bold text-white">{selectedProducto.nombre}</h2>

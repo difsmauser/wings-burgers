@@ -261,7 +261,7 @@ function ItemCarritoCard({
           {/* Product image */}
           {item.imagenUrl ? (
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 border border-white/5">
-              <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" />
+              <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="flex items-center justify-center w-full h-full bg-[#1a1a24] text-2xl opacity-30">🍔</span>'; }} />
             </div>
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl shrink-0 bg-[#1a1a24] border border-white/5 flex items-center justify-center">
