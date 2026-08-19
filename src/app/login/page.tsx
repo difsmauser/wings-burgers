@@ -57,16 +57,37 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[#030306] relative overflow-hidden">
-      {/* Static ambient background — no movement */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-[600px] h-[600px] top-[-200px] left-[-100px] rounded-full bg-gradient-to-br from-brand-500/15 to-fire-500/10 blur-[100px]" />
-        <div className="absolute w-[500px] h-[500px] bottom-[-150px] right-[-100px] rounded-full bg-gradient-to-tl from-fire-600/12 to-brand-400/8 blur-[120px]" />
-        <div className="absolute w-[400px] h-[400px] top-[30%] left-[50%] rounded-full bg-gradient-to-r from-fire-600/8 to-brand-500/6 blur-[80px]" />
-        {/* Noise texture */}
-        <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+      {/* Realistic CSS fire — organic flames rising from bottom */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* The contrast+blur filter container creates organic metaball flame shapes */}
+        <div className="absolute bottom-0 left-0 right-0 h-[60%]" style={{ filter: 'contrast(1.5) brightness(1.2)' }}>
+          {/* Base flame layer — large slow shapes */}
+          <div className="absolute bottom-0 left-0 right-0 h-full opacity-70" style={{ filter: 'blur(8px)' }}>
+            <div className="fire-shape fire-shape-1" />
+            <div className="fire-shape fire-shape-2" />
+            <div className="fire-shape fire-shape-3" />
+            <div className="fire-shape fire-shape-4" />
+            <div className="fire-shape fire-shape-5" />
+          </div>
+          {/* Inner flame layer — brighter, smaller */}
+          <div className="absolute bottom-0 left-0 right-0 h-[70%] opacity-60" style={{ filter: 'blur(5px)' }}>
+            <div className="fire-shape-inner fire-shape-inner-1" />
+            <div className="fire-shape-inner fire-shape-inner-2" />
+            <div className="fire-shape-inner fire-shape-inner-3" />
+          </div>
+          {/* Core flame — yellow/white hot center */}
+          <div className="absolute bottom-0 left-0 right-0 h-[40%] opacity-50" style={{ filter: 'blur(3px)' }}>
+            <div className="fire-shape-core fire-shape-core-1" />
+            <div className="fire-shape-core fire-shape-core-2" />
+          </div>
+        </div>
+        {/* Ambient glow at the bottom */}
+        <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-fire-600/20 via-fire-500/5 to-transparent" />
+        {/* Noise texture overlay */}
+        <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       </div>
 
-      {/* Login card — NO animate-float, completely static */}
+      {/* Login card */}
       <div className="w-full max-w-[420px] relative z-10">
         {/* Outer glow */}
         <div className="absolute -inset-[2px] rounded-[28px] bg-gradient-to-b from-brand-400/25 via-white/5 to-fire-500/15 opacity-70" />

@@ -215,6 +215,57 @@
     100% { transform: scaleY(1) translateY(0); opacity: 0.7; }
   }
 
+  /* === REALISTIC FIRE SHAPES (Login page) ===
+   * Uses organic blob shapes with gradient backgrounds that animate vertically.
+   * When combined with the parent's contrast+blur filter, they merge into
+   * realistic flame forms like real fire photography.
+   */
+
+  .fire-shape {
+    position: absolute;
+    bottom: -20%;
+    border-radius: 50% 50% 30% 30%;
+    background: radial-gradient(ellipse at bottom, #f97316 0%, #dc2626 40%, transparent 70%);
+    animation: fireRise 3s ease-in-out infinite;
+  }
+
+  .fire-shape-1 { left: 5%; width: 25%; height: 80%; animation-duration: 2.8s; animation-delay: 0s; }
+  .fire-shape-2 { left: 20%; width: 30%; height: 90%; animation-duration: 3.2s; animation-delay: 0.4s; }
+  .fire-shape-3 { left: 40%; width: 28%; height: 85%; animation-duration: 2.6s; animation-delay: 0.8s; }
+  .fire-shape-4 { left: 55%; width: 32%; height: 95%; animation-duration: 3.5s; animation-delay: 0.2s; }
+  .fire-shape-5 { left: 72%; width: 26%; height: 75%; animation-duration: 3s; animation-delay: 0.6s; }
+
+  .fire-shape-inner {
+    position: absolute;
+    bottom: -10%;
+    border-radius: 45% 45% 25% 25%;
+    background: radial-gradient(ellipse at bottom, #fbbf24 0%, #f97316 35%, transparent 65%);
+    animation: fireRise 2.5s ease-in-out infinite;
+  }
+
+  .fire-shape-inner-1 { left: 15%; width: 22%; height: 75%; animation-duration: 2.3s; animation-delay: 0.3s; }
+  .fire-shape-inner-2 { left: 40%; width: 25%; height: 80%; animation-duration: 2.7s; animation-delay: 0.7s; }
+  .fire-shape-inner-3 { left: 62%; width: 20%; height: 70%; animation-duration: 2.4s; animation-delay: 0.1s; }
+
+  .fire-shape-core {
+    position: absolute;
+    bottom: 0;
+    border-radius: 40% 40% 20% 20%;
+    background: radial-gradient(ellipse at bottom, #fef3c7 0%, #fbbf24 30%, transparent 60%);
+    animation: fireRise 2s ease-in-out infinite;
+  }
+
+  .fire-shape-core-1 { left: 25%; width: 18%; height: 60%; animation-duration: 2.1s; animation-delay: 0.5s; }
+  .fire-shape-core-2 { left: 50%; width: 20%; height: 65%; animation-duration: 2.4s; animation-delay: 0.9s; }
+
+  @keyframes fireRise {
+    0% { transform: translateY(10%) scaleX(1) scaleY(0.9); opacity: 0.7; }
+    25% { transform: translateY(-5%) scaleX(0.9) scaleY(1.05); opacity: 1; }
+    50% { transform: translateY(-15%) scaleX(1.05) scaleY(1.1); opacity: 0.85; }
+    75% { transform: translateY(-8%) scaleX(0.95) scaleY(1); opacity: 0.95; }
+    100% { transform: translateY(10%) scaleX(1) scaleY(0.9); opacity: 0.7; }
+  }
+
   /* Staggered children animation */
   .stagger-children > * {
     animation: fadeIn 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
