@@ -11,7 +11,6 @@ interface Mesa {
   pos_x: number;
   pos_y: number;
   capacidad: number;
-  pedido_activo_id: string | null;
 }
 
 interface PedidoCaja {
@@ -19,19 +18,36 @@ interface PedidoCaja {
   numero: string;
   estado: string;
   modalidad: string;
-  canal: string;
+  observaciones: string;
   clienteNombre: string;
   total: number;
   estadoPago: string;
   metodoPago?: string;
   mesaZona?: string;
+  meseroNombre?: string;
+  creadoEn: string;
   items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
 }
 
-function parseCanal(obs?: string): string {
-  if (!obs) return 'QR';
-  const m = obs.match(/\[(QR|QR_REDES|MESERO)\]/);
-  return m ? m[1] : 'QR';
+function getCanal(p: PedidoCaja): { label: string; icon: string; color: string } {
+  const obs = p.observaciones || '';
+  if (p.modalidad === 'domicilio') return { label: 'Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+  if (obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro') return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+  if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+  return { label: 'QR Mesa', icon: '📱', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
+}
+
+function getEstadoLabel(estado: string): { label: string; color: string } {
+  switch (estado) {
+    case 'recibido': return { label: 'Recibido', color: 'text-brand-400 bg-brand-500/10 border-brand-500/20' };
+    case 'en_preparacion': return { label: 'Preparando', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+    case 'empacado': return { label: 'Listo', color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' };
+    case 'listo_para_servir': return { label: 'Mesero', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' };
+    case 'servido': return { label: 'Servido', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+    case 'en_camino': return { label: 'En camino', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+    case 'entregado': return { label: 'Entregado', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+    default: return { label: estado, color: 'text-gray-400 bg-white/5 border-white/10' };
+  }
 }
 
 export default function CajaPage() {
@@ -40,16 +56,16 @@ export default function CajaPage() {
   const [pedidos, setPedidos] = useState<PedidoCaja[]>([]);
   const [loading, setLoading] = useState(true);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
-  const [selectedMesa, setSelectedMesa] = useState<Mesa | null>(null);
+  const [selectedMesa, setSelectedMesa] = useState<string | null>(null);
+  const [selectedPedido, setSelectedPedido] = useState<PedidoCaja | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      // Fetch mesas
       const mesasRes = await fetch('/api/mesas');
       if (mesasRes.ok) { const d = await mesasRes.json(); setMesas(d.data ?? []); }
 
-      // Fetch pedidos
-      const estados = ['listo', 'entregado', 'servido', 'empacado', 'en_camino'];
+      // Fetch ALL active pedidos (all states except cancelado)
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido', 'en_camino', 'entregado'];
       const allPedidos: PedidoCaja[] = [];
       for (const estado of estados) {
         const res = await fetch(`/api/pedidos?estado=${estado}`);
@@ -61,28 +77,27 @@ export default function CajaPage() {
               numero: p.numero as string,
               estado: p.estado as string || estado,
               modalidad: p.modalidad as string || 'local',
-              canal: parseCanal(p.observaciones as string),
+              observaciones: p.observaciones as string || '',
               clienteNombre: (p.clienteNombre as string) || '',
               total: p.total as number || 0,
               estadoPago: (p.estadoPago as string) || 'pendiente',
               metodoPago: p.metodoPago as string || undefined,
               mesaZona: p.mesaZona as string || '',
-              items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
+              meseroNombre: p.meseroNombre as string || '',
+              creadoEn: p.creadoEn as string || '',
+              items: (p.items as PedidoCaja['items']) || [],
             });
           });
         }
       }
       setPedidos(allPedidos);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* */ }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
     fetchData();
-    const i = setInterval(fetchData, 10000);
+    const i = setInterval(fetchData, 6000);
     return () => clearInterval(i);
   }, [fetchData]);
 
@@ -97,74 +112,38 @@ export default function CajaPage() {
     fetchData();
   };
 
-  const liberarMesa = async (mesaId: string) => {
-    await fetch('/api/mesas', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: mesaId, estado: 'disponible', pedido_activo_id: null }),
-    });
-    setSelectedMesa(null);
-    fetchData();
-  };
+  // Filter: today's orders only
+  const today = new Date().toDateString();
+  const pedidosHoy = pedidos.filter(p => new Date(p.creadoEn).toDateString() === today);
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
+  // Active (not paid)
+  const activos = pedidosHoy.filter(p => p.estadoPago !== 'pagado');
+  const pagados = pedidosHoy.filter(p => p.estadoPago === 'pagado');
 
-  // Comprobantes pendientes de validación
-  const [comprobantes, setComprobantes] = useState<Array<{
-    id: string;
-    pedido_id: string;
-    mesa_zona: string;
-    total: number;
-    metodo_pago: string;
-    comprobante_url: string | null;
-    estado: string;
-    created_at: string;
-  }>>([]);
+  // By channel
+  const mesaOrders = activos.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[PARA_LLEVAR]'));
+  const llevarOrders = activos.filter(p => p.observaciones.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro');
+  const domicilioOrders = activos.filter(p => p.modalidad === 'domicilio');
 
-  const fetchComprobantes = useCallback(async () => {
-    try {
-      const res = await fetch('/api/pagos/comprobante-upload?estado=pendiente');
-      if (res.ok) { const json = await res.json(); setComprobantes(json.data || []); }
-    } catch { /* */ }
-  }, []);
+  // KPIs
+  const totalEfectivo = pagados.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
+  const totalTransfer = pagados.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + p.total, 0);
 
-  useEffect(() => {
-    fetchComprobantes();
-    const i = setInterval(fetchComprobantes, 8000);
-    return () => clearInterval(i);
-  }, [fetchComprobantes]);
+  // Mesa orders grouped
+  const mesaGroups: Record<string, PedidoCaja[]> = {};
+  mesaOrders.forEach(p => {
+    const key = p.mesaZona || 'Sin mesa';
+    if (!mesaGroups[key]) mesaGroups[key] = [];
+    mesaGroups[key].push(p);
+  });
 
-  const validarComprobante = async (comp: { id: string; pedido_id: string; mesa_zona: string; metodo_pago: string }) => {
-    setProcesandoId(comp.id);
-    try {
-      // 1. Mark comprobante as validated
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-      await fetch(`/api/pagos/validar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ comprobanteId: comp.id, pedidoId: comp.pedido_id, mesaZona: comp.mesa_zona }),
-      });
-      fetchComprobantes();
-      fetchData();
-    } catch { /* */ }
-    finally { setProcesandoId(null); }
-  };
+  // Selected mesa orders
+  const selectedMesaOrders = selectedMesa ? (mesaGroups[selectedMesa] || []) : [];
 
-  // Categorize pedidos
-  const pendientesPago = pedidos.filter(p => p.estadoPago !== 'pagado');
-  const pedidosMesa = pendientesPago.filter(p => p.modalidad === 'local' || p.modalidad === 'retiro');
-  const pedidosDomicilio = pendientesPago.filter(p => p.modalidad === 'domicilio');
-  const pagadosHoy = pedidos.filter(p => p.estadoPago === 'pagado');
-
-  const totalEfectivo = pagadosHoy.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
-  const totalTransferencia = pagadosHoy.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + p.total, 0);
-  const totalDia = totalEfectivo + totalTransferencia;
+  const formatMXN = (n: number) => `$${n.toFixed(0)}`;
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
       <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full" />
     </div>
   );
@@ -172,7 +151,7 @@ export default function CajaPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       {/* Header */}
-      <header className="bg-[#111118] border-b border-white/5 px-6 py-3 flex items-center justify-between">
+      <header className="bg-[#111118] border-b border-white/5 px-6 py-3 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="A-la Burguer" className="h-8 w-8 rounded-full" />
           <div>
@@ -180,267 +159,241 @@ export default function CajaPage() {
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Módulo de Caja</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="text-xs text-gray-400 hover:text-red-400 transition-colors">Cerrar Sesión</button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Tiempo real
+          </div>
+          <button onClick={() => { fetch('/api/auth/logout', { method: 'POST' }); router.push('/login'); }} className="text-xs text-gray-400 hover:text-red-400 transition-colors">Salir</button>
+        </div>
       </header>
 
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
-        {/* Daily Totals */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-            <p className="text-[10px] text-gray-500">Pendientes</p>
-            <p className="text-xl font-bold text-red-400">{pendientesPago.length}</p>
-          </div>
-          <div className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-            <p className="text-[10px] text-gray-500">Efectivo</p>
-            <p className="text-xl font-bold text-green-400">${totalEfectivo.toFixed(0)}</p>
-          </div>
-          <div className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-            <p className="text-[10px] text-gray-500">Transferencia</p>
-            <p className="text-xl font-bold text-blue-400">${totalTransferencia.toFixed(0)}</p>
-          </div>
-          <div className="rounded-xl bg-[#16161f] border border-brand-500/20 p-3">
-            <p className="text-[10px] text-gray-500">Total del Día</p>
-            <p className="text-xl font-bold text-brand-400">${totalDia.toFixed(0)}</p>
-          </div>
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5">
+        {/* KPI Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <KPI icon="🔥" label="Activos" value={String(activos.length)} color="text-red-400" border="border-red-500/20" />
+          <KPI icon="💵" label="Efectivo" value={formatMXN(totalEfectivo)} color="text-green-400" border="border-green-500/20" />
+          <KPI icon="🏦" label="Transferencia" value={formatMXN(totalTransfer)} color="text-purple-400" border="border-purple-500/20" />
+          <KPI icon="✅" label="Cobrados" value={String(pagados.length)} color="text-green-400" border="border-green-500/20" />
+          <KPI icon="💰" label="Total Día" value={formatMXN(totalEfectivo + totalTransfer)} color="text-brand-400" border="border-brand-500/20" />
         </div>
 
-        {/* Comprobantes pendientes de validación */}
-        {comprobantes.length > 0 && (
-          <div className="rounded-xl bg-[#16161f] border border-amber-500/20 p-4">
-            <h2 className="text-sm font-bold text-amber-400 mb-3 flex items-center gap-2">
-              📎 Comprobantes por Validar
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold animate-pulse">
-                {comprobantes.length}
-              </span>
-            </h2>
-            <div className="space-y-2">
-              {comprobantes.map(comp => (
-                <div key={comp.id} className="rounded-lg bg-[#0d0d14] border border-white/5 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <span className="text-xs font-bold text-white">{comp.mesa_zona || 'Sin mesa'}</span>
-                      <span className="text-[10px] text-gray-500 ml-2">{comp.metodo_pago === 'transferencia' ? '📱 Transferencia' : '💵 Efectivo'}</span>
-                      <span className="text-[10px] text-gray-600 ml-2">{new Date(comp.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <span className="text-sm font-bold text-brand-400">${comp.total.toFixed(0)}</span>
-                  </div>
-                  {comp.comprobante_url && (
-                    <a href={comp.comprobante_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 underline mb-2 block">
-                      📷 Ver comprobante
-                    </a>
-                  )}
+        {/* Mesas Map + Detail */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Mesa Map */}
+          <div className="lg:col-span-1 rounded-2xl bg-[#12121a] border border-white/5 p-4">
+            <h2 className="text-sm font-bold text-white mb-3">🪑 Mesas</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {mesas.map(mesa => {
+                const hasOrders = mesaGroups[`${mesa.nombre} - ${mesa.zona}`]?.length > 0;
+                const isSelected = selectedMesa === `${mesa.nombre} - ${mesa.zona}`;
+                return (
                   <button
-                    onClick={() => validarComprobante(comp)}
-                    disabled={procesandoId === comp.id}
-                    className="w-full py-2 rounded-lg text-xs font-bold text-black bg-green-500 hover:bg-green-400 disabled:opacity-50 transition-all active:scale-[0.97]"
+                    key={mesa.id}
+                    onClick={() => setSelectedMesa(hasOrders ? `${mesa.nombre} - ${mesa.zona}` : null)}
+                    className={`p-3 rounded-xl text-center transition-all duration-200 border ${
+                      isSelected ? 'bg-brand-500/20 border-brand-400/40 scale-105 ring-1 ring-brand-400/30'
+                      : hasOrders ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 cursor-pointer'
+                      : 'bg-green-500/5 border-green-500/20 opacity-60'
+                    }`}
                   >
-                    {procesandoId === comp.id ? 'Validando...' : '✓ Validar Pago'}
+                    <span className="text-xs font-bold block">{mesa.nombre.replace('Mesa ', 'M')}</span>
+                    <span className="text-[9px] text-gray-500 block">{mesa.zona}</span>
+                    {hasOrders && (
+                      <span className="text-[9px] text-red-400 font-bold mt-0.5 block">
+                        {mesaGroups[`${mesa.nombre} - ${mesa.zona}`].length} pedido(s)
+                      </span>
+                    )}
                   </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* Floor Map */}
-        <div className="rounded-xl bg-[#16161f] border border-white/5 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-white">Mapa de Mesas</h2>
-            <div className="flex gap-3 text-[9px] text-gray-500">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400"></span>Libre</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400"></span>Ocupada</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span>Cobro</span>
-            </div>
-          </div>
-          <div className="relative w-full h-[200px] sm:h-[250px] bg-[#0d0d14] rounded-xl border border-white/5 overflow-hidden">
-            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '10% 10%' }} />
-            {mesas.map(mesa => {
-              const isOcupada = mesa.estado === 'ocupada';
-              const isPendiente = mesa.estado === 'pendiente_cobro';
-              const isSelected = selectedMesa?.id === mesa.id;
-              return (
-                <div
-                  key={mesa.id}
-                  onClick={() => (isPendiente || isOcupada) && setSelectedMesa(mesa)}
-                  className={`absolute w-14 h-14 rounded-xl flex flex-col items-center justify-center text-[9px] font-bold border transition-all duration-200 ${
-                    isSelected ? 'ring-2 ring-brand-400 scale-110 z-10' :
-                    isPendiente ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 cursor-pointer hover:scale-105' :
-                    isOcupada ? 'bg-red-500/20 border-red-500/40 text-red-400 cursor-pointer hover:scale-105' :
-                    'bg-green-500/20 border-green-500/40 text-green-400'
-                  }`}
-                  style={{ left: `${mesa.pos_x}%`, top: `${mesa.pos_y}%`, transform: 'translate(-50%, -50%)' }}
-                >
-                  <span>{mesa.nombre.replace('Mesa ', 'M').replace('Terraza ', 'T').replace('Barra ', 'B')}</span>
-                  <span className="text-[7px] text-gray-500">{mesa.capacidad}p</span>
-                  {isPendiente && <span className="text-[7px]">💰</span>}
+          {/* Mesa Detail */}
+          <div className="lg:col-span-2 rounded-2xl bg-[#12121a] border border-white/5 p-4">
+            {selectedMesa && selectedMesaOrders.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-white">📍 {selectedMesa}</h2>
+                  <span className="text-sm font-bold text-brand-400">Total: {formatMXN(selectedMesaOrders.reduce((s, p) => s + p.total, 0))}</span>
                 </div>
-              );
-            })}
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {selectedMesaOrders.map(p => (
+                    <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
+                <span className="text-4xl mb-3">🪑</span>
+                <p className="text-sm text-gray-500">Selecciona una mesa ocupada para ver sus pedidos</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Selected Mesa Detail */}
-        {selectedMesa && (
-          <div className="rounded-xl bg-[#16161f] border border-brand-500/20 p-4 animate-scale-in">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-white">{selectedMesa.nombre} — {selectedMesa.zona}</h3>
-              <button onClick={() => setSelectedMesa(null)} className="text-xs text-gray-400 hover:text-white">✕</button>
-            </div>
-            <p className="text-xs text-gray-400 mb-3 capitalize">Estado: <span className={selectedMesa.estado === 'ocupada' ? 'text-red-400' : 'text-amber-400'}>{selectedMesa.estado.replace('_', ' ')}</span></p>
-            {selectedMesa.estado === 'pendiente_cobro' && (
-              <button onClick={() => liberarMesa(selectedMesa.id)} className="w-full px-4 py-2.5 rounded-lg text-sm font-medium text-black gradient-brand shadow-lg shadow-brand-500/20 transition-all">
-                ✓ Liberar Mesa (pago confirmado)
-              </button>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Pedidos en Mesa — grouped by mesaZona */}
-          <div>
-            <h2 className="text-sm font-bold text-white mb-3">🍽️ Pedidos en Mesa ({pedidosMesa.length})</h2>
-            {pedidosMesa.length === 0 ? (
-              <div className="rounded-xl bg-[#16161f] border border-white/5 p-6 text-center"><p className="text-gray-500 text-xs">Sin pedidos pendientes</p></div>
+        {/* Orders by Channel */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Para Llevar */}
+          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-4">
+            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              🛍️ Para Llevar
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">{llevarOrders.length}</span>
+            </h2>
+            {llevarOrders.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-6">Sin pedidos para llevar</p>
             ) : (
-              <div className="space-y-3">
-                {/* Group by mesaZona for accumulated billing */}
-                {(() => {
-                  const groups: Record<string, PedidoCaja[]> = {};
-                  pedidosMesa.forEach(p => {
-                    const key = p.mesaZona || `individual-${p.id}`;
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(p);
-                  });
-
-                  return Object.entries(groups).map(([mesa, pedidosGrupo]) => {
-                    const totalGrupo = pedidosGrupo.reduce((s, p) => s + p.total, 0);
-                    const isMesa = mesa && !mesa.startsWith('individual-');
-
-                    return (
-                      <div key={mesa} className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-                        {/* Mesa header with total */}
-                        {isMesa && pedidosGrupo.length > 1 && (
-                          <div className="flex justify-between items-center mb-2 pb-2 border-b border-white/5">
-                            <span className="text-xs font-bold text-brand-400">📍 {mesa.split(' - ')[0]}</span>
-                            <span className="text-sm font-bold text-white">Total: ${totalGrupo.toFixed(0)}</span>
-                          </div>
-                        )}
-
-                        {/* Individual orders within the group */}
-                        <div className="space-y-2">
-                          {pedidosGrupo.map(p => (
-                            <div key={p.id} className={pedidosGrupo.length > 1 ? 'pl-2 border-l-2 border-brand-400/20' : ''}>
-                              <div className="flex justify-between items-center mb-1.5">
-                                <div>
-                                  <span className="text-xs font-bold text-white">#{p.numero}</span>
-                                  <span className="text-[10px] text-gray-500 ml-2 capitalize">{p.modalidad === 'retiro' ? '🛍️ Llevar' : '🍽️ Mesa'}</span>
-                                  {p.mesaZona && pedidosGrupo.length <= 1 && <span className="text-[10px] text-brand-400 ml-1">{p.mesaZona}</span>}
-                                </div>
-                                <span className="text-sm font-bold text-brand-400">${p.total.toFixed(0)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Payment buttons — pay all orders in group at once */}
-                        {isMesa && pedidosGrupo.length > 1 ? (
-                          <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
-                            <button
-                              onClick={async () => {
-                                setProcesandoId(pedidosGrupo[0].id);
-                                for (const p of pedidosGrupo) {
-                                  await marcarPagado(p.id, 'efectivo');
-                                }
-                                setProcesandoId(null);
-                                // Liberar mesa
-                                const mesaObj = mesas.find(m => mesa.startsWith(m.nombre));
-                                if (mesaObj) await liberarMesa(mesaObj.id);
-                                fetchData();
-                              }}
-                              disabled={procesandoId !== null}
-                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all"
-                            >
-                              💵 Todo Efectivo (${totalGrupo.toFixed(0)})
-                            </button>
-                            <button
-                              onClick={async () => {
-                                setProcesandoId(pedidosGrupo[0].id);
-                                for (const p of pedidosGrupo) {
-                                  await marcarPagado(p.id, 'transferencia');
-                                }
-                                setProcesandoId(null);
-                                const mesaObj = mesas.find(m => mesa.startsWith(m.nombre));
-                                if (mesaObj) await liberarMesa(mesaObj.id);
-                                fetchData();
-                              }}
-                              disabled={procesandoId !== null}
-                              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all"
-                            >
-                              📱 Todo Transfer (${totalGrupo.toFixed(0)})
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2 mt-2">
-                            <button onClick={() => marcarPagado(pedidosGrupo[0].id, 'efectivo')} disabled={procesandoId === pedidosGrupo[0].id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all">💵 Efectivo</button>
-                            <button onClick={() => marcarPagado(pedidosGrupo[0].id, 'transferencia')} disabled={procesandoId === pedidosGrupo[0].id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all">📱 Transfer</button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })()}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {llevarOrders.map(p => <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />)}
               </div>
             )}
           </div>
 
-          {/* Pedidos Domicilio */}
-          <div>
-            <h2 className="text-sm font-bold text-white mb-3">🛵 Pedidos Domicilio ({pedidosDomicilio.length})</h2>
-            {pedidosDomicilio.length === 0 ? (
-              <div className="rounded-xl bg-[#16161f] border border-white/5 p-6 text-center"><p className="text-gray-500 text-xs">Sin pedidos de domicilio</p></div>
+          {/* Domicilio */}
+          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-4">
+            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              🛵 Domicilio
+              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold">{domicilioOrders.length}</span>
+            </h2>
+            {domicilioOrders.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-6">Sin pedidos a domicilio</p>
             ) : (
-              <div className="space-y-2">
-                {pedidosDomicilio.map(p => (
-                  <div key={p.id} className="rounded-xl bg-[#16161f] border border-white/5 p-3">
-                    <div className="flex justify-between items-center mb-2">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {domicilioOrders.map(p => <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pagados Hoy */}
+        {pagados.length > 0 && (
+          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-4">
+            <h2 className="text-sm font-bold text-white mb-3">✅ Cobrados Hoy ({pagados.length})</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[250px] overflow-y-auto">
+              {pagados.map(p => {
+                const canal = getCanal(p);
+                return (
+                  <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/5">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${p.metodoPago === 'efectivo' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}>
+                        {p.metodoPago === 'efectivo' ? '💵' : '🏦'}
+                      </span>
                       <div>
-                        <span className="text-xs font-bold text-white">#{p.numero}</span>
-                        <span className="text-[10px] text-gray-500 ml-2">🛵 {p.clienteNombre}</span>
+                        <span className="text-[10px] font-bold text-white">#{p.numero.split('-').pop()}</span>
+                        <span className={`text-[9px] ml-1.5 ${canal.color.split(' ')[0]}`}>{canal.icon}</span>
                       </div>
-                      <span className="text-sm font-bold text-brand-400">${p.total.toFixed(0)}</span>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => marcarPagado(p.id, 'efectivo')} disabled={procesandoId === p.id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all">💵 Efectivo</button>
-                      <button onClick={() => marcarPagado(p.id, 'transferencia')} disabled={procesandoId === p.id} className="flex-1 px-3 py-2 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all">📱 Transfer</button>
-                    </div>
+                    <span className="text-xs font-bold text-brand-400">{formatMXN(p.total)}</span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Paid today */}
-        {pagadosHoy.length > 0 && (
-          <div>
-            <h2 className="text-sm font-bold text-white mb-3">✅ Cobrados Hoy ({pagadosHoy.length})</h2>
-            <div className="rounded-xl bg-[#16161f] border border-white/5 divide-y divide-white/5 max-h-60 overflow-y-auto scrollbar-thin">
-              {pagadosHoy.map(p => (
-                <div key={p.id} className="px-4 py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400">✓</span>
-                    <span className="text-white font-medium">#{p.numero}</span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[9px] border ${p.metodoPago === 'efectivo' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
-                      {p.metodoPago === 'efectivo' ? '💵' : '📱'}
-                    </span>
-                  </div>
-                  <span className="text-brand-400 font-medium">${p.total.toFixed(0)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {selectedPedido && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setSelectedPedido(null)}>
+          <div className="w-full max-w-md bg-[#12121a] rounded-2xl border border-white/10 overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-white/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white">#{selectedPedido.numero}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${getCanal(selectedPedido).color}`}>{getCanal(selectedPedido).icon} {getCanal(selectedPedido).label}</span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${getEstadoLabel(selectedPedido.estado).color}`}>{getEstadoLabel(selectedPedido.estado).label}</span>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedPedido(null)} className="text-gray-400 hover:text-white text-lg">✕</button>
+              </div>
+            </div>
+            <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+              {selectedPedido.mesaZona && <p className="text-xs text-gray-400">📍 {selectedPedido.mesaZona}</p>}
+              {selectedPedido.meseroNombre && <p className="text-xs text-cyan-400">🧑‍🍳 Mesero: {selectedPedido.meseroNombre}</p>}
+              <div className="space-y-2">
+                {selectedPedido.items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                    <div>
+                      <span className="text-xs text-brand-400 font-bold mr-1.5">{item.cantidad}x</span>
+                      <span className="text-xs text-white">{item.nombre}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{formatMXN(item.precioUnitario * item.cantidad)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-3 border-t border-white/5 flex justify-between">
+                <span className="text-sm font-bold text-white">Total</span>
+                <span className="text-sm font-bold text-brand-400">{formatMXN(selectedPedido.total)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
+  pedido: PedidoCaja;
+  onPay: (id: string, metodo: 'efectivo' | 'transferencia') => void;
+  procesandoId: string | null;
+  onDetail: (p: PedidoCaja) => void;
+}) {
+  const canal = getCanal(pedido);
+  const estado = getEstadoLabel(pedido.estado);
+  const canPay = ['servido', 'entregado', 'listo_para_servir', 'empacado'].includes(pedido.estado);
+
+  return (
+    <div className="rounded-xl bg-[#0d0d14] border border-white/[0.06] p-3 hover:border-white/10 transition-all">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => onDetail(pedido)} className="text-xs font-bold text-white hover:text-brand-400 transition-colors">
+            #{pedido.numero.split('-').pop()}
+          </button>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${canal.color}`}>{canal.icon} {canal.label}</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${estado.color}`}>{estado.label}</span>
+        </div>
+        <span className="text-sm font-bold text-brand-400">{`$${pedido.total.toFixed(0)}`}</span>
+      </div>
+      {pedido.meseroNombre && (
+        <p className="text-[10px] text-cyan-400 mb-2">🧑‍🍳 {pedido.meseroNombre}</p>
+      )}
+      {/* Items preview */}
+      <div className="text-[10px] text-gray-500 mb-2 line-clamp-2">
+        {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
+      </div>
+      {/* Pay buttons */}
+      {canPay && pedido.estadoPago !== 'pagado' && (
+        <div className="flex gap-2">
+          <button onClick={() => onPay(pedido.id, 'efectivo')} disabled={procesandoId === pedido.id}
+            className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-95">
+            💵 Efectivo
+          </button>
+          <button onClick={() => onPay(pedido.id, 'transferencia')} disabled={procesandoId === pedido.id}
+            className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all active:scale-95">
+            🏦 Transfer
+          </button>
+        </div>
+      )}
+      {pedido.estadoPago === 'pagado' && (
+        <div className="text-center py-1.5 rounded-lg bg-green-500/5 border border-green-500/10">
+          <span className="text-[10px] text-green-400 font-bold">✓ Pagado — {pedido.metodoPago}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function KPI({ icon, label, value, color, border }: { icon: string; label: string; value: string; color: string; border: string }) {
+  return (
+    <div className={`rounded-xl bg-[#12121a] border p-3 ${border}`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-sm">{icon}</span>
+        <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">{label}</span>
+      </div>
+      <p className={`text-xl font-black ${color}`}>{value}</p>
     </div>
   );
 }
