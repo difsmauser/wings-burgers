@@ -335,8 +335,8 @@ export default function DemoPage() {
 
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
               <p className="text-xs font-bold text-white mb-2">2. Limpiar base de datos (sin tocar productos)</p>
-              <p className="text-[10px] text-gray-500 mb-2">Ejecuta en la terminal del proyecto:</p>
-              <code className="block text-[11px] text-green-400 bg-black/30 p-3 rounded-lg font-mono select-all whitespace-pre-wrap">npx tsx src/scripts/setup-datos-base.ts</code>
+              <p className="text-[10px] text-gray-500 mb-2">Ejecuta en PowerShell dentro del proyecto:</p>
+              <code className="block text-[10px] text-green-400 bg-black/30 p-3 rounded-lg font-mono select-all whitespace-pre-wrap break-all">$env:NEXT_PUBLIC_SUPABASE_URL=&quot;https://evhyieblmtivcnfqxwxc.supabase.co&quot;; $env:SUPABASE_SERVICE_ROLE_KEY=&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHlpZWJsbXRpdmNuZnF4d3hjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjAzMjM5NiwiZXhwIjoyMTAxNjA4Mzk2fQ.bq4DB1ssHbTr1IB_fsb6PyxM3GNRtVesGV6lg2HD4Q0&quot;; npx tsx src/scripts/setup-datos-base.ts</code>
               <p className="text-[10px] text-gray-600 mt-2">Esto limpia pedidos, mesas, meseros, inventario, gastos y recrea 5 mesas + 3 meseros + 2 repartidores. No toca productos ni categorías.</p>
             </div>
           </div>
