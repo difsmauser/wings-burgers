@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
       const pedido = pedidoData?.[0];
 
       if (pedido) {
-        const isDomicilio = pedido.modalidad === 'DOMICILIO';
+        const isDomicilio = (pedido.modalidad || '').toLowerCase() === 'domicilio';
         // Target state: empacado for domicilio, listo_para_servir for local/retiro
         const targetState = isDomicilio ? 'empacado' : 'listo_para_servir';
 

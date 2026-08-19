@@ -384,7 +384,7 @@ function getOrderSteps(modalidad: string | null) {
     return [
       { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por el restaurante' },
       { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
-      { key: 'empacado', label: 'Empacado', icon: '📦', desc: 'Listo para enviar' },
+      { key: 'empacado', label: 'Listo', icon: '📦', desc: 'Tu pedido está listo para envío' },
       { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'El repartidor va hacia ti' },
       { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
     ];
@@ -393,7 +393,6 @@ function getOrderSteps(modalidad: string | null) {
     return [
       { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido' },
       { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
-      { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Empacando tu orden' },
       { key: 'listo_para_servir', label: 'Listo', icon: '🛍️', desc: '¡Pasa a recoger tu pedido!' },
       { key: 'servido', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
     ];
@@ -402,8 +401,7 @@ function getOrderSteps(modalidad: string | null) {
   return [
     { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
     { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
-    { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
-    { key: 'listo_para_servir', label: 'Mesero', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
+    { key: 'listo_para_servir', label: 'Mesero', icon: '🍽️', desc: 'Mesero asignado, en camino a tu mesa' },
     { key: 'servido', label: 'Servido', icon: '✅', desc: '¡Buen provecho!' },
   ];
 }
@@ -411,6 +409,8 @@ function getOrderSteps(modalidad: string | null) {
 function mapEstadoUnified(apiEstado: string, modalidad: string | null): string {
   if (apiEstado === 'servido') return 'servido';
   if (apiEstado === 'listo' || apiEstado === 'listo_para_servir') return 'listo_para_servir';
+  // For LOCAL/RETIRO, empacado maps to listo_para_servir (we skip that step in the UI)
+  if ((apiEstado === 'empacado' || apiEstado === 'empaquetado') && modalidad !== 'DOMICILIO') return 'listo_para_servir';
   if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
   if (apiEstado === 'en_camino') return 'en_camino';
   if (apiEstado === 'entregado') return 'entregado';

@@ -269,7 +269,9 @@ function BarCard({ pedido, buttonLabel, buttonColor, onAction, updating }: {
 
       {!buttonLabel && (
         <div className="py-2 rounded-xl bg-green-500/5 border border-green-500/10 text-center">
-          <span className="text-[10px] text-green-400 font-bold">✓ Lista para entregar</span>
+          <span className="text-[10px] text-green-400 font-bold">
+            ✓ {pedido.meseroNombre ? `Para ${pedido.meseroNombre}` : 'Lista para entregar'}
+          </span>
         </div>
       )}
     </div>

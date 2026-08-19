@@ -90,29 +90,27 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
 
   // Select a suggestion
   const handleSelect = (sugerencia: Sugerencia) => {
-    // Format address nicely, preserving the user's typed number if Nominatim didn't return one
-    const addr = sugerencia.address;
-    let formatted = '';
+    // For Mexican addresses, display_name is the most complete source.
+    // Take the first 4-5 segments which typically contain:
+    // street, neighbourhood/suburb, municipality, state, CP
+    const displayParts = sugerencia.display_name.split(',').map(p => p.trim());
+    // Remove country ("México") and state duplicate if present
+    const useful = displayParts.filter(p => p !== 'México' && p !== 'Mexico').slice(0, 4);
 
-    if (addr) {
-      const parts = [];
-      if (addr.road) parts.push(addr.road);
-      // If Nominatim has house_number, use it. Otherwise try to extract from user input.
-      if (addr.house_number) {
-        parts.push(`#${addr.house_number}`);
-      } else {
-        // Try to find a number in what the user typed (e.g., "108" from "Calle Plutarco 108")
-        const numMatch = value.match(/\b(\d{1,5})\b/);
-        if (numMatch) parts.push(`#${numMatch[1]}`);
-      }
-      if (addr.neighbourhood || addr.suburb) parts.push(addr.neighbourhood || addr.suburb);
-      if (addr.city) parts.push(addr.city);
-      if (addr.postcode) parts.push(`CP ${addr.postcode}`);
-      formatted = parts.join(', ');
+    // Try to include user's typed number if not already in the address
+    const numMatch = value.match(/\b(\d{1,5})\b/);
+    let finalAddress = useful.join(', ');
+    if (numMatch && !finalAddress.includes(numMatch[1])) {
+      // Insert number after the first part (street name)
+      finalAddress = `${useful[0]} #${numMatch[1]}, ${useful.slice(1).join(', ')}`;
     }
 
-    // Use formatted if we got address parts, otherwise use display_name cleaned up
-    const finalAddress = formatted || sugerencia.display_name.split(',').slice(0, 5).join(',').trim();
+    // Add CP if available and not already present
+    const addr = sugerencia.address;
+    if (addr?.postcode && !finalAddress.includes(addr.postcode)) {
+      finalAddress += `, CP ${addr.postcode}`;
+    }
+
     onChange(finalAddress);
     setShowDropdown(false);
     setSugerencias([]);
@@ -165,19 +163,18 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
       {showDropdown && sugerencias.length > 0 && (
         <div className="absolute z-50 w-full mt-1 rounded-xl bg-[#1a1a24] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden animate-fade-in">
           {sugerencias.map((s, i) => {
+            // Use display_name segments for Mexican addresses (structured address is often incomplete)
+            const displayParts = s.display_name.split(',').map(p => p.trim());
+            // Main text: first 2-3 meaningful parts (street + area)
+            const mainText = displayParts.slice(0, 2).join(', ');
+            // Secondary: remaining useful parts (city, state, CP)
             const addr = s.address;
-            // Main line: street + number (if available)
-            const mainText = addr?.road
-              ? `${addr.road}${addr.house_number ? ' ' + addr.house_number : ''}`
-              : s.display_name.split(',')[0];
-            // Secondary line: neighbourhood/suburb, city, CP — all useful context
             const secondaryParts = [];
             if (addr?.neighbourhood || addr?.suburb) secondaryParts.push(addr.neighbourhood || addr.suburb);
-            if (addr?.city && addr.city !== (addr?.neighbourhood || addr?.suburb)) secondaryParts.push(addr.city);
+            else if (displayParts[2]) secondaryParts.push(displayParts[2]);
             if (addr?.postcode) secondaryParts.push(`CP ${addr.postcode}`);
-            const secondaryText = secondaryParts.length > 0
-              ? secondaryParts.join(', ')
-              : s.display_name.split(',').slice(1, 4).join(',').trim();
+            else if (displayParts.length > 3) secondaryParts.push(displayParts[3]);
+            const secondaryText = secondaryParts.join(', ');
 
             return (
               <button

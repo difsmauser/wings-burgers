@@ -84,8 +84,8 @@ export class CrearPedido {
       }
     }
 
-    // 4. Generar número de pedido único
-    const numero = generarNumeroPedido();
+    // 4. Generar número de pedido único con prefijo según modalidad/canal
+    const numero = generarNumeroPedido(input.modalidad, input.observaciones);
 
     // 5. Crear entidad Pedido en estado RECIBIDO
     const pedido = Pedido.crear({
@@ -137,15 +137,31 @@ export class CrearPedido {
 }
 
 /**
- * Genera un número de pedido con formato PED-YYYYMMDD-XXXX.
+ * Genera un número de pedido con prefijo según canal/modalidad:
+ * - MES-YYYYMMDD-XXXX (mesa QR, local)
+ * - DOM-YYYYMMDD-XXXX (domicilio)
+ * - LLEVAR-YYYYMMDD-XXXX (para llevar/retiro)
  */
-function generarNumeroPedido(): string {
+function generarNumeroPedido(modalidad?: unknown, observaciones?: string | null): string {
   const ahora = new Date();
   const fecha = ahora.toISOString().slice(0, 10).replace(/-/g, '');
   const aleatorio = Math.floor(Math.random() * 10000)
     .toString()
     .padStart(4, '0');
-  return `PED-${fecha}-${aleatorio}`;
+
+  const mod = String(modalidad || '').toLowerCase();
+  const obs = observaciones || '';
+
+  let prefix = 'PED';
+  if (mod === 'domicilio') {
+    prefix = 'DOM';
+  } else if (obs.includes('[PARA_LLEVAR]') || mod === 'retiro') {
+    prefix = 'LLEVAR';
+  } else if (obs.includes('[QR]') || obs.includes('[MESERO]') || mod === 'local') {
+    prefix = 'MES';
+  }
+
+  return `${prefix}-${fecha}-${aleatorio}`;
 }
 
 /**
