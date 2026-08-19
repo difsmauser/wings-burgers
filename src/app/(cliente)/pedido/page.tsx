@@ -377,188 +377,188 @@ function CarritoVacio({ menuHref }: { menuHref: string }) {
 }
 
 /**
- * Single order status tracker that polls the API.
+ * Premium unified order status tracker step configuration.
  */
-function SingleOrderTracker({ pedidoId, modalidad, numero }: { pedidoId: string; modalidad: string | null; numero?: string }) {
-  const [estado, setEstado] = useState<string>('recibido');
-  const [polling, setPolling] = useState(true);
+function getOrderSteps(modalidad: string | null) {
+  if (modalidad === 'DOMICILIO') {
+    return [
+      { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por el restaurante' },
+      { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
+      { key: 'empacado', label: 'Empacado', icon: '📦', desc: 'Listo para enviar' },
+      { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'El repartidor va hacia ti' },
+      { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
+    ];
+  }
+  if (modalidad === 'RETIRO') {
+    return [
+      { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido' },
+      { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
+      { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Empacando tu orden' },
+      { key: 'listo_para_servir', label: 'Listo', icon: '🛍️', desc: '¡Pasa a recoger tu pedido!' },
+      { key: 'servido', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
+    ];
+  }
+  // LOCAL (mesa)
+  return [
+    { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
+    { key: 'en_preparacion', label: 'Preparando', icon: '🔥', desc: 'Cocinando tu pedido' },
+    { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
+    { key: 'listo_para_servir', label: 'Mesero', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
+    { key: 'servido', label: 'Servido', icon: '✅', desc: '¡Buen provecho!' },
+  ];
+}
 
-  const pasos = modalidad === 'DOMICILIO'
-    ? [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por el restaurante' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Tu comida se está preparando' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Listo para enviar' },
-        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'El repartidor va hacia ti' },
-        { key: 'entregado', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
-      ]
-    : [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando tu pedido' },
-        { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
-        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
-        { key: 'listo', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
-      ];
+function mapEstadoUnified(apiEstado: string, modalidad: string | null): string {
+  if (apiEstado === 'servido') return 'servido';
+  if (apiEstado === 'listo' || apiEstado === 'listo_para_servir') return 'listo_para_servir';
+  if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
+  if (apiEstado === 'en_camino') return 'en_camino';
+  if (apiEstado === 'entregado') return 'entregado';
+  if (apiEstado === 'en_preparacion') return 'en_preparacion';
+  return 'recibido';
+}
 
-  const mapEstado = (apiEstado: string): string => {
-    if (apiEstado === 'servido' || apiEstado === 'listo') return 'listo';
-    if (apiEstado === 'listo_para_servir') return 'en_camino_mesa';
-    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
-    if (apiEstado === 'en_camino') return 'en_camino';
-    if (apiEstado === 'entregado') return 'entregado';
-    if (apiEstado === 'en_preparacion') return 'en_preparacion';
-    return 'recibido';
-  };
-
-  useEffect(() => {
-    if (!pedidoId || !polling) return;
-
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch(`/api/pedidos/${pedidoId}/estado`);
-        if (res.ok) {
-          const json = await res.json();
-          const pedidoData = json?.data || json;
-          const nuevoEstado = mapEstado(pedidoData?.estado || 'recibido');
-          setEstado(nuevoEstado);
-
-          if (nuevoEstado === 'entregado' || nuevoEstado === 'listo') {
-            setPolling(false);
-          }
-        }
-      } catch {
-        // Silently retry on next interval
-      }
-    };
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pedidoId, polling]);
-
-  const currentIdx = pasos.findIndex(p => p.key === estado);
-  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
+/**
+ * Premium order step indicator — unified design for all modalities.
+ * Animated gradient progress, glowing active step, premium feel.
+ */
+function PremiumStepIndicator({ pasos, currentIdx }: { pasos: ReturnType<typeof getOrderSteps>; currentIdx: number }) {
+  const progressPercent = pasos.length > 1 ? (currentIdx / (pasos.length - 1)) * 100 : 0;
 
   return (
-    <div className="rounded-xl bg-[#0d0d14] border border-white/5 p-4">
-      {/* Order number + status */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-bold text-white">
-          {numero ? `#${numero}` : 'Pedido'}
-        </span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-          estado === 'listo' || estado === 'entregado'
-            ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-            : estado === 'en_preparacion'
-            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-            : estado === 'empacado' || estado === 'en_camino_mesa'
-            ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-            : 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
-        }`}>
-          {currentPaso.icon} {currentPaso.label}
-        </span>
+    <div className="relative px-1 py-2">
+      {/* Connection line (background) */}
+      <div className="absolute top-[22px] left-8 right-8 h-[3px] rounded-full bg-white/[0.04]" />
+      {/* Progress line (animated gradient) */}
+      <div
+        className="absolute top-[22px] left-8 h-[3px] rounded-full transition-all duration-1000 ease-out"
+        style={{
+          width: `calc(${progressPercent}% - ${progressPercent > 0 ? '0px' : '0px'})`,
+          maxWidth: 'calc(100% - 64px)',
+          background: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)',
+          boxShadow: '0 0 8px rgba(249, 115, 22, 0.4)',
+        }}
+      />
+
+      {/* Steps */}
+      <div className="relative flex items-start justify-between">
+        {pasos.map((paso, idx) => {
+          const isCompleted = idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+          const isPending = idx > currentIdx;
+
+          return (
+            <div key={paso.key} className="flex flex-col items-center w-0 flex-1">
+              {/* Step circle */}
+              <div className={`
+                relative w-[38px] h-[38px] rounded-full flex items-center justify-center text-sm
+                transition-all duration-700 ease-out
+                ${isCurrent
+                  ? 'bg-gradient-to-br from-brand-400 to-fire-500 text-white shadow-[0_0_20px_rgba(249,115,22,0.5)] scale-110 ring-[3px] ring-fire-500/20'
+                  : isCompleted
+                  ? 'bg-gradient-to-br from-brand-400/90 to-brand-500/90 text-black'
+                  : 'bg-[#16161f] border border-white/[0.08] text-gray-600'
+                }
+              `}>
+                {isCompleted ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <span className={`text-base ${isPending ? 'opacity-40' : ''}`}>{paso.icon}</span>
+                )}
+                {/* Pulse ring for current */}
+                {isCurrent && (
+                  <div className="absolute inset-0 rounded-full bg-fire-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+                )}
+              </div>
+              {/* Label */}
+              <span className={`
+                text-[9px] sm:text-[10px] mt-1.5 font-semibold text-center leading-tight
+                ${isCurrent ? 'text-brand-400' : isCompleted ? 'text-gray-300' : 'text-gray-600'}
+              `}>
+                {paso.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
-
-      {/* Description */}
-      <p className="text-[11px] text-gray-400 mb-3">{currentPaso.desc}</p>
-
-      {/* Progress bar */}
-      <div className="flex items-center gap-1">
-        {pasos.map((paso, idx) => (
-          <div
-            key={paso.key}
-            className={`flex-1 h-2 rounded-full transition-all duration-500 ${
-              idx <= currentIdx ? 'bg-brand-400' : 'bg-white/5'
-            }`}
-          />
-        ))}
-      </div>
-
-      {/* Polling indicator */}
-      {polling && (
-        <div className="mt-2 flex items-center gap-1.5 text-[9px] text-gray-500">
-          <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
-          Actualizando
-        </div>
-      )}
-      {!polling && (
-        <p className="mt-2 text-[10px] text-green-400 font-medium">
-          {currentPaso.icon} {currentPaso.desc}
-        </p>
-      )}
     </div>
   );
 }
 
 /**
- * Individual order card within MesaOrdersTracker.
- * Receives estado from parent (no separate polling needed).
+ * Premium individual order tracker card — used by both mesa and non-mesa flows.
  */
-function MesaOrderCard({ numero, estado, modalidad }: { numero: string; estado: string; modalidad: string | null }) {
-  const pasos = modalidad === 'DOMICILIO'
-    ? [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Listo para enviar' },
-        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'En camino' },
-        { key: 'entregado', label: 'Entregado', icon: '✅', desc: 'Entregado' },
-      ]
-    : [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Pedido recibido por cocina' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Cocinando tu pedido' },
-        { key: 'empacado', label: 'Casi listo', icon: '📦', desc: 'Terminando de preparar' },
-        { key: 'listo_para_servir', label: 'En camino', icon: '🍽️', desc: 'El mesero lleva tu pedido' },
-        { key: 'servido', label: 'Entregado', icon: '✅', desc: 'Buen provecho' },
-      ];
-
-  const mapEstado = (apiEstado: string): string => {
-    if (apiEstado === 'servido') return 'servido';
-    if (apiEstado === 'listo_para_servir' || apiEstado === 'listo') return 'listo_para_servir';
-    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
-    if (apiEstado === 'en_camino') return 'en_camino';
-    if (apiEstado === 'entregado') return 'entregado';
-    if (apiEstado === 'en_preparacion') return 'en_preparacion';
-    return 'recibido';
-  };
-
-  const mappedEstado = mapEstado(estado);
-  const currentIdx = pasos.findIndex(p => p.key === mappedEstado);
-  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
+function PremiumOrderCard({
+  numero,
+  estado,
+  modalidad,
+  desc,
+  polling = true,
+}: {
+  numero: string;
+  estado: string;
+  modalidad: string | null;
+  desc?: string;
+  polling?: boolean;
+}) {
+  const pasos = getOrderSteps(modalidad);
+  const mappedEstado = mapEstadoUnified(estado, modalidad);
+  const currentIdx = Math.max(0, pasos.findIndex(p => p.key === mappedEstado));
+  const currentPaso = pasos[currentIdx];
+  const isTerminal = mappedEstado === 'servido' || mappedEstado === 'entregado';
 
   return (
-    <div className="rounded-xl bg-[#0d0d14] border border-white/5 p-4">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-bold text-white">#{numero}</span>
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-          mappedEstado === 'servido' || mappedEstado === 'entregado'
+    <div className="rounded-2xl bg-[#0e0e16] border border-white/[0.06] p-4 sm:p-5 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.5)]">
+      {/* Header: order number + status badge */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-white tracking-tight">
+            #{numero}
+          </span>
+          {desc && <span className="text-[10px] text-gray-500">{desc}</span>}
+        </div>
+        <span className={`
+          inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-bold
+          ${isTerminal
             ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-            : mappedEstado === 'en_preparacion'
-            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-            : mappedEstado === 'empacado' || mappedEstado === 'listo_para_servir'
+            : currentIdx >= 3
             ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+            : currentIdx >= 1
+            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             : 'bg-brand-500/10 text-brand-400 border border-brand-500/20'
-        }`}>
+          }
+        `}>
           {currentPaso.icon} {currentPaso.label}
         </span>
       </div>
-      <p className="text-[11px] text-gray-400 mb-3">{currentPaso.desc}</p>
-      <div className="flex items-center gap-1">
-        {pasos.map((paso, idx) => (
-          <div
-            key={paso.key}
-            className={`flex-1 h-2 rounded-full transition-all duration-500 ${
-              idx <= currentIdx ? 'bg-brand-400' : 'bg-white/5'
-            }`}
-          />
-        ))}
-      </div>
+
+      {/* Current status description */}
+      <p className="text-xs text-gray-400 mb-4">{currentPaso.desc}</p>
+
+      {/* Premium step indicator */}
+      <PremiumStepIndicator pasos={pasos} currentIdx={currentIdx} />
+
+      {/* Polling / terminal indicator */}
+      {polling && !isTerminal && (
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[9px] text-gray-500">
+          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          Actualizando en tiempo real
+        </div>
+      )}
+      {isTerminal && (
+        <div className="mt-3 text-center">
+          <p className="text-[11px] text-green-400 font-medium">{currentPaso.desc} 🎉</p>
+        </div>
+      )}
     </div>
   );
 }
 
 /**
  * Multi-order tracker for mesa sessions.
- * Shows ALL active orders for the current mesa, with individual progress.
+ * Shows ALL active orders for the current mesa with unified premium design.
  */
 function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
   pedidoIds: string[];
@@ -577,7 +577,6 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
-        // If we have mesaZona, fetch ALL orders for this mesa
         if (mesaZona) {
           const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(mesaZona)}`);
           if (res.ok) {
@@ -586,7 +585,6 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
             setPedidosMesa(activos);
           }
         } else {
-          // Fallback: fetch each pedido individually
           const results = await Promise.all(
             pedidoIds.map(async (id) => {
               const res = await fetch(`/api/pedidos/${id}`);
@@ -599,11 +597,8 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
           );
           setPedidosMesa(results.filter(Boolean));
         }
-      } catch {
-        // silent
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* silent */ }
+      finally { setLoading(false); }
     };
 
     fetchPedidos();
@@ -614,7 +609,7 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 
   if (loading) {
     return (
-      <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-5 text-center">
+      <div className="mt-4 rounded-2xl bg-[#16161f] border border-white/5 p-6 text-center">
         <div className="animate-spin h-5 w-5 border-2 border-brand-400 border-t-transparent rounded-full mx-auto" />
       </div>
     );
@@ -624,28 +619,30 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 
   const totalMesa = pedidosMesa.reduce((sum, p) => sum + (p.total || 0), 0);
   const todosListos = pedidosMesa.every(p =>
-    ['listo', 'servido', 'entregado'].includes(p.estado)
+    ['listo', 'listo_para_servir', 'servido', 'entregado'].includes(p.estado)
   );
 
   return (
-    <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          📋 Tus Pedidos
-          <span className="px-1.5 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold">
-            {pedidosMesa.length}
+    <div className="mt-4 space-y-3 animate-fade-in">
+      {/* Header card */}
+      <div className="rounded-2xl bg-[#16161f] border border-white/5 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            📋 Tus Pedidos
+            <span className="px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold">
+              {pedidosMesa.length}
+            </span>
+          </h3>
+          <span className="text-sm font-bold text-brand-400">
+            Total: {formatPrecio(totalMesa)}
           </span>
-        </h3>
-        <span className="text-sm font-bold text-brand-400">
-          Total: {formatPrecio(totalMesa)}
-        </span>
+        </div>
       </div>
 
-      {/* Individual order trackers — use data from MesaOrdersTracker fetch, no separate polling */}
-      <div className="space-y-2">
+      {/* Individual order trackers */}
+      <div className="space-y-3">
         {pedidosMesa.map((pedido) => (
-          <MesaOrderCard
+          <PremiumOrderCard
             key={pedido.id}
             numero={pedido.numero}
             estado={pedido.estado}
@@ -654,10 +651,10 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
         ))}
       </div>
 
-      {/* Summary */}
+      {/* All done? Show pay button */}
       {todosListos && (
-        <div className="mt-3 space-y-3">
-          <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+        <div className="space-y-3">
+          <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/10 text-center">
             <p className="text-xs text-green-400 font-medium">
               🎉 ¡Todos tus pedidos están listos!
             </p>
@@ -672,7 +669,7 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
       )}
 
       {!todosListos && (
-        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-gray-500">
+        <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 py-1">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           Actualizando en tiempo real
         </div>
@@ -682,37 +679,13 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
 }
 
 /**
- * Legacy single-order tracker for backward compatibility (non-mesa orders).
+ * Single-order tracker for non-mesa flows (domicilio, para llevar).
+ * Polls the API and shows the premium unified tracker.
  */
 function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null; modalidad: string | null }) {
   const [estado, setEstado] = useState<string>('recibido');
   const [polling, setPolling] = useState(true);
-
-  const pasos = modalidad === 'DOMICILIO'
-    ? [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Tu pedido está listo para salir' },
-        { key: 'en_camino', label: 'En camino', icon: '🛵', desc: 'Tu pedido va en camino' },
-        { key: 'entregado', label: 'Entregado', icon: '✅', desc: '¡Buen provecho!' },
-      ]
-    : [
-        { key: 'recibido', label: 'Recibido', icon: '📋', desc: 'Tu pedido fue recibido' },
-        { key: 'en_preparacion', label: 'Preparando', icon: '👨‍🍳', desc: 'Estamos preparando tu pedido' },
-        { key: 'empacado', label: 'Empaquetado', icon: '📦', desc: 'Casi listo...' },
-        { key: 'en_camino_mesa', label: 'En camino', icon: '🍽️', desc: 'Tu mesero va en camino a tu mesa' },
-        { key: 'listo', label: 'Listo', icon: '✅', desc: modalidad === 'RETIRO' ? '¡Pasa a recoger!' : '¡Buen provecho!' },
-      ];
-
-  const mapEstado = (apiEstado: string): string => {
-    if (apiEstado === 'servido' || apiEstado === 'listo') return 'listo';
-    if (apiEstado === 'listo_para_servir') return 'en_camino_mesa';
-    if (apiEstado === 'empacado' || apiEstado === 'empaquetado') return 'empacado';
-    if (apiEstado === 'en_camino') return 'en_camino';
-    if (apiEstado === 'entregado') return 'entregado';
-    if (apiEstado === 'en_preparacion') return 'en_preparacion';
-    return 'recibido';
-  };
+  const [numero, setNumero] = useState<string>('');
 
   useEffect(() => {
     if (!pedidoId || !polling) return;
@@ -723,16 +696,15 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
         if (res.ok) {
           const json = await res.json();
           const pedidoData = json?.data || json;
-          const nuevoEstado = mapEstado(pedidoData?.estado || 'recibido');
+          const nuevoEstado = pedidoData?.estado || 'recibido';
           setEstado(nuevoEstado);
+          if (pedidoData?.numero) setNumero(pedidoData.numero);
 
-          if (nuevoEstado === 'entregado' || nuevoEstado === 'listo') {
+          if (['servido', 'entregado', 'listo'].includes(nuevoEstado)) {
             setPolling(false);
           }
         }
-      } catch {
-        // Silently retry on next interval
-      }
+      } catch { /* retry on next interval */ }
     };
 
     fetchStatus();
@@ -741,69 +713,20 @@ function PedidoStatusTracker({ pedidoId, modalidad }: { pedidoId: string | null;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId, polling]);
 
-  const currentIdx = pasos.findIndex(p => p.key === estado);
-  const currentPaso = pasos[currentIdx >= 0 ? currentIdx : 0];
+  if (!pedidoId) return null;
 
   return (
-    <div className="mt-4 rounded-xl bg-[#16161f] border border-white/5 p-5 animate-fade-in">
-      {/* Current status message */}
-      <div className="text-center mb-6">
-        <span className="text-4xl block mb-2" aria-hidden="true">{currentPaso.icon}</span>
-        <h3 className="text-base font-bold text-white">{currentPaso.label}</h3>
-        <p className="text-xs text-gray-400 mt-1">{currentPaso.desc}</p>
-      </div>
-
-      {/* Progress steps */}
-      <div className="flex items-center justify-between relative px-2">
-        {/* Background line */}
-        <div className="absolute top-4 left-4 right-4 h-0.5 bg-white/5" />
-        {/* Progress line */}
-        <div
-          className="absolute top-4 left-4 h-0.5 bg-brand-400 transition-all duration-1000"
-          style={{ width: `${Math.max(0, (currentIdx / (pasos.length - 1)) * 100)}%`, maxWidth: 'calc(100% - 32px)' }}
-        />
-
-        {pasos.map((paso, idx) => {
-          const isCompleted = idx <= currentIdx;
-          const isCurrent = idx === currentIdx;
-          return (
-            <div key={paso.key} className="flex flex-col items-center relative z-10">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all duration-500 ${
-                isCurrent ? 'bg-brand-500 text-black ring-4 ring-brand-500/20 scale-110' :
-                isCompleted ? 'bg-brand-500/80 text-black' :
-                'bg-[#0d0d14] border border-white/10 text-gray-600'
-              }`}>
-                {isCompleted ? (idx === currentIdx ? paso.icon : '✓') : (idx + 1)}
-              </div>
-              <span className={`text-[9px] mt-1.5 font-medium ${isCurrent ? 'text-brand-400' : isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
-                {paso.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Polling indicator */}
-      {polling && (
-        <div className="mt-4 flex items-center justify-center gap-2 text-[10px] text-gray-500">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-          Actualizando en tiempo real
-        </div>
-      )}
-
-      {/* Final state message */}
-      {!polling && (
-        <div className="mt-4 text-center">
-          <p className="text-xs text-green-400 font-medium">
-            {modalidad === 'DOMICILIO' ? '¡Tu pedido ha sido entregado! Buen provecho 🎉' :
-             modalidad === 'RETIRO' ? '¡Tu pedido está listo! Pasa a recogerlo 🎉' :
-             '¡Tu pedido está listo! Llegará a tu mesa en un momento 🎉'}
-          </p>
-        </div>
-      )}
+    <div className="mt-4 animate-fade-in">
+      <PremiumOrderCard
+        numero={numero || pedidoId.slice(-4)}
+        estado={estado}
+        modalidad={modalidad}
+        polling={polling}
+      />
     </div>
   );
 }
+
 
 /**
  * Order summary section showing subtotal, IVA (16%), and total.
