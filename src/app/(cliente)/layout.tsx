@@ -32,34 +32,12 @@ function ClienteLayoutInner({ children }: { children: ReactNode }) {
             </div>
           </div>
         </div>
-        {/* Animated fire bottom border — SVG flames */}
-        <div className="relative h-3 overflow-visible pointer-events-none">
-          <svg
-            className="absolute bottom-0 left-0 w-full h-6"
-            viewBox="0 0 1200 24"
-            preserveAspectRatio="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="flame-grad-1" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#dc2626" stopOpacity="0.9" />
-                <stop offset="50%" stopColor="#f97316" stopOpacity="0.7" />
-                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="flame-grad-2" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#f97316" stopOpacity="0.8" />
-                <stop offset="60%" stopColor="#fbbf24" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#fcd34d" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            {/* Layer 1: larger flames */}
-            <path className="animate-flames-1" fill="url(#flame-grad-1)" d="M0,24 C30,24 40,14 60,10 C80,6 90,16 120,12 C150,8 160,18 200,14 C240,10 250,20 280,16 C310,12 330,22 360,18 C390,14 410,24 440,20 C470,16 490,22 520,18 C550,14 570,24 600,20 C630,16 650,10 680,14 C710,18 730,8 760,12 C790,16 810,6 840,10 C870,14 900,20 930,16 C960,12 980,22 1010,18 C1040,14 1060,24 1090,20 C1120,16 1140,10 1170,14 C1190,16 1200,20 1200,24 Z" />
-            {/* Layer 2: smaller accent flames */}
-            <path className="animate-flames-2" fill="url(#flame-grad-2)" d="M0,24 C20,24 30,18 50,16 C70,14 80,20 110,17 C140,14 150,22 180,19 C210,16 230,24 260,21 C290,18 310,14 340,17 C370,20 390,12 420,15 C450,18 470,24 500,21 C530,18 550,14 580,17 C610,20 630,12 660,15 C690,18 720,24 750,21 C780,18 800,14 830,17 C860,20 880,12 910,15 C940,18 960,24 990,21 C1020,18 1040,14 1070,17 C1100,20 1130,24 1160,21 C1180,19 1200,22 1200,24 Z" />
-          </svg>
-          {/* Glow line at the base */}
-          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-fire-500/80 to-transparent" />
+        {/* Fire bottom edge — organic flames using CSS shapes */}
+        <div className="relative h-[10px] overflow-visible pointer-events-none">
+          {/* Base glow */}
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-fire-500/70 to-transparent blur-[1px]" />
+          {/* Flame tips — small organic bumps */}
+          <div className="absolute bottom-0 left-0 right-0 h-[10px] fire-edge" />
         </div>
       </header>
 
