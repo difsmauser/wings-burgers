@@ -53,10 +53,41 @@ function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
   const [shaking, setShaking] = useState(false);
 
   useEffect(() => {
-    fetch('/api/meseros')
-      .then(res => res.ok ? res.json() : { data: [] })
-      .then(json => setMeserosRegistrados(json.data || []))
-      .catch(() => {})
+    // Fetch meseros directly from Supabase REST API (public, bypasses server-side auth issues)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !anonKey) {
+      // Fallback to API route
+      fetch('/api/meseros')
+        .then(res => res.ok ? res.json() : { data: [] })
+        .then(json => setMeserosRegistrados(json.data || []))
+        .catch(() => {})
+        .finally(() => setLoadingList(false));
+      return;
+    }
+
+    fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin,foto_url&order=nombre.asc`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setMeserosRegistrados(data);
+        } else {
+          // Si Supabase directo no devuelve datos (RLS), intentar vía API
+          return fetch('/api/meseros')
+            .then(res => res.ok ? res.json() : { data: [] })
+            .then(json => setMeserosRegistrados(json.data || []));
+        }
+      })
+      .catch(() => {
+        // Ultimate fallback
+        fetch('/api/meseros')
+          .then(res => res.ok ? res.json() : { data: [] })
+          .then(json => setMeserosRegistrados(json.data || []))
+          .catch(() => {});
+      })
       .finally(() => setLoadingList(false));
   }, []);
 
