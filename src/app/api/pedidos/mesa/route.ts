@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Direct fetch — no SDK, no cache
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/pedido?mesa_zona=eq.${encodeURIComponent(mesaZona)}&estado=neq.cancelado&select=id,numero,estado,modalidad,canal,total,subtotal,impuestos,mesa_zona,observaciones,estado_pago,metodo_pago,mesero_id,mesero_nombre,cliente_id,creado_en,actualizado_en,pedido_detalle(producto_id,cantidad,precio_unitario,precio_total,comentario,personalizaciones,item_estado,producto:producto_id(nombre,categoria,imagen))&order=creado_en.asc`,
+      `${supabaseUrl}/rest/v1/pedido?mesa_zona=eq.${encodeURIComponent(mesaZona)}&estado=neq.cancelado&select=id,numero,estado,modalidad,canal,total,subtotal,impuestos,mesa_zona,observaciones,estado_pago,metodo_pago,mesero_id,mesero_nombre,cliente_id,creado_en,actualizado_en,pedido_detalle(producto_id,cantidad,precio_unitario,precio_total,comentario,personalizaciones,item_estado,producto:producto_id(nombre,categoria,imagen_url))&order=creado_en.asc`,
       {
         headers: {
           'apikey': key,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         productoId: d.producto_id,
         nombre: (d.producto as Record<string, unknown> | null)?.nombre || 'Producto',
         categoria: (d.producto as Record<string, unknown> | null)?.categoria || '',
-        imagenUrl: (d.producto as Record<string, unknown> | null)?.imagen || null,
+        imagenUrl: (d.producto as Record<string, unknown> | null)?.imagen_url || null,
         cantidad: d.cantidad,
         precioUnitario: d.precio_unitario,
         precioTotal: d.precio_total,
