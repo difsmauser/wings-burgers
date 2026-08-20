@@ -8,16 +8,14 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/meseros
  * Lista todos los meseros registrados.
- * Auth: admin, vendedor, caja
+ * Public: needed for mesero login screen (PIN-based auth).
  */
-export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request, ['admin', 'vendedor', 'caja']);
-  if ('respuesta' in auth) return auth.respuesta;
+export async function GET() {
   try {
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('mesero')
-      .select('*')
+      .select('id, nombre, pin, foto_url')
       .eq('activo', true)
       .order('nombre', { ascending: true });
 

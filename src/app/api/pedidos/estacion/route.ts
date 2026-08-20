@@ -116,8 +116,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // 2. Check if ALL items in this pedido are now 'listo'
-    // First get the pedido_id for this item
-    const itemRes = await fetch(`${supabaseUrl}/rest/v1/pedido_detalle?id=eq.${itemId}&select=pedido_id`, {
+    // First get the pedido_id and category for this item
+    const itemRes = await fetch(`${supabaseUrl}/rest/v1/pedido_detalle?id=eq.${itemId}&select=pedido_id,producto:producto_id(categoria)`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
     });
     const itemData = await itemRes.json();
@@ -126,19 +126,33 @@ export async function PUT(request: NextRequest) {
     }
 
     const pedidoId = itemData[0].pedido_id;
+    const itemCategoria = itemData[0].producto?.categoria || '';
+    const barCategories = ['bar', 'bebidas'];
+    const isBarItem = barCategories.includes(itemCategoria);
 
-    // Get ALL items for this pedido
-    const allItemsRes = await fetch(`${supabaseUrl}/rest/v1/pedido_detalle?pedido_id=eq.${pedidoId}&select=item_estado`, {
+    // Get ALL items for this pedido with categories
+    const allItemsRes = await fetch(`${supabaseUrl}/rest/v1/pedido_detalle?pedido_id=eq.${pedidoId}&select=item_estado,producto:producto_id(categoria)`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
     });
-    const allItems = await allItemsRes.json();
+    const allItems = await allItemsRes.json() || [];
 
-    // 3. If ALL items are 'listo', advance pedido through proper state chain
-    //    For LOCAL/RETIRO: advance to listo_para_servir and auto-assign mesero
-    //    For DOMICILIO: advance only to empacado (repartidor picks it up from there)
-    const allListo = (allItems || []).every((i: { item_estado: string }) => i.item_estado === 'listo');
-    if (allListo && allItems.length > 0) {
-      // Get current pedido state and modalidad
+    // Split items by station
+    const stationItems = allItems.filter((i: { producto?: { categoria?: string } }) => {
+      const cat = i.producto?.categoria || '';
+      return isBarItem ? barCategories.includes(cat) : !barCategories.includes(cat);
+    });
+    const otherStationItems = allItems.filter((i: { producto?: { categoria?: string } }) => {
+      const cat = i.producto?.categoria || '';
+      return isBarItem ? !barCategories.includes(cat) : barCategories.includes(cat);
+    });
+
+    // Check if THIS station's items are all listo → assign mesero for pickup
+    const thisStationAllListo = stationItems.every((i: { item_estado: string }) => i.item_estado === 'listo');
+    const allListo = allItems.every((i: { item_estado: string }) => i.item_estado === 'listo');
+
+    // 3. Auto-assign mesero when THIS station finishes (independent of other station)
+    if (thisStationAllListo && stationItems.length > 0 && itemEstado === 'listo') {
+      // Get pedido info to check if mesero assignment is needed
       const pedidoRes = await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=estado,modalidad,mesero_id,mesero_nombre`, {
         headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
       });
@@ -147,35 +161,8 @@ export async function PUT(request: NextRequest) {
 
       if (pedido) {
         const isDomicilio = (pedido.modalidad || '').toLowerCase() === 'domicilio';
-        // Target state: empacado for domicilio, listo_para_servir for local/retiro
-        const targetState = isDomicilio ? 'empacado' : 'listo_para_servir';
 
-        // Build the state chain from current to target
-        const stateChain: string[] = [];
-        const fullChain = isDomicilio
-          ? ['en_preparacion', 'empacado']
-          : ['en_preparacion', 'empacado', 'listo_para_servir'];
-
-        const currentIdx = fullChain.indexOf(pedido.estado);
-        const targetIdx = fullChain.indexOf(targetState);
-
-        if (targetIdx >= 0) {
-          // Add states from current+1 to target (inclusive)
-          const startFrom = currentIdx >= 0 ? currentIdx + 1 : 0;
-          for (let i = startFrom; i <= targetIdx; i++) {
-            stateChain.push(fullChain[i]);
-          }
-        }
-
-        // Apply state transitions
-        for (const nextState of stateChain) {
-          await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`, {
-            method: 'PATCH', headers, cache: 'no-store',
-            body: JSON.stringify({ estado: nextState, actualizado_en: new Date().toISOString() }),
-          });
-        }
-
-        // Auto-assign a mesero only for LOCAL/RETIRO orders when reaching listo_para_servir
+        // Assign mesero for LOCAL/RETIRO orders (even if other station isn't done)
         if (!isDomicilio && !pedido.mesero_id && !pedido.mesero_nombre) {
           try {
             const meserosRes = await fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre&order=nombre.asc`, {
@@ -184,7 +171,7 @@ export async function PUT(request: NextRequest) {
             const meseros = await meserosRes.json();
 
             if (meseros && meseros.length > 0) {
-              const assignmentsRes = await fetch(`${supabaseUrl}/rest/v1/pedido?estado=eq.listo_para_servir&select=mesero_id`, {
+              const assignmentsRes = await fetch(`${supabaseUrl}/rest/v1/pedido?estado=in.(listo_para_servir,en_preparacion,empacado)&mesero_id=not.is.null&select=mesero_id`, {
                 headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
               });
               const assignments = await assignmentsRes.json() || [];
@@ -205,14 +192,43 @@ export async function PUT(request: NextRequest) {
                 body: JSON.stringify({ mesero_id: chosen.id, mesero_nombre: chosen.nombre }),
               });
             }
-          } catch {
-            // Mesero assignment is best-effort
+          } catch { /* best-effort */ }
+        }
+      }
+    }
+
+    // 4. If ALL items across ALL stations are listo, advance pedido state
+    if (allListo && allItems.length > 0) {
+      const pedidoRes2 = await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=estado,modalidad`, {
+        headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
+      });
+      const pedidoData2 = await pedidoRes2.json();
+      const pedido2 = pedidoData2?.[0];
+
+      if (pedido2) {
+        const isDomicilio = (pedido2.modalidad || '').toLowerCase() === 'domicilio';
+        const targetState = isDomicilio ? 'empacado' : 'listo_para_servir';
+
+        const fullChain = isDomicilio
+          ? ['en_preparacion', 'empacado']
+          : ['en_preparacion', 'empacado', 'listo_para_servir'];
+
+        const currentIdx = fullChain.indexOf(pedido2.estado);
+        const targetIdx = fullChain.indexOf(targetState);
+
+        if (targetIdx >= 0) {
+          const startFrom = currentIdx >= 0 ? currentIdx + 1 : 0;
+          for (let i = startFrom; i <= targetIdx; i++) {
+            await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`, {
+              method: 'PATCH', headers, cache: 'no-store',
+              body: JSON.stringify({ estado: fullChain[i], actualizado_en: new Date().toISOString() }),
+            });
           }
         }
       }
     } else {
-      // At least one item is being prepared, ensure pedido is in en_preparacion
-      const somePrep = (allItems || []).some((i: { item_estado: string }) => i.item_estado === 'preparando' || i.item_estado === 'listo');
+      // Not all items are listo yet — ensure pedido is in en_preparacion
+      const somePrep = allItems.some((i: { item_estado: string }) => i.item_estado === 'preparando' || i.item_estado === 'listo');
       if (somePrep) {
         await fetch(`${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&estado=eq.recibido`, {
           method: 'PATCH', headers, cache: 'no-store',
@@ -221,7 +237,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ data: { success: true, allListo } });
+    return NextResponse.json({ data: { success: true, allListo, thisStationAllListo } });
   } catch (e) {
     return NextResponse.json({ error: { message: (e as Error).message } }, { status: 500 });
   }
