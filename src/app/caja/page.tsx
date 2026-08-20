@@ -31,10 +31,10 @@ interface PedidoCaja {
 
 function getCanal(p: PedidoCaja): { label: string; icon: string; color: string } {
   const obs = p.observaciones || '';
-  if (p.modalidad === 'domicilio') return { label: 'Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+  if (p.modalidad === 'domicilio') return { label: 'A Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
   if (obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro') return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
   if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
-  return { label: 'QR Mesa', icon: '📱', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
+  return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
 }
 
 function getEstadoLabel(estado: string): { label: string; color: string } {
@@ -120,18 +120,28 @@ export default function CajaPage() {
   const activos = pedidosHoy.filter(p => p.estadoPago !== 'pagado');
   const pagados = pedidosHoy.filter(p => p.estadoPago === 'pagado');
 
-  // By channel
-  const mesaOrders = activos.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[PARA_LLEVAR]'));
-  const llevarOrders = activos.filter(p => p.observaciones.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro');
+  // By channel — 4 canales de venta
+  const enSucursalOrders = activos.filter(p => {
+    const obs = p.observaciones || '';
+    return (p.modalidad === 'local') && !obs.includes('[PARA_LLEVAR]') && !obs.includes('[MESERO]');
+  });
+  const llevarOrders = activos.filter(p => {
+    const obs = p.observaciones || '';
+    return obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro';
+  });
   const domicilioOrders = activos.filter(p => p.modalidad === 'domicilio');
+  const meseroOrders = activos.filter(p => {
+    const obs = p.observaciones || '';
+    return obs.includes('[MESERO]');
+  });
 
   // KPIs
   const totalEfectivo = pagados.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
   const totalTransfer = pagados.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + p.total, 0);
 
-  // Mesa orders grouped
+  // Mesa orders grouped (En Sucursal)
   const mesaGroups: Record<string, PedidoCaja[]> = {};
-  mesaOrders.forEach(p => {
+  enSucursalOrders.forEach(p => {
     const key = p.mesaZona || 'Sin mesa';
     if (!mesaGroups[key]) mesaGroups[key] = [];
     mesaGroups[key].push(p);
@@ -182,7 +192,7 @@ export default function CajaPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Mesa Map */}
           <div className="lg:col-span-1 rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            <h2 className="text-sm font-bold text-white mb-3">🪑 Mesas</h2>
+            <h2 className="text-sm font-bold text-white mb-3">🍽️ En Sucursal</h2>
             <div className="grid grid-cols-3 gap-2">
               {mesas.map(mesa => {
                 const hasOrders = mesaGroups[`${mesa.nombre} - ${mesa.zona}`]?.length > 0;
@@ -233,37 +243,32 @@ export default function CajaPage() {
           </div>
         </div>
 
-        {/* Orders by Channel */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Orders by Channel — 4 canales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* En Sucursal (sin mesa asignada o sin QR) */}
+          <ChannelSection
+            icon="🍽️" title="En Sucursal" count={enSucursalOrders.length}
+            color="yellow" pedidos={enSucursalOrders}
+            onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
+          />
           {/* Para Llevar */}
-          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-              🛍️ Para Llevar
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 text-[10px] font-bold">{llevarOrders.length}</span>
-            </h2>
-            {llevarOrders.length === 0 ? (
-              <p className="text-xs text-gray-500 text-center py-6">Sin pedidos para llevar</p>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {llevarOrders.map(p => <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />)}
-              </div>
-            )}
-          </div>
-
-          {/* Domicilio */}
-          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-              🛵 Domicilio
-              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold">{domicilioOrders.length}</span>
-            </h2>
-            {domicilioOrders.length === 0 ? (
-              <p className="text-xs text-gray-500 text-center py-6">Sin pedidos a domicilio</p>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {domicilioOrders.map(p => <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />)}
-              </div>
-            )}
-          </div>
+          <ChannelSection
+            icon="🛍️" title="Para Llevar" count={llevarOrders.length}
+            color="amber" pedidos={llevarOrders}
+            onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
+          />
+          {/* A Domicilio */}
+          <ChannelSection
+            icon="🛵" title="A Domicilio" count={domicilioOrders.length}
+            color="green" pedidos={domicilioOrders}
+            onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
+          />
+          {/* Mesero */}
+          <ChannelSection
+            icon="🧑‍🍳" title="Mesero" count={meseroOrders.length}
+            color="blue" pedidos={meseroOrders}
+            onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
+          />
         </div>
 
         {/* Pagados Hoy */}
@@ -421,6 +426,33 @@ function KPI({ icon, label, value, color, border }: { icon: string; label: strin
         <span className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">{label}</span>
       </div>
       <p className={`text-xl font-black ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function ChannelSection({ icon, title, count, color, pedidos, onPay, procesandoId, onDetail }: {
+  icon: string; title: string; count: number; color: string;
+  pedidos: PedidoCaja[];
+  onPay: (id: string, metodo: 'efectivo' | 'transferencia') => void;
+  procesandoId: string | null;
+  onDetail: (p: PedidoCaja) => void;
+}) {
+  const borderColor = color === 'green' ? 'border-green-500/10' : color === 'amber' ? 'border-amber-500/10' : color === 'blue' ? 'border-blue-500/10' : 'border-yellow-500/10';
+  const badgeColor = color === 'green' ? 'bg-green-500/10 text-green-400' : color === 'amber' ? 'bg-amber-500/10 text-amber-400' : color === 'blue' ? 'bg-blue-500/10 text-blue-400' : 'bg-yellow-500/10 text-yellow-400';
+
+  return (
+    <div className={`rounded-2xl bg-[#12121a] border border-white/5 ${borderColor} p-4`}>
+      <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+        {icon} {title}
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}`}>{count}</span>
+      </h2>
+      {pedidos.length === 0 ? (
+        <p className="text-xs text-gray-500 text-center py-6">Sin pedidos</p>
+      ) : (
+        <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
+          {pedidos.map(p => <OrderCard key={p.id} pedido={p} onPay={onPay} procesandoId={procesandoId} onDetail={onDetail} />)}
+        </div>
+      )}
     </div>
   );
 }
