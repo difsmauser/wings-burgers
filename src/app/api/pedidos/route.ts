@@ -216,6 +216,33 @@ export async function POST(request: NextRequest) {
         .from('pedido')
         .update({ canal: canalVenta, numero: newNumero })
         .eq('id', pedido.id);
+
+      // Ensure comments and personalizaciones are saved on items
+      // (bypass domain entity limitation — save directly from frontend payload)
+      if (body.items && Array.isArray(body.items)) {
+        const { data: detalles } = await supabase
+          .from('pedido_detalle')
+          .select('id, producto_id')
+          .eq('pedido_id', pedido.id)
+          .order('id');
+
+        if (detalles && detalles.length === body.items.length) {
+          for (let i = 0; i < detalles.length; i++) {
+            const frontendItem = body.items[i];
+            const updateFields: Record<string, unknown> = {};
+            if (frontendItem.comentario) updateFields.comentario = frontendItem.comentario;
+            if (frontendItem.personalizaciones && Array.isArray(frontendItem.personalizaciones) && frontendItem.personalizaciones.length > 0) {
+              updateFields.personalizaciones = frontendItem.personalizaciones;
+            }
+            if (Object.keys(updateFields).length > 0) {
+              await supabase
+                .from('pedido_detalle')
+                .update(updateFields)
+                .eq('id', detalles[i].id);
+            }
+          }
+        }
+      }
     } catch {
       // Non-critical — canal defaults to MESA_LOCAL in DB
     }
