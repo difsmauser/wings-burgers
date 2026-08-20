@@ -196,60 +196,93 @@ export default function CajaPage() {
           <KPI icon="💰" label="Total Día" value={formatMXN(totalEfectivo + totalTransfer)} color="text-brand-400" border="border-brand-500/20" />
         </div>
 
-        {/* Mesas Map + Detail */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Mesa Map */}
-          <div className="lg:col-span-1 rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            <h2 className="text-sm font-bold text-white mb-3">🪑 Mesas</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {mesas.map(mesa => {
-                const hasOrders = mesaGroups[`${mesa.nombre} - ${mesa.zona}`]?.length > 0;
-                const isSelected = selectedMesa === `${mesa.nombre} - ${mesa.zona}`;
-                return (
-                  <button
-                    key={mesa.id}
-                    onClick={() => setSelectedMesa(hasOrders ? `${mesa.nombre} - ${mesa.zona}` : null)}
-                    className={`p-3 rounded-xl text-center transition-all duration-200 border ${
-                      isSelected ? 'bg-brand-500/20 border-brand-400/40 scale-105 ring-1 ring-brand-400/30'
-                      : hasOrders ? 'bg-red-500/10 border-red-500/30 hover:bg-red-500/20 cursor-pointer'
-                      : 'bg-green-500/5 border-green-500/20 opacity-60'
-                    }`}
-                  >
-                    <span className="text-xs font-bold block">{mesa.nombre.replace('Mesa ', 'M')}</span>
-                    <span className="text-[9px] text-gray-500 block">{mesa.zona}</span>
-                    {hasOrders && (
-                      <span className="text-[9px] text-red-400 font-bold mt-0.5 block">
-                        {mesaGroups[`${mesa.nombre} - ${mesa.zona}`].length} pedido(s)
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+        {/* Mesas — Full width premium grid */}
+        <div className="rounded-2xl bg-[#12121a] border border-white/5 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-white flex items-center gap-2">
+              🪑 Mesas del Restaurante
+              <span className="text-[10px] text-gray-500 font-normal">Toca una mesa ocupada para ver detalles</span>
+            </h2>
+            <div className="flex gap-4 text-[9px] text-gray-500">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500/60"></span>Libre</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>Ocupada</span>
             </div>
           </div>
-
-          {/* Mesa Detail */}
-          <div className="lg:col-span-2 rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            {selectedMesa && selectedMesaOrders.length > 0 ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-bold text-white">📍 {selectedMesa}</h2>
-                  <span className="text-sm font-bold text-brand-400">Total: {formatMXN(selectedMesaOrders.reduce((s, p) => s + p.total, 0))}</span>
-                </div>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {selectedMesaOrders.map(p => (
-                    <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
-                <span className="text-4xl mb-3">🪑</span>
-                <p className="text-sm text-gray-500">Selecciona una mesa ocupada para ver sus pedidos</p>
-              </div>
-            )}
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-5 gap-3">
+            {mesas.map(mesa => {
+              const mesaKey = `${mesa.nombre} - ${mesa.zona}`;
+              const orders = mesaGroups[mesaKey] || [];
+              const hasOrders = orders.length > 0;
+              const totalMesa = orders.reduce((s, p) => s + p.total, 0);
+              return (
+                <button
+                  key={mesa.id}
+                  onClick={() => hasOrders && setSelectedMesa(mesaKey)}
+                  className={`relative p-4 sm:p-5 rounded-2xl text-center transition-all duration-300 border group ${
+                    hasOrders
+                      ? 'bg-gradient-to-br from-red-500/10 to-red-900/10 border-red-500/30 hover:border-red-400/60 hover:scale-[1.03] hover:shadow-[0_0_20px_rgba(239,68,68,0.15)] cursor-pointer'
+                      : 'bg-[#0d0d14] border-white/[0.06] opacity-50'
+                  }`}
+                >
+                  <span className={`text-lg sm:text-xl font-black block ${hasOrders ? 'text-white' : 'text-gray-600'}`}>
+                    {mesa.nombre.replace('Mesa ', 'M')}
+                  </span>
+                  <span className="text-[10px] text-gray-500 block mt-0.5">{mesa.zona}</span>
+                  {hasOrders && (
+                    <>
+                      <span className="text-[10px] text-red-400 font-bold mt-1.5 block">
+                        {orders.length} pedido{orders.length > 1 ? 's' : ''}
+                      </span>
+                      <span className="text-[10px] text-brand-400 font-bold block">
+                        {formatMXN(totalMesa)}
+                      </span>
+                      {/* Glow indicator */}
+                      <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    </>
+                  )}
+                  {!hasOrders && (
+                    <span className="text-[10px] text-green-600 mt-1 block">Libre</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
+
+        {/* Mesa Detail Modal */}
+        {selectedMesa && selectedMesaOrders.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setSelectedMesa(null)}>
+            <div className="w-full max-w-2xl bg-[#12121a] rounded-2xl border border-white/10 overflow-hidden animate-scale-in shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)]" onClick={e => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="p-5 border-b border-white/5 bg-gradient-to-r from-[#12121a] to-[#16161f]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                      📍 {selectedMesa}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {selectedMesaOrders.length} pedido{selectedMesaOrders.length > 1 ? 's' : ''} activo{selectedMesaOrders.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-black text-brand-400">
+                      Total: {formatMXN(selectedMesaOrders.reduce((s, p) => s + p.total, 0))}
+                    </span>
+                    <button onClick={() => setSelectedMesa(null)} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {/* Modal Body */}
+              <div className="p-5 space-y-3 max-h-[65vh] overflow-y-auto">
+                {selectedMesaOrders.map(p => (
+                  <OrderCard key={p.id} pedido={p} onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Orders by Channel — 5 canales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
