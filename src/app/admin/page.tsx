@@ -9,6 +9,7 @@ interface PedidoResumen {
   total: number;
   estado: string;
   estadoPago: string;
+  canal: string;
   mesaZona: string;
   modalidad: string;
   meseroNombre: string;
@@ -45,7 +46,7 @@ export default function AdminDashboardPage() {
             allPedidos.push({
               id: p.id as string, numero: p.numero as string, total: p.total as number || 0,
               estado: p.estado as string, estadoPago: p.estadoPago as string || 'pendiente',
-              mesaZona: p.mesaZona as string || '', modalidad: p.modalidad as string || 'local',
+              canal: p.canal as string || '', mesaZona: p.mesaZona as string || '', modalidad: p.modalidad as string || 'local',
               meseroNombre: p.meseroNombre as string || '', observaciones: p.observaciones as string || '',
               creadoEn: p.creadoEn as string || '',
               items: (p.items as PedidoResumen['items']) || [],
@@ -357,14 +358,16 @@ export default function AdminDashboardPage() {
           ) : (
             <div ref={actividadRef} className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-thin pr-1">
               {recientes.map((p, idx) => {
-                const isQR = p.observaciones.includes('[QR]');
-                const isDomicilio = p.modalidad === 'domicilio';
-                const isParaLlevar = p.observaciones.includes('[PARA_LLEVAR]');
-                const canalColor = isDomicilio ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                  isParaLlevar ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                  isQR ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                  'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                const canalLabel = isDomicilio ? 'Domicilio' : isParaLlevar ? 'Para Llevar' : isQR ? 'QR Mesa' : 'Mesero';
+                const canalMap: Record<string, { color: string; label: string }> = {
+                  MESA_LOCAL: { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', label: 'En Sucursal' },
+                  MESA_LLEVAR: { color: 'bg-amber-500/10 text-amber-400 border-amber-500/20', label: 'Mesa → Llevar' },
+                  MOSTRADOR: { color: 'bg-orange-500/10 text-orange-400 border-orange-500/20', label: 'Mostrador' },
+                  DOMICILIO: { color: 'bg-green-500/10 text-green-400 border-green-500/20', label: 'A Domicilio' },
+                  MESERO: { color: 'bg-blue-500/10 text-blue-400 border-blue-500/20', label: 'Mesero' },
+                };
+                const canalInfo = canalMap[p.canal] || canalMap.MESA_LOCAL;
+                const canalColor = canalInfo.color;
+                const canalLabel = canalInfo.label;
                 const timeAgo = getTimeAgo(p.creadoEn);
 
                 return (

@@ -491,9 +491,8 @@ export default function MenuPage() {
   }, [carritoModalidad, modalidad, userReset, qrCodigo, qrMesa]);
 
   // If QR mesa is already in context (from localStorage), mark as valid.
-  // If the user already chose a modalidad before (carritoModalidad persisted),
-  // restore it. Otherwise default to LOCAL — the mesa is active, don't ask again
-  // unless the user explicitly clicked "Cambiar" (userReset=true).
+  // Only restore modalidad if the user already chose one before (carritoModalidad persisted).
+  // If carritoModalidad is null, DON'T set a default — show the selector instead.
   useEffect(() => {
     if (qrMesa && qrEstado === 'idle' && !qrCodigo && !userReset) {
       setQrEstado('valido');
@@ -502,12 +501,12 @@ export default function MenuPage() {
         mesaZona: qrMesa.mesaZona,
         valido: true,
       });
-      // Restore persisted modalidad, or default to LOCAL since mesa = eating in
-      const restoredModalidad = carritoModalidad || 'LOCAL';
-      setModalidadLocal(restoredModalidad);
-      setModalidadContext(restoredModalidad);
+      // Only restore if user previously chose (don't default to LOCAL)
+      if (carritoModalidad) {
+        setModalidadLocal(carritoModalidad);
+      }
     }
-  }, [qrMesa, qrEstado, qrCodigo, userReset, carritoModalidad, setModalidadContext]);
+  }, [qrMesa, qrEstado, qrCodigo, userReset, carritoModalidad]);
 
   // Derive categories dynamically from fetched products
   const categoriasDinamicas = [
@@ -572,10 +571,12 @@ export default function MenuPage() {
         mesaZona: qrMesa.mesaZona,
         valido: true,
       });
-      // Restore persisted modalidad or default to LOCAL
-      const restoredModalidad = carritoModalidad || 'LOCAL';
-      setModalidadLocal(restoredModalidad);
-      setModalidadContext(restoredModalidad);
+      // Only restore modalidad if user previously chose one
+      // If carritoModalidad is null → show the selector
+      if (carritoModalidad) {
+        setModalidadLocal(carritoModalidad);
+        setModalidadContext(carritoModalidad);
+      }
       return;
     }
 

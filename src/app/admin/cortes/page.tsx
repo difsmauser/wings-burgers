@@ -176,10 +176,14 @@ export default function CortesPage() {
 
   // === Canal classification for table ===
   const getCanal = (p: PedidoCorte): { label: string; color: string } => {
-    if (p.modalidad === 'domicilio') return { label: 'Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (p.observaciones.includes('[PARA_LLEVAR]')) return { label: 'Para Llevar', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
-    if (p.observaciones.includes('[QR]')) return { label: 'QR Mesa', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
-    return { label: 'Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+    switch (p.canal) {
+      case 'MESA_LOCAL': return { label: 'En Sucursal', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
+      case 'MESA_LLEVAR': return { label: 'Mesa → Llevar', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+      case 'MOSTRADOR': return { label: 'Mostrador', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' };
+      case 'DOMICILIO': return { label: 'A Domicilio', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+      case 'MESERO': return { label: 'Mesero', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+      default: return { label: 'En Sucursal', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' };
+    }
   };
 
   // === Cocina vs Bar breakdown ===
