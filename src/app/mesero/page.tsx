@@ -26,16 +26,6 @@ interface PedidoMesero {
 
 const MESERO_STORAGE_KEY = 'alaburguer-mesero-nombre';
 
-const ESTADO_LABELS: Record<string, string> = {
-  listo_para_servir: 'Listo para servir',
-  servido: 'Servido (pendiente cobro)',
-};
-
-const ESTADO_COLORS: Record<string, string> = {
-  listo_para_servir: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  servido: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-};
-
 // ========== Helpers ==========
 
 function parseCanal(canal?: string): string {
@@ -449,30 +439,86 @@ export default function MeseroPage() {
   }
 
   // ========== Main View ==========
+  // Count today's deliveries
+  const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length;
+  const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir').length;
+  const pendientesPago = misPedidos.filter(p => p.estado === 'servido' && p.estadoPago !== 'pagado').length;
+
+  // Separate by channel
+  const getCanal = (p: PedidoMesero): { label: string; icon: string; color: string } => {
+    switch (p.canal) {
+      case 'MESA_LOCAL': return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400' };
+      case 'MESA_LLEVAR': return { label: 'Mesa → Llevar', icon: '🛍️', color: 'text-amber-400' };
+      case 'MOSTRADOR': return { label: 'Mostrador', icon: '📱', color: 'text-orange-400' };
+      case 'DOMICILIO': return { label: 'Domicilio', icon: '🛵', color: 'text-green-400' };
+      default: return { label: 'Mesa', icon: '🍽️', color: 'text-yellow-400' };
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Header */}
-      <header className="bg-[#111118] border-b border-white/5 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🧑‍🍳</span>
-          <div>
-            <h1 className="text-sm font-bold text-white">Mesero: {meseroNombre}</h1>
-            <p className="text-[10px] text-gray-500">
-              {misPedidos.length} asignados &bull; {pedidosDisponibles.length} disponibles
-            </p>
+      {/* Header premium */}
+      <header className="bg-[#111118] border-b border-white/5 px-4 py-3 sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400/20 to-brand-600/20 flex items-center justify-center border border-brand-400/20">
+              <span className="text-lg font-bold text-brand-400">{meseroNombre.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white">{meseroNombre}</h1>
+              <p className="text-[10px] text-gray-500">Módulo Mesero</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchPedidos} className="px-3 py-1.5 rounded-lg text-xs text-gray-400 bg-white/5 border border-white/10 hover:text-white transition-all">
-            🔄
-          </button>
-          <button onClick={handleLogout} className="px-3 py-1.5 rounded-lg text-xs text-gray-400 hover:text-red-400 transition-all">
-            Salir
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mr-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              En línea
+            </div>
+            <button onClick={fetchPedidos} className="p-2 rounded-lg text-gray-400 bg-white/5 border border-white/10 hover:text-white transition-all">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            </button>
+            <button onClick={handleLogout} className="px-3 py-1.5 rounded-lg text-[10px] text-gray-400 hover:text-red-400 border border-white/5 transition-all">
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+      <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
+        {/* KPIs */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="rounded-xl bg-[#12121a] border border-white/5 p-3 text-center">
+            <p className="text-xl font-black text-brand-400">{entregasHoy}</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wider">Entregados</p>
+          </div>
+          <div className="rounded-xl bg-[#12121a] border border-emerald-500/20 p-3 text-center">
+            <p className="text-xl font-black text-emerald-400">{pendientesEntrega}</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wider">Por entregar</p>
+          </div>
+          <div className="rounded-xl bg-[#12121a] border border-amber-500/20 p-3 text-center">
+            <p className="text-xl font-black text-amber-400">{pendientesPago}</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wider">Esp. pago</p>
+          </div>
+          <div className="rounded-xl bg-[#12121a] border border-purple-500/20 p-3 text-center">
+            <p className="text-xl font-black text-purple-400">{pedidosDisponibles.length}</p>
+            <p className="text-[9px] text-gray-500 uppercase tracking-wider">Disponibles</p>
+          </div>
+        </div>
+
+        {/* Notification banner for new orders */}
+        {pedidosDisponibles.length > 0 && (
+          <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3 flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🔔</span>
+              <div>
+                <p className="text-xs font-bold text-emerald-400">{pedidosDisponibles.length} pedido{pedidosDisponibles.length > 1 ? 's' : ''} listo{pedidosDisponibles.length > 1 ? 's' : ''} para recoger</p>
+                <p className="text-[9px] text-gray-500">Toma uno para entregarlo</p>
+              </div>
+            </div>
+            <span className="text-2xl">👆</span>
+          </div>
+        )}
+
         {/* My assigned orders — priority */}
         {misPedidos.length > 0 && (
           <section>
@@ -483,69 +529,66 @@ export default function MeseroPage() {
               </span>
             </h2>
             <div className="space-y-3">
-              {misPedidos.map(pedido => (
-                <div key={pedido.id} className="rounded-xl bg-[#16161f] border border-white/5 p-4 hover:border-brand-400/20 transition-all">
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">#{pedido.numero}</span>
-                      {pedido.mesaZona && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                          📍 {pedido.mesaZona.split(' - ')[0]}
-                        </span>
-                      )}
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${ESTADO_COLORS[pedido.estado] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}>
-                        {ESTADO_LABELS[pedido.estado] || pedido.estado}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold text-brand-400">${pedido.total.toFixed(0)}</span>
-                  </div>
-
-                  {/* Items preview */}
-                  <div className="space-y-0.5 mb-3">
-                    {pedido.items.slice(0, 3).map((item, i) => (
-                      <p key={i} className="text-xs text-gray-400">{item.cantidad}x {item.nombre}</p>
-                    ))}
-                    {pedido.items.length > 3 && <p className="text-[10px] text-gray-600">+{pedido.items.length - 3} más</p>}
-                  </div>
-
-                  {/* Actions based on state */}
-                  {pedido.estado === 'listo_para_servir' && (
-                    <button
-                      onClick={() => marcarServido(pedido.id)}
-                      disabled={procesandoId === pedido.id}
-                      className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
-                    >
-                      {procesandoId === pedido.id ? 'Actualizando...' : '🍽️ Entregar a mesa / mostrador'}
-                    </button>
-                  )}
-
-                  {/* After delivery: show payment status (mesero does NOT collect payment) */}
-                  {pedido.estado === 'servido' && pedido.estadoPago === 'pagado' && (
-                    <div className="space-y-2">
-                      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
-                        <p className="text-xs text-green-400 font-bold">✓ Pagado — {pedido.mesaZona ? 'Liberar mesa' : 'Completado'}</p>
+              {misPedidos.map(pedido => {
+                const canal = getCanal(pedido);
+                return (
+                  <div key={pedido.id} className="rounded-xl bg-[#16161f] border border-white/5 p-4 hover:border-brand-400/20 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-white">#{pedido.numero.split('-').pop()}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border border-white/10 font-medium ${canal.color}`}>{canal.icon} {canal.label}</span>
+                        {pedido.mesaZona && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                            📍 {pedido.mesaZona.split(' - ')[0]}
+                          </span>
+                        )}
                       </div>
-                      {pedido.mesaZona && (
-                        <button
-                          onClick={() => liberarMesa(pedido)}
-                          disabled={procesandoId === pedido.id}
-                          className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-blue-400 to-blue-500 shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
-                        >
-                          {procesandoId === pedido.id ? 'Liberando...' : '🪑 Liberar mesa'}
-                        </button>
-                      )}
+                      <span className="text-sm font-bold text-brand-400">${pedido.total.toFixed(0)}</span>
                     </div>
-                  )}
 
-                  {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
-                    <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
-                      <p className="text-[10px] text-amber-400">⏳ Esperando pago del cliente</p>
-                      <p className="text-[9px] text-gray-600 mt-0.5">El cliente pagará por transferencia o efectivo</p>
+                    {/* Items */}
+                    <div className="space-y-0.5 mb-3">
+                      {pedido.items.map((item, i) => (
+                        <p key={i} className="text-xs text-gray-400"><span className="text-brand-400 font-bold">{item.cantidad}x</span> {item.nombre}</p>
+                      ))}
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Actions */}
+                    {pedido.estado === 'listo_para_servir' && (
+                      <button
+                        onClick={() => marcarServido(pedido.id)}
+                        disabled={procesandoId === pedido.id}
+                        className="w-full py-3 rounded-xl text-xs font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+                      >
+                        {procesandoId === pedido.id ? '⏳ Actualizando...' : '🍽️ Entregar a mesa / mostrador'}
+                      </button>
+                    )}
+
+                    {pedido.estado === 'servido' && pedido.estadoPago === 'pagado' && (
+                      <div className="space-y-2">
+                        <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+                          <p className="text-xs text-green-400 font-bold">✓ Pagado</p>
+                        </div>
+                        {pedido.mesaZona && (
+                          <button
+                            onClick={() => liberarMesa(pedido)}
+                            disabled={procesandoId === pedido.id}
+                            className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                          >
+                            {procesandoId === pedido.id ? 'Liberando...' : '🪑 Liberar mesa'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
+                      <div className="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+                        <p className="text-[10px] text-amber-400 font-medium">⏳ Esperando pago del cliente</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -553,51 +596,53 @@ export default function MeseroPage() {
         {/* Available orders to pick up */}
         <section>
           <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-            📋 Pedidos Disponibles
+            📋 Disponibles para recoger
             {pedidosDisponibles.length > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold animate-pulse">
-                {pedidosDisponibles.length} nuevos
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                {pedidosDisponibles.length}
               </span>
             )}
           </h2>
 
           {pedidosDisponibles.length === 0 ? (
             <div className="rounded-xl bg-[#16161f] border border-white/5 p-8 text-center">
-              <span className="text-4xl block mb-2">☕</span>
-              <p className="text-gray-400 text-sm">No hay pedidos disponibles por el momento</p>
-              <p className="text-gray-600 text-[10px] mt-1">Se actualiza cada 5 segundos</p>
+              <span className="text-4xl block mb-2">✅</span>
+              <p className="text-gray-400 text-sm">Todo entregado — no hay pedidos pendientes</p>
+              <p className="text-gray-600 text-[10px] mt-1">Se actualiza automáticamente cada 5 segundos</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {pedidosDisponibles.map(pedido => (
-                <div key={pedido.id} className="rounded-xl bg-[#16161f] border border-emerald-500/10 p-3 hover:border-emerald-400/30 transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">#{pedido.numero}</span>
-                      {pedido.mesaZona && (
-                        <span className="text-[10px] text-yellow-400">📍 {pedido.mesaZona.split(' - ')[0]}</span>
-                      )}
-                      <span className="text-[10px] text-gray-500">
-                        {pedido.items.length} productos
-                      </span>
+              {pedidosDisponibles.map(pedido => {
+                const canal = getCanal(pedido);
+                return (
+                  <div key={pedido.id} className="rounded-xl bg-[#16161f] border border-emerald-500/10 p-3 hover:border-emerald-400/30 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white">#{pedido.numero.split('-').pop()}</span>
+                        <span className={`text-[9px] ${canal.color}`}>{canal.icon} {canal.label}</span>
+                        {pedido.mesaZona && <span className="text-[10px] text-yellow-400">📍 {pedido.mesaZona.split(' - ')[0]}</span>}
+                      </div>
+                      <span className="text-xs font-bold text-brand-400">${pedido.total.toFixed(0)}</span>
                     </div>
-                    <span className="text-xs font-bold text-brand-400">${pedido.total.toFixed(0)}</span>
+                    <div className="text-[10px] text-gray-500 mb-2">
+                      {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
+                    </div>
+                    <button
+                      onClick={() => tomarPedido(pedido)}
+                      disabled={procesandoId === pedido.id}
+                      className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                    >
+                      {procesandoId === pedido.id ? '⏳ Tomando...' : '✋ Tomar pedido'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => tomarPedido(pedido)}
-                    disabled={procesandoId === pedido.id}
-                    className="w-full py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition-all active:scale-[0.98]"
-                  >
-                    {procesandoId === pedido.id ? 'Tomando...' : '✋ Tomar este pedido'}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
 
-        {/* Link to capture (mesero can also take orders) */}
-        <div className="pt-4 border-t border-white/5">
+        {/* Quick actions */}
+        <div className="pt-4 border-t border-white/5 space-y-2">
           <button
             onClick={() => router.push('/mesero/captura')}
             className="w-full py-3 rounded-xl text-sm font-medium text-brand-400 bg-brand-500/5 border border-brand-400/20 hover:bg-brand-500/10 transition-all"
@@ -612,7 +657,6 @@ export default function MeseroPage() {
           </button>
         </div>
       </div>
-
     </div>
   );
 }
