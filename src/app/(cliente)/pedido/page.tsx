@@ -699,8 +699,8 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
         </div>
       </div>
 
-      {/* Individual order trackers */}
-      <div className="space-y-3">
+      {/* Individual order trackers with their items */}
+      <div className="space-y-4">
         {pedidosMesa.map((pedido) => {
           // Compute per-station progress from items
           const barCategories = ['bar', 'bebidas'];
@@ -716,16 +716,29 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
           };
 
           return (
-            <PremiumOrderCard
-              key={pedido.id}
-              numero={pedido.numero}
-              estado={pedido.estado}
-              modalidad={modalidad}
-              estaciones={{
-                cocina: getStationStatus(cocinaItems),
-                bar: getStationStatus(barItems),
-              }}
-            />
+            <div key={pedido.id} className="space-y-2">
+              <PremiumOrderCard
+                numero={pedido.numero}
+                estado={pedido.estado}
+                modalidad={modalidad}
+                estaciones={{
+                  cocina: getStationStatus(cocinaItems),
+                  bar: getStationStatus(barItems),
+                }}
+              />
+              {/* Items for this order */}
+              <div className="rounded-xl bg-[#0e0e16] border border-white/[0.04] p-3 space-y-2">
+                {pedido.items.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-brand-400 font-bold">{item.cantidad}x</span>
+                      <span className="text-xs text-white">{item.nombre}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{formatPrecio(item.precioUnitario * item.cantidad)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           );
         })}
       </div>
