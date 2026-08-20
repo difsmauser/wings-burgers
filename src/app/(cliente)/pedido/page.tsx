@@ -630,7 +630,7 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
     numero: string;
     estado: string;
     total: number;
-    items: Array<{ nombre: string; categoria?: string; cantidad: number; precioUnitario: number; itemEstado?: string }>;
+    items: Array<{ nombre: string; categoria?: string; imagenUrl?: string | null; cantidad: number; precioUnitario: number; itemEstado?: string }>;
   }>>([]);
   const [loading, setLoading] = useState(true);
 
@@ -729,12 +729,21 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
               {/* Items for this order */}
               <div className="rounded-xl bg-[#0e0e16] border border-white/[0.04] p-3 space-y-2">
                 {pedido.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-brand-400 font-bold">{item.cantidad}x</span>
-                      <span className="text-xs text-white">{item.nombre}</span>
+                  <div key={idx} className="flex items-center gap-3 py-2 border-b border-white/[0.04] last:border-0">
+                    {item.imagenUrl && (
+                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5">
+                        <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-white truncate">
+                          <span className="text-brand-400 font-bold mr-1">{item.cantidad}x</span>
+                          {item.nombre}
+                        </span>
+                        <span className="text-xs text-gray-400 shrink-0 ml-2">{formatPrecio(item.precioUnitario * item.cantidad)}</span>
+                      </div>
                     </div>
-                    <span className="text-xs text-gray-400">{formatPrecio(item.precioUnitario * item.cantidad)}</span>
                   </div>
                 ))}
               </div>
