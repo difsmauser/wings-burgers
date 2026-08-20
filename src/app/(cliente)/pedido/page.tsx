@@ -1118,8 +1118,8 @@ export default function PedidoPage() {
         )}
       </div>
 
-      {/* Real-time status tracker — show when there are active orders on mesa */}
-      {(confirmado || hayPedidosActivos) && qrMesa && (
+      {/* Real-time status tracker — ALWAYS show for mesa when there are active orders */}
+      {qrMesa && (
         <MesaOrdersTracker
           pedidoIds={pedidoIds}
           modalidad={modalidad}
