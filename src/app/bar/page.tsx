@@ -18,6 +18,7 @@ interface PedidoEstacion {
   numero: string;
   estado: string;
   modalidad: string;
+  canal: string;
   mesaZona: string;
   meseroNombre: string;
   observaciones: string;
@@ -27,12 +28,14 @@ interface PedidoEstacion {
 }
 
 function getCanal(pedido: PedidoEstacion): { label: string; icon: string; color: string; bg: string } {
-  const obs = pedido.observaciones || '';
-  if (pedido.modalidad === 'domicilio') return { label: 'Domicilio', icon: '🛵', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' };
-  if (obs.includes('[PARA_LLEVAR]')) return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
-  if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' };
-  if (obs.includes('[QR]')) return { label: 'QR Mesa', icon: '📱', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' };
-  return { label: 'Local', icon: '📋', color: 'text-gray-400', bg: 'bg-white/5 border-white/10' };
+  switch (pedido.canal) {
+    case 'MESA_LOCAL': return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' };
+    case 'MESA_LLEVAR': return { label: 'Mesa → Llevar', icon: '🛍️', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' };
+    case 'MOSTRADOR': return { label: 'Mostrador', icon: '📱', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/20' };
+    case 'DOMICILIO': return { label: 'A Domicilio', icon: '🛵', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/20' };
+    case 'MESERO': return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' };
+    default: return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' };
+  }
 }
 
 function getTimeSince(dateStr: string): { text: string; urgent: boolean; critical: boolean } {

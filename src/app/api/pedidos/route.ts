@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       numero: p.numero,
       estado: p.estado,
       modalidad: p.modalidad,
+      canal: p.canal || null,
       total: p.total,
       subtotal: p.subtotal,
       impuestos: p.impuestos,
@@ -166,19 +167,31 @@ export async function POST(request: NextRequest) {
     const container = getContainer();
     const useCase = container.getCrearPedido();
 
-    // Store canal info in observaciones field as prefix: [CANAL:XX]
-    const canal = body.canal as string | undefined;
-    let observaciones = body.observaciones || '';
-    if (canal && ['QR', 'QR_REDES', 'MESERO', 'PARA_LLEVAR'].includes(canal)) {
-      observaciones = `[${canal}] ${observaciones}`.trim();
+    // Determine the sales channel (5 channels)
+    const rawCanal = body.canal as string | undefined;
+    const modalidadLower = (body.modalidad as string || 'local').toLowerCase();
+    const hasMesa = !!body.mesaZona;
+
+    let canalVenta: string;
+    if (modalidadLower === 'domicilio') {
+      canalVenta = 'DOMICILIO';
+    } else if (rawCanal === 'MESERO') {
+      canalVenta = 'MESERO';
+    } else if (rawCanal === 'PARA_LLEVAR' || modalidadLower === 'retiro') {
+      canalVenta = hasMesa ? 'MESA_LLEVAR' : 'MOSTRADOR';
+    } else {
+      // QR mesa or default local
+      canalVenta = 'MESA_LOCAL';
     }
+
+    // Observaciones: clean, no channel prefixes
+    const observaciones = (body.observaciones || '').trim();
 
     const pedido = await useCase.ejecutar({
       nombre: body.nombre,
       telefono: body.telefono,
       modalidad: (() => {
-        const m = (body.modalidad as string || 'local').toLowerCase();
-        if (m === 'domicilio') return ModalidadServicio.DOMICILIO;
+        if (modalidadLower === 'domicilio') return ModalidadServicio.DOMICILIO;
         return ModalidadServicio.LOCAL;
       })(),
       items: body.items,
@@ -186,25 +199,44 @@ export async function POST(request: NextRequest) {
       observaciones,
     });
 
+    // Save the canal field and update the order number prefix
+    try {
+      const supabase = createServerClient();
+      // Generate proper prefix based on channel
+      const prefixMap: Record<string, string> = {
+        MESA_LOCAL: 'MES', MESA_LLEVAR: 'LLEVAR', MOSTRADOR: 'LLEVAR', DOMICILIO: 'DOM', MESERO: 'MES',
+      };
+      const prefix = prefixMap[canalVenta] || 'PED';
+      const currentNumero = pedido.numero as string;
+      // Replace the prefix part (e.g., PED-20260819-1234 → MES-20260819-1234)
+      const datePart = currentNumero.replace(/^[A-Z]+-/, '');
+      const newNumero = `${prefix}-${datePart}`;
+
+      await supabase
+        .from('pedido')
+        .update({ canal: canalVenta, numero: newNumero })
+        .eq('id', pedido.id);
+    } catch {
+      // Non-critical — canal defaults to MESA_LOCAL in DB
+    }
+
     // Mark mesa as occupied if order includes mesaZona (QR-based order)
     if (body.mesaZona) {
       try {
         const supabase = createServerClient();
-        // mesaZona format is "Mesa 1 - Interior" → extract "Mesa 1" part
         const mesaNombre = body.mesaZona.split(' - ')[0];
-        // Only mark as occupied if not already occupied (don't overwrite pedido_activo_id for multi-order)
         await supabase
           .from('mesa')
           .update({ estado: 'ocupada' })
           .ilike('nombre', mesaNombre)
           .in('estado', ['disponible', 'ocupada']);
       } catch {
-        // Non-critical: don't fail the order if mesa update fails
+        // Non-critical
       }
     }
 
     // If order was taken by a mesero (canal=MESERO), auto-assign that mesero
-    if (canal === 'MESERO' && body.meseroNombre) {
+    if (canalVenta === 'MESERO' && body.meseroNombre) {
       try {
         const supabase = createServerClient();
         await supabase

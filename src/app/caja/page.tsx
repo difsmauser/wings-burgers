@@ -18,6 +18,7 @@ interface PedidoCaja {
   numero: string;
   estado: string;
   modalidad: string;
+  canal: string;
   observaciones: string;
   clienteNombre: string;
   total: number;
@@ -30,11 +31,21 @@ interface PedidoCaja {
 }
 
 function getCanal(p: PedidoCaja): { label: string; icon: string; color: string } {
-  const obs = p.observaciones || '';
-  if (p.modalidad === 'domicilio') return { label: 'A Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
-  if (obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro') return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
-  if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
-  return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
+  switch (p.canal) {
+    case 'MESA_LOCAL': return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
+    case 'MESA_LLEVAR': return { label: 'Mesa → Llevar', icon: '🛍️', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+    case 'MOSTRADOR': return { label: 'Mostrador', icon: '📱', color: 'text-orange-400 bg-orange-500/10 border-orange-500/20' };
+    case 'DOMICILIO': return { label: 'A Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+    case 'MESERO': return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+    default: {
+      // Fallback for old orders without canal field — infer from observaciones
+      const obs = p.observaciones || '';
+      if (p.modalidad === 'domicilio') return { label: 'A Domicilio', icon: '🛵', color: 'text-green-400 bg-green-500/10 border-green-500/20' };
+      if (obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro') return { label: 'Para Llevar', icon: '🛍️', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' };
+      if (obs.includes('[MESERO]')) return { label: 'Mesero', icon: '🧑‍🍳', color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' };
+      return { label: 'En Sucursal', icon: '🍽️', color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' };
+    }
+  }
 }
 
 function getEstadoLabel(estado: string): { label: string; color: string } {
@@ -77,6 +88,7 @@ export default function CajaPage() {
               numero: p.numero as string,
               estado: p.estado as string || estado,
               modalidad: p.modalidad as string || 'local',
+              canal: p.canal as string || '',
               observaciones: p.observaciones as string || '',
               clienteNombre: (p.clienteNombre as string) || '',
               total: p.total as number || 0,
@@ -120,20 +132,15 @@ export default function CajaPage() {
   const activos = pedidosHoy.filter(p => p.estadoPago !== 'pagado');
   const pagados = pedidosHoy.filter(p => p.estadoPago === 'pagado');
 
-  // By channel — 4 canales de venta
-  const enSucursalOrders = activos.filter(p => {
-    const obs = p.observaciones || '';
-    return (p.modalidad === 'local') && !obs.includes('[PARA_LLEVAR]') && !obs.includes('[MESERO]');
-  });
-  const llevarOrders = activos.filter(p => {
-    const obs = p.observaciones || '';
-    return obs.includes('[PARA_LLEVAR]') || p.modalidad === 'retiro';
-  });
-  const domicilioOrders = activos.filter(p => p.modalidad === 'domicilio');
-  const meseroOrders = activos.filter(p => {
-    const obs = p.observaciones || '';
-    return obs.includes('[MESERO]');
-  });
+  // By channel — 5 canales de venta (from DB field)
+  const enSucursalOrders = activos.filter(p => p.canal === 'MESA_LOCAL');
+  const mesaLlevarOrders = activos.filter(p => p.canal === 'MESA_LLEVAR');
+  const mostradorOrders = activos.filter(p => p.canal === 'MOSTRADOR');
+  const domicilioOrders = activos.filter(p => p.canal === 'DOMICILIO');
+  const meseroOrders = activos.filter(p => p.canal === 'MESERO');
+  // Fallback for orders without canal field (legacy)
+  const sinCanal = activos.filter(p => !p.canal || !['MESA_LOCAL', 'MESA_LLEVAR', 'MOSTRADOR', 'DOMICILIO', 'MESERO'].includes(p.canal));
+  if (sinCanal.length > 0) enSucursalOrders.push(...sinCanal);
 
   // KPIs
   const totalEfectivo = pagados.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
@@ -243,27 +250,28 @@ export default function CajaPage() {
           </div>
         </div>
 
-        {/* Orders by Channel — 4 canales */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* En Sucursal (sin mesa asignada o sin QR) */}
+        {/* Orders by Channel — 5 canales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <ChannelSection
             icon="🍽️" title="En Sucursal" count={enSucursalOrders.length}
             color="yellow" pedidos={enSucursalOrders}
             onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
           />
-          {/* Para Llevar */}
           <ChannelSection
-            icon="🛍️" title="Para Llevar" count={llevarOrders.length}
-            color="amber" pedidos={llevarOrders}
+            icon="🛍️" title="Mesa → Llevar" count={mesaLlevarOrders.length}
+            color="amber" pedidos={mesaLlevarOrders}
             onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
           />
-          {/* A Domicilio */}
+          <ChannelSection
+            icon="📱" title="Mostrador" count={mostradorOrders.length}
+            color="amber" pedidos={mostradorOrders}
+            onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
+          />
           <ChannelSection
             icon="🛵" title="A Domicilio" count={domicilioOrders.length}
             color="green" pedidos={domicilioOrders}
             onPay={marcarPagado} procesandoId={procesandoId} onDetail={setSelectedPedido}
           />
-          {/* Mesero */}
           <ChannelSection
             icon="🧑‍🍳" title="Mesero" count={meseroOrders.length}
             color="blue" pedidos={meseroOrders}

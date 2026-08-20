@@ -8,6 +8,7 @@ interface PedidoCorte {
   total: number;
   estadoPago: string;
   metodoPago: string;
+  canal: string;
   observaciones: string;
   modalidad: string;
   mesaZona: string;
@@ -46,7 +47,7 @@ export default function CortesPage() {
             all.push({
               id: p.id as string, numero: p.numero as string, total: p.total as number || 0,
               estadoPago: p.estadoPago as string || 'pendiente', metodoPago: p.metodoPago as string || '',
-              observaciones: p.observaciones as string || '', modalidad: p.modalidad as string || 'local',
+              canal: p.canal as string || '', observaciones: p.observaciones as string || '', modalidad: p.modalidad as string || 'local',
               mesaZona: p.mesaZona as string || '', meseroNombre: p.meseroNombre as string || '',
               creadoEn: p.creadoEn as string || '', items: (p.items as PedidoCorte['items']) || [],
             });
@@ -150,16 +151,18 @@ export default function CortesPage() {
     { label: 'Otro', value: otroMetodo, color: '#6b7280' },
   ].filter(d => d.value > 0);
 
-  // === By canal (donut data) ===
-  const ventasDomicilio = pagados.filter(p => p.modalidad === 'domicilio').reduce((s, p) => s + p.total, 0);
-  const ventasParaLlevar = pagados.filter(p => p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
-  const ventasQR = pagados.filter(p => p.modalidad === 'local' && p.observaciones.includes('[QR]') && !p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
-  const ventasMesero = pagados.filter(p => p.modalidad === 'local' && !p.observaciones.includes('[QR]') && !p.observaciones.includes('[PARA_LLEVAR]')).reduce((s, p) => s + p.total, 0);
+  // === By canal (5 channels from DB field) ===
+  const ventasMesaLocal = pagados.filter(p => p.canal === 'MESA_LOCAL').reduce((s, p) => s + p.total, 0);
+  const ventasMesaLlevar = pagados.filter(p => p.canal === 'MESA_LLEVAR').reduce((s, p) => s + p.total, 0);
+  const ventasMostrador = pagados.filter(p => p.canal === 'MOSTRADOR').reduce((s, p) => s + p.total, 0);
+  const ventasDomicilio = pagados.filter(p => p.canal === 'DOMICILIO').reduce((s, p) => s + p.total, 0);
+  const ventasMesero = pagados.filter(p => p.canal === 'MESERO').reduce((s, p) => s + p.total, 0);
   const canalData = [
-    { label: 'QR Mesa', value: ventasQR, color: '#eab308' },
+    { label: 'En Sucursal', value: ventasMesaLocal, color: '#eab308' },
+    { label: 'Mesa → Llevar', value: ventasMesaLlevar, color: '#f59e0b' },
+    { label: 'Mostrador', value: ventasMostrador, color: '#fb923c' },
+    { label: 'A Domicilio', value: ventasDomicilio, color: '#22c55e' },
     { label: 'Mesero', value: ventasMesero, color: '#3b82f6' },
-    { label: 'Para Llevar', value: ventasParaLlevar, color: '#f59e0b' },
-    { label: 'Domicilio', value: ventasDomicilio, color: '#22c55e' },
   ].filter(d => d.value > 0);
 
   // === Ventas por día (bar chart) ===

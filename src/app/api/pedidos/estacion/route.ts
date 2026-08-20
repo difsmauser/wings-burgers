@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     for (const estado of estados) {
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/pedido?estado=eq.${estado}&select=id,numero,estado,modalidad,total,mesa_zona,observaciones,mesero_nombre,creado_en,actualizado_en,pedido_detalle(id,producto_id,cantidad,precio_unitario,comentario,personalizaciones,item_estado,producto:producto_id(nombre,categoria))&order=creado_en.asc`,
+        `${supabaseUrl}/rest/v1/pedido?estado=eq.${estado}&select=id,numero,estado,modalidad,canal,total,mesa_zona,observaciones,mesero_nombre,creado_en,actualizado_en,pedido_detalle(id,producto_id,cantidad,precio_unitario,comentario,personalizaciones,item_estado,producto:producto_id(nombre,categoria))&order=creado_en.asc`,
         { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' }
       );
       if (res.ok) {
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
           numero: pedido.numero,
           estado: pedido.estado,
           modalidad: pedido.modalidad,
+          canal: pedido.canal || null,
           total: pedido.total,
           mesaZona: pedido.mesa_zona,
           meseroNombre: pedido.mesero_nombre,

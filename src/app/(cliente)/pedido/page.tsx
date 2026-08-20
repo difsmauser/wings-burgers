@@ -940,8 +940,21 @@ export default function PedidoPage() {
     }
 
     try {
-      // Determine canal based on context
-      const canal = modalidad === 'DOMICILIO' ? 'QR_REDES' : modalidad === 'RETIRO' ? 'PARA_LLEVAR' : 'QR';
+      // Determine canal based on context (5 channels)
+      let canal: string;
+      if (modalidad === 'DOMICILIO') {
+        canal = 'DOMICILIO';
+      } else if (modalidad === 'RETIRO' || modalidad === 'LOCAL') {
+        if (qrMesa) {
+          // Has QR mesa context
+          canal = modalidad === 'RETIRO' ? 'MESA_LLEVAR' : 'MESA_LOCAL';
+        } else {
+          // No QR context — direct access (mostrador)
+          canal = 'MOSTRADOR';
+        }
+      } else {
+        canal = qrMesa ? 'MESA_LOCAL' : 'MOSTRADOR';
+      }
 
       const payload = {
         nombre,

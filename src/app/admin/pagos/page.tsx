@@ -8,6 +8,7 @@ interface PedidoPago {
   total: number;
   estadoPago: string;
   metodoPago: string;
+  canal: string;
   modalidad: string;
   observaciones: string;
   mesaZona: string;
@@ -18,12 +19,14 @@ interface PedidoPago {
 type Periodo = 'hoy' | 'semana' | 'mes';
 
 function getCanal(p: PedidoPago): string {
-  const obs = p.observaciones || '';
-  if (p.modalidad === 'domicilio') return 'Domicilio';
-  if (obs.includes('[PARA_LLEVAR]')) return 'Para Llevar';
-  if (obs.includes('[MESERO]')) return 'Mesero';
-  if (obs.includes('[QR]')) return 'QR Mesa';
-  return 'Local';
+  switch (p.canal) {
+    case 'MESA_LOCAL': return 'En Sucursal';
+    case 'MESA_LLEVAR': return 'Mesa → Llevar';
+    case 'MOSTRADOR': return 'Mostrador';
+    case 'DOMICILIO': return 'A Domicilio';
+    case 'MESERO': return 'Mesero';
+    default: return 'En Sucursal';
+  }
 }
 
 export default function PagosPage() {
@@ -44,7 +47,7 @@ export default function PagosPage() {
             all.push({
               id: p.id as string, numero: p.numero as string, total: p.total as number || 0,
               estadoPago: p.estadoPago as string || 'pendiente', metodoPago: p.metodoPago as string || '',
-              modalidad: p.modalidad as string || 'local', observaciones: p.observaciones as string || '',
+              canal: p.canal as string || '', modalidad: p.modalidad as string || 'local', observaciones: p.observaciones as string || '',
               mesaZona: p.mesaZona as string || '', meseroNombre: p.meseroNombre as string || '',
               creadoEn: p.creadoEn as string || '',
             });
