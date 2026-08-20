@@ -38,10 +38,8 @@ const ESTADO_COLORS: Record<string, string> = {
 
 // ========== Helpers ==========
 
-function parseCanal(obs?: string): string {
-  if (!obs) return 'QR';
-  const m = obs.match(/\[(QR|QR_REDES|MESERO)\]/);
-  return m ? m[1] : 'QR';
+function parseCanal(canal?: string): string {
+  return canal || 'MESA_LOCAL';
 }
 
 // ========== Login Component (PIN + Photo) ==========
@@ -282,7 +280,7 @@ export default function MeseroPage() {
           numero: p.numero as string,
           estado: p.estado as string,
           modalidad: p.modalidad as string || 'local',
-          canal: parseCanal(p.observaciones as string),
+          canal: parseCanal(p.canal as string),
           clienteNombre: p.clienteNombre as string || '',
           items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
           total: p.total as number || 0,
@@ -305,7 +303,7 @@ export default function MeseroPage() {
           numero: p.numero as string,
           estado: p.estado as string,
           modalidad: p.modalidad as string || 'local',
-          canal: parseCanal(p.observaciones as string),
+          canal: parseCanal(p.canal as string),
           clienteNombre: p.clienteNombre as string || '',
           items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
           total: p.total as number || 0,

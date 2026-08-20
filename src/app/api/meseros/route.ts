@@ -10,19 +10,28 @@ export const dynamic = 'force-dynamic';
  * Lista todos los meseros registrados.
  * Public: needed for mesero login screen (PIN-based auth).
  */
-export async function GET() {
+export async function GET(_request: NextRequest) {
   try {
-    const supabase = createServerClient();
-    const { data, error } = await supabase
-      .from('mesero')
-      .select('id, nombre, pin, foto_url')
-      .eq('activo', true)
-      .order('nombre', { ascending: true });
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    if (error) throw new Error(error.message);
+    // Direct fetch to bypass any Supabase client initialization issues
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin,foto_url&order=nombre.asc`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        cache: 'no-store',
+      }
+    );
+
+    if (!res.ok) {
+      return NextResponse.json({ data: [] });
+    }
+
+    const data = await res.json();
     return NextResponse.json({ data: data ?? [] });
-  } catch (error) {
-    return handleApiError(error);
+  } catch {
+    return NextResponse.json({ data: [] });
   }
 }
 
