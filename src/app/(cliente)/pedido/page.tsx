@@ -637,26 +637,36 @@ function MesaOrdersTracker({ pedidoIds, modalidad, mesaZona }: {
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
+        let results: typeof pedidosMesa = [];
+
+        // Primary: fetch by mesaZona
         if (mesaZona) {
           const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(mesaZona)}`);
           if (res.ok) {
             const json = await res.json();
-            const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
-            setPedidosMesa(activos);
+            results = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
           }
-        } else {
-          const results = await Promise.all(
+        }
+
+        // Fallback: if mesaZona returned nothing, try individual pedidoIds
+        if (results.length === 0 && pedidoIds.length > 0) {
+          const individual = await Promise.all(
             pedidoIds.map(async (id) => {
-              const res = await fetch(`/api/pedidos/${id}`);
-              if (res.ok) {
-                const json = await res.json();
-                return json?.data || json;
-              }
+              try {
+                const res = await fetch(`/api/pedidos/${id}/estado`);
+                if (res.ok) {
+                  const json = await res.json();
+                  const d = json?.data || json;
+                  return d?.id ? { id: d.id, numero: d.numero || id.slice(-4), estado: d.estado, total: d.total || 0, items: [] } : null;
+                }
+              } catch { /* */ }
               return null;
             })
           );
-          setPedidosMesa(results.filter(Boolean));
+          results = individual.filter(Boolean) as typeof pedidosMesa;
         }
+
+        setPedidosMesa(results);
       } catch { /* silent */ }
       finally { setLoading(false); }
     };
