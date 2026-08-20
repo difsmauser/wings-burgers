@@ -146,9 +146,10 @@ export default function CajaPage() {
   const totalEfectivo = pagados.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
   const totalTransfer = pagados.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + p.total, 0);
 
-  // Mesa orders grouped (En Sucursal)
+  // Mesa orders grouped (ALL mesa orders: En Sucursal + Mesa Llevar)
+  const allMesaOrders = activos.filter(p => p.mesaZona && (p.canal === 'MESA_LOCAL' || p.canal === 'MESA_LLEVAR'));
   const mesaGroups: Record<string, PedidoCaja[]> = {};
-  enSucursalOrders.forEach(p => {
+  allMesaOrders.forEach(p => {
     const key = p.mesaZona || 'Sin mesa';
     if (!mesaGroups[key]) mesaGroups[key] = [];
     mesaGroups[key].push(p);
@@ -199,7 +200,7 @@ export default function CajaPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Mesa Map */}
           <div className="lg:col-span-1 rounded-2xl bg-[#12121a] border border-white/5 p-4">
-            <h2 className="text-sm font-bold text-white mb-3">🍽️ En Sucursal</h2>
+            <h2 className="text-sm font-bold text-white mb-3">🪑 Mesas</h2>
             <div className="grid grid-cols-3 gap-2">
               {mesas.map(mesa => {
                 const hasOrders = mesaGroups[`${mesa.nombre} - ${mesa.zona}`]?.length > 0;
@@ -358,7 +359,21 @@ function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
   const estado = getEstadoLabel(pedido.estado);
   // Payment is only allowed AFTER the order has been served/delivered
   const canPay = ['servido', 'entregado'].includes(pedido.estado);
-  const isWaiting = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir'].includes(pedido.estado);
+
+  // Status message based on actual order state
+  const getStatusMessage = (): { text: string; color: string; icon: string } | null => {
+    if (pedido.estadoPago === 'pagado') return null;
+    if (canPay) return null; // handled separately with pay buttons
+    switch (pedido.estado) {
+      case 'recibido': return { text: 'Recibido por cocina', icon: '📋', color: 'text-brand-400 bg-brand-500/5 border-brand-500/10' };
+      case 'en_preparacion': return { text: 'En preparación', icon: '🔥', color: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
+      case 'empacado': return { text: 'Listo — esperando mesero', icon: '📦', color: 'text-purple-400 bg-purple-500/5 border-purple-500/10' };
+      case 'listo_para_servir': return { text: 'Mesero en camino', icon: '🍽️', color: 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' };
+      default: return null;
+    }
+  };
+
+  const statusMsg = getStatusMessage();
 
   return (
     <div className="rounded-xl bg-[#0d0d14] border border-white/[0.06] p-3 hover:border-white/10 transition-all">
@@ -372,19 +387,22 @@ function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
         </div>
         <span className="text-sm font-bold text-brand-400">{`$${pedido.total.toFixed(0)}`}</span>
       </div>
+      {pedido.mesaZona && (
+        <p className="text-[10px] text-gray-500 mb-1">📍 {pedido.mesaZona}</p>
+      )}
       {pedido.meseroNombre && (
-        <p className="text-[10px] text-cyan-400 mb-2">🧑‍🍳 {pedido.meseroNombre}</p>
+        <p className="text-[10px] text-cyan-400 mb-1">🧑‍🍳 {pedido.meseroNombre}</p>
       )}
       {/* Items preview */}
       <div className="text-[10px] text-gray-500 mb-2 line-clamp-2">
         {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
       </div>
 
-      {/* Status: waiting for delivery */}
-      {isWaiting && pedido.estadoPago !== 'pagado' && (
-        <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
-          <span className="text-[10px] text-amber-400 font-medium">
-            ⏳ Esperando entrega del mesero
+      {/* Real status progression */}
+      {statusMsg && (
+        <div className={`py-2 rounded-lg border text-center ${statusMsg.color}`}>
+          <span className="text-[10px] font-medium">
+            {statusMsg.icon} {statusMsg.text}
           </span>
         </div>
       )}
@@ -398,11 +416,11 @@ function OrderCard({ pedido, onPay, procesandoId, onDetail }: {
           <div className="flex gap-2">
             <button onClick={() => onPay(pedido.id, 'efectivo')} disabled={procesandoId === pedido.id}
               className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-95">
-              💵 Efectivo (mesero)
+              💵 Efectivo
             </button>
             <button onClick={() => onPay(pedido.id, 'transferencia')} disabled={procesandoId === pedido.id}
               className="flex-1 py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all active:scale-95">
-              🏦 Transfer (voucher)
+              🏦 Transfer
             </button>
           </div>
         </div>
