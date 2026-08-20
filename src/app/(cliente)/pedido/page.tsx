@@ -1261,7 +1261,7 @@ export default function PedidoPage() {
         <div className="mt-6 mb-4">
           <Link
             href={qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu'}
-            onClick={() => { limpiarParaNuevoPedido(); }}
+            onClick={() => { if (confirmado) limpiarParaNuevoPedido(); }}
             className="
               block w-full min-h-[44px] py-3 rounded-xl font-medium text-sm text-center
               text-brand-400 bg-brand-50/10 border border-brand-400/20
