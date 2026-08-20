@@ -377,10 +377,10 @@ export default function MeseroPage() {
   const tomarPedido = async (pedido: PedidoMesero) => {
     setProcesandoId(pedido.id);
     try {
-      await fetch(`/api/pedidos/${pedido.id}`, {
-        method: 'PUT',
+      await fetch('/api/mesero/accion', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meseroNombre: meseroNombre, meseroId: meseroNombre }),
+        body: JSON.stringify({ accion: 'tomar', pedidoId: pedido.id, meseroNombre }),
       });
       await fetchPedidos();
     } catch { /* silent */ }
@@ -391,10 +391,10 @@ export default function MeseroPage() {
   const marcarServido = async (pedidoId: string) => {
     setProcesandoId(pedidoId);
     try {
-      await fetch(`/api/pedidos/${pedidoId}`, {
-        method: 'PUT',
+      await fetch('/api/mesero/accion', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'servido' }),
+        body: JSON.stringify({ accion: 'entregar', pedidoId, meseroNombre }),
       });
       await fetchPedidos();
     } catch { /* silent */ }
@@ -407,10 +407,10 @@ export default function MeseroPage() {
     try {
       if (pedido.mesaZona) {
         const mesaNombre = pedido.mesaZona.split(' - ')[0];
-        await fetch('/api/mesas', {
-          method: 'PUT',
+        await fetch('/api/mesero/accion', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre: mesaNombre, estado: 'disponible', pedido_activo_id: null }),
+          body: JSON.stringify({ accion: 'liberar', meseroNombre, mesaNombre }),
         });
       }
       await fetchPedidos();
