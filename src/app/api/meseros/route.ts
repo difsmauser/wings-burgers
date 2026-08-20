@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest) {
 
     // Direct fetch to bypass any Supabase client initialization issues
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin,foto_url&order=nombre.asc`,
+      `${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin&order=nombre.asc`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         cache: 'no-store',

@@ -45,9 +45,9 @@ function parseCanal(canal?: string): string {
 // ========== Login Component (PIN + Photo) ==========
 
 function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
-  const [meserosRegistrados, setMeserosRegistrados] = useState<Array<{ id: string; nombre: string; pin: string | null; foto_url: string | null }>>([]);
+  const [meserosRegistrados, setMeserosRegistrados] = useState<Array<{ id: string; nombre: string; pin: string | null }>>([]);
   const [loadingList, setLoadingList] = useState(true);
-  const [selectedMesero, setSelectedMesero] = useState<{ id: string; nombre: string; pin: string | null; foto_url: string | null } | null>(null);
+  const [selectedMesero, setSelectedMesero] = useState<{ id: string; nombre: string; pin: string | null } | null>(null);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
   const [shaking, setShaking] = useState(false);
@@ -67,7 +67,7 @@ function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
       return;
     }
 
-    fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin,foto_url&order=nombre.asc`, {
+    fetch(`${supabaseUrl}/rest/v1/mesero?activo=eq.true&select=id,nombre,pin&order=nombre.asc`, {
       headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
     })
       .then(res => res.ok ? res.json() : [])
@@ -156,13 +156,9 @@ function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
             <div className={`w-20 h-20 rounded-2xl mx-auto overflow-hidden border-2 transition-all duration-300 ${
               pinError ? 'border-red-500 shadow-lg shadow-red-500/20' : 'border-white/10 shadow-lg shadow-black/20'
             } ${shaking ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
-              {selectedMesero.foto_url ? (
-                <img src={selectedMesero.foto_url} alt={selectedMesero.nombre} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-brand-500/30 to-brand-600/20 flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-brand-500/30 to-brand-600/20 flex items-center justify-center">
                   <span className="text-2xl font-bold text-brand-400">{selectedMesero.nombre.charAt(0).toUpperCase()}</span>
                 </div>
-              )}
             </div>
             <h2 className="text-lg font-bold text-white mt-3">{selectedMesero.nombre}</h2>
             <p className="text-xs text-gray-500 mt-1">Ingresa tu PIN de 4 dígitos</p>
@@ -239,13 +235,9 @@ function MeseroLoginScreen({ onLogin }: { onLogin: (nombre: string) => void }) {
                 className="flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-[#12121a] border border-white/[0.06] hover:border-brand-400/30 hover:bg-brand-500/5 transition-all group active:scale-[0.97]"
               >
                 <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-white/10 group-hover:border-brand-400/30 transition-all">
-                  {m.foto_url ? (
-                    <img src={m.foto_url} alt={m.nombre} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center">
+                  <div className="w-full h-full bg-gradient-to-br from-brand-500/20 to-brand-600/10 flex items-center justify-center">
                       <span className="text-lg font-bold text-brand-400">{m.nombre.charAt(0).toUpperCase()}</span>
                     </div>
-                  )}
                 </div>
                 <span className="text-xs font-medium text-white text-center truncate w-full">{m.nombre}</span>
                 {m.pin && (
