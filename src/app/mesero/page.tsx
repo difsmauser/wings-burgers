@@ -270,8 +270,6 @@ export default function MeseroPage() {
   const [misPedidos, setMisPedidos] = useState<PedidoMesero[]>([]);
   const [loading, setLoading] = useState(true);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
-  const [cobroModal, setCobroModal] = useState<PedidoMesero | null>(null);
-  const [esperandoCambio, setEsperandoCambio] = useState<string | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
 
   // Hydrate mesero name from localStorage
@@ -413,59 +411,11 @@ export default function MeseroPage() {
     finally { setProcesandoId(null); }
   };
 
-  // Handle payment flow
-  const iniciarCobro = (pedido: PedidoMesero) => {
-    setCobroModal(pedido);
-  };
-
-  const procesarPago = async (pedidoId: string, metodo: 'transferencia' | 'efectivo') => {
-    setProcesandoId(pedidoId);
+  // Liberar mesa after payment confirmed
+  const liberarMesa = async (pedido: PedidoMesero) => {
+    setProcesandoId(pedido.id);
     try {
-      if (metodo === 'transferencia') {
-        // Transfer: mark paid, liberate mesa, done
-        await fetch(`/api/pedidos/${pedidoId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ estadoPago: 'pagado', metodoPago: 'transferencia' }),
-        });
-        // Liberate mesa
-        if (cobroModal?.mesaZona) {
-          const mesaNombre = cobroModal.mesaZona.split(' - ')[0];
-          await fetch('/api/mesas', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: mesaNombre, estado: 'disponible', pedido_activo_id: null }),
-          });
-        }
-        setCobroModal(null);
-      } else {
-        // Cash: mesero must go to table, collect cash, go to caja, return change
-        // For now mark as "esperando cambio" — mesero confirms when complete
-        await fetch(`/api/pedidos/${pedidoId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ metodoPago: 'efectivo' }),
-        });
-        setCobroModal(null);
-        setEsperandoCambio(pedidoId);
-      }
-      await fetchPedidos();
-    } catch { /* silent */ }
-    finally { setProcesandoId(null); }
-  };
-
-  // Confirm cash collected and change delivered — finalize
-  const confirmarEfectivoCompleto = async (pedidoId: string) => {
-    setProcesandoId(pedidoId);
-    try {
-      await fetch(`/api/pedidos/${pedidoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estadoPago: 'pagado' }),
-      });
-      // Find mesa to liberate
-      const pedido = misPedidos.find(p => p.id === pedidoId);
-      if (pedido?.mesaZona) {
+      if (pedido.mesaZona) {
         const mesaNombre = pedido.mesaZona.split(' - ')[0];
         await fetch('/api/mesas', {
           method: 'PUT',
@@ -473,7 +423,6 @@ export default function MeseroPage() {
           body: JSON.stringify({ nombre: mesaNombre, estado: 'disponible', pedido_activo_id: null }),
         });
       }
-      setEsperandoCambio(null);
       await fetchPedidos();
     } catch { /* silent */ }
     finally { setProcesandoId(null); }
@@ -567,32 +516,32 @@ export default function MeseroPage() {
                       disabled={procesandoId === pedido.id}
                       className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
                     >
-                      {procesandoId === pedido.id ? 'Actualizando...' : '🍽️ Marcar como Entregado a Mesa'}
+                      {procesandoId === pedido.id ? 'Actualizando...' : '🍽️ Entregar a mesa / mostrador'}
                     </button>
                   )}
 
-                  {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && esperandoCambio !== pedido.id && (
-                    <button
-                      onClick={() => iniciarCobro(pedido)}
-                      disabled={procesandoId === pedido.id}
-                      className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-amber-400 to-amber-500 shadow-lg shadow-amber-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
-                    >
-                      💰 Iniciar Cobro
-                    </button>
-                  )}
-
-                  {esperandoCambio === pedido.id && (
+                  {/* After delivery: show payment status (mesero does NOT collect payment) */}
+                  {pedido.estado === 'servido' && pedido.estadoPago === 'pagado' && (
                     <div className="space-y-2">
-                      <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                        <p className="text-xs text-amber-400 font-medium">⏳ Esperando: recoge efectivo → caja → cambio → mesa</p>
+                      <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+                        <p className="text-xs text-green-400 font-bold">✓ Pagado — {pedido.mesaZona ? 'Liberar mesa' : 'Completado'}</p>
                       </div>
-                      <button
-                        onClick={() => confirmarEfectivoCompleto(pedido.id)}
-                        disabled={procesandoId === pedido.id}
-                        className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
-                      >
-                        {procesandoId === pedido.id ? 'Procesando...' : '✅ Cambio entregado — Liberar mesa'}
-                      </button>
+                      {pedido.mesaZona && (
+                        <button
+                          onClick={() => liberarMesa(pedido)}
+                          disabled={procesandoId === pedido.id}
+                          className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-gradient-to-r from-blue-400 to-blue-500 shadow-lg shadow-blue-500/20 disabled:opacity-50 transition-all active:scale-[0.98]"
+                        >
+                          {procesandoId === pedido.id ? 'Liberando...' : '🪑 Liberar mesa'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
+                    <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+                      <p className="text-[10px] text-amber-400">⏳ Esperando pago del cliente</p>
+                      <p className="text-[9px] text-gray-600 mt-0.5">El cliente pagará por transferencia o efectivo</p>
                     </div>
                   )}
                 </div>
@@ -664,53 +613,6 @@ export default function MeseroPage() {
         </div>
       </div>
 
-      {/* Cobro Modal */}
-      {cobroModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[#16161f] border border-white/10 p-6 animate-scale-in">
-            <h3 className="text-base font-bold text-white mb-1">Cobrar Pedido #{cobroModal.numero}</h3>
-            <p className="text-xs text-gray-400 mb-1">
-              {cobroModal.mesaZona && `📍 ${cobroModal.mesaZona.split(' - ')[0]} — `}
-              Total: <span className="text-brand-400 font-bold">${cobroModal.total.toFixed(2)}</span>
-            </p>
-            <p className="text-[10px] text-gray-500 mb-4">¿Cómo paga el cliente?</p>
-
-            <div className="space-y-2">
-              <label className="block w-full">
-                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setProcesandoId(cobroModal.id);
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  formData.append('pedidoId', cobroModal.id);
-                  formData.append('mesaZona', cobroModal.mesaZona || '');
-                  formData.append('total', cobroModal.total.toString());
-                  formData.append('metodoPago', 'transferencia');
-                  await fetch('/api/pagos/comprobante-upload', { method: 'POST', body: formData });
-                  await procesarPago(cobroModal.id, 'transferencia');
-                }} />
-                <span className="block w-full py-3 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 transition-all text-center cursor-pointer">
-                  📱 Transferencia + Subir Comprobante
-                </span>
-              </label>
-              <button
-                onClick={() => procesarPago(cobroModal.id, 'efectivo')}
-                disabled={procesandoId === cobroModal.id}
-                className="w-full py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all"
-              >
-                💵 Efectivo — Cobrar y reportar a Caja
-              </button>
-              <button
-                onClick={() => setCobroModal(null)}
-                className="w-full py-2 rounded-xl text-xs text-gray-400 hover:text-white transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
