@@ -130,15 +130,45 @@ function MetodoSelector({
 /**
  * Efectivo (cash) payment flow component.
  * Shows confirmation that payment will be collected in person.
+ * Notifies the backend (caja/mesero) that the client chose cash payment.
  */
 function EfectivoFlow({
+  pedidoId,
   onBack,
   onConfirm,
 }: {
+  pedidoId: string;
   onBack: () => void;
   onConfirm: () => void;
 }) {
   const [confirmed, setConfirmed] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    setEnviando(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/pagos/efectivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || 'Error al registrar pago');
+      }
+
+      setConfirmed(true);
+      onConfirm();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setEnviando(false);
+    }
+  };
 
   if (confirmed) {
     return (
@@ -147,8 +177,11 @@ function EfectivoFlow({
         <h3 className="text-xl font-bold text-wood-800 mb-2">
           Pago en efectivo registrado
         </h3>
-        <p className="text-sm text-wood-600">
+        <p className="text-sm text-wood-600 mb-2">
           Tu pedido está en proceso. Tendrás que pagar al momento de recibirlo o en caja.
+        </p>
+        <p className="text-xs text-wood-500">
+          Se notificó al equipo para preparar tu cobro.
         </p>
       </div>
     );
@@ -177,20 +210,31 @@ function EfectivoFlow({
         </p>
       </div>
 
+      {error && (
+        <div className="p-3 bg-fire-50 border border-fire-200 rounded-lg" role="alert">
+          <p className="text-sm text-fire-700">{error}</p>
+        </div>
+      )}
+
       <button
-        onClick={() => {
-          setConfirmed(true);
-          onConfirm();
-        }}
+        onClick={handleConfirm}
+        disabled={enviando}
         className="
           w-full min-h-[44px] px-4 py-4 rounded-xl
           bg-brand-500 hover:bg-brand-600 text-white font-bold text-base
           shadow-lg transition-all duration-200 motion-reduce:transition-none
           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2
-          active:scale-[0.98]
+          active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
         "
       >
-        Confirmar pago en efectivo
+        {enviando ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
+            Procesando...
+          </span>
+        ) : (
+          'Confirmar pago en efectivo'
+        )}
       </button>
     </div>
   );
@@ -628,6 +672,7 @@ export default function PagoPage() {
 
       {metodo === 'efectivo' && (
         <EfectivoFlow
+          pedidoId={pedidoId}
           onBack={() => setMetodo(null)}
           onConfirm={() => setEstadoPago('exito')}
         />

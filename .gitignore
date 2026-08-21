@@ -39,3 +39,7 @@ next-env.d.ts
 /public/workbox-*.js
 /public/sw.js.map
 /public/workbox-*.js.map
+
+# security - sensitive files
+db\ password.txt
+*.secret

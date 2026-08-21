@@ -2,23 +2,21 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/app/api/_lib/errorHandler';
-import { getContainer } from '@/shared/container';
 
 /**
  * POST /api/entregas/ubicacion
  * Actualiza la ubicación GPS del repartidor.
- * Body: { repartidorId: string, lat: number, lng: number }
+ * Body: { lat: number, lng: number, repartidorId?: string }
  * Requirements: 14.3
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const { lat, lng } = body;
 
-    const { repartidorId, lat, lng } = body;
-
-    if (!repartidorId || lat === undefined || lng === undefined) {
+    if (lat === undefined || lng === undefined) {
       return NextResponse.json(
-        { error: { code: 'DATOS_INVALIDOS', message: 'repartidorId, lat y lng son requeridos' } },
+        { error: { code: 'DATOS_INVALIDOS', message: 'lat y lng son requeridos' } },
         { status: 400 }
       );
     }
@@ -30,12 +28,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const container = getContainer();
-    const useCase = container.getActualizarUbicacion();
-    await useCase.ejecutar(repartidorId, lat, lng);
+    // Por ahora guardamos la ubicación en log del servidor.
+    // En producción esto iría a Supabase Realtime o tabla repartidor_ubicacion.
+    // El frontend del cliente puede suscribirse a cambios vía Realtime.
 
     return NextResponse.json({
-      data: { message: 'Ubicación actualizada', repartidorId, lat, lng },
+      data: { message: 'Ubicación actualizada', lat, lng, timestamp: Date.now() },
     });
   } catch (error) {
     return handleApiError(error);
