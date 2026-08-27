@@ -279,77 +279,66 @@ export default function MeseroPage() {
     setRegistrado(true);
   };
 
-  // Fetch orders
+  // Fetch orders — ALL states to show complete lifecycle
   const fetchPedidos = useCallback(async () => {
     if (!registrado) return;
     try {
-      // Fetch listo_para_servir (available for pickup)
-      const resDisponibles = await fetch('/api/pedidos?estado=listo_para_servir');
-      let disponibles: PedidoMesero[] = [];
-      if (resDisponibles.ok) {
-        const json = await resDisponibles.json();
-        disponibles = (json.data || []).map((p: Record<string, unknown>) => ({
-          id: p.id as string,
-          numero: p.numero as string,
-          estado: p.estado as string,
-          modalidad: p.modalidad as string || 'local',
-          canal: parseCanal(p.canal as string),
-          clienteNombre: p.clienteNombre as string || '',
-          items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
-          total: p.total as number || 0,
-          creadoEn: p.creadoEn as string || '',
-          mesaZona: p.mesaZona as string || '',
-          meseroId: p.meseroId as string || '',
-          meseroNombre: p.meseroNombre as string || '',
-          estadoPago: p.estadoPago as string || 'pendiente',
-          metodoPago: p.metodoPago as string || undefined,
-          observaciones: p.observaciones as string || '',
-        }));
+      const mapPedido = (p: Record<string, unknown>): PedidoMesero => ({
+        id: p.id as string,
+        numero: p.numero as string,
+        estado: p.estado as string,
+        modalidad: p.modalidad as string || 'local',
+        canal: parseCanal(p.canal as string),
+        clienteNombre: p.clienteNombre as string || '',
+        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
+        total: p.total as number || 0,
+        creadoEn: p.creadoEn as string || '',
+        mesaZona: p.mesaZona as string || '',
+        meseroId: p.meseroId as string || '',
+        meseroNombre: p.meseroNombre as string || '',
+        estadoPago: p.estadoPago as string || 'pendiente',
+        metodoPago: p.metodoPago as string || undefined,
+        observaciones: p.observaciones as string || '',
+      });
+
+      // Fetch ALL active states
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido'];
+      const todosPedidos: PedidoMesero[] = [];
+
+      for (const estado of estados) {
+        const res = await fetch(`/api/pedidos?estado=${estado}`);
+        if (res.ok) {
+          const json = await res.json();
+          todosPedidos.push(...(json.data || []).map(mapPedido));
+        }
       }
 
-      // Fetch servido (my orders pending payment)
-      const resServidos = await fetch('/api/pedidos?estado=servido');
-      let servidos: PedidoMesero[] = [];
-      if (resServidos.ok) {
-        const json = await resServidos.json();
-        servidos = (json.data || []).map((p: Record<string, unknown>) => ({
-          id: p.id as string,
-          numero: p.numero as string,
-          estado: p.estado as string,
-          modalidad: p.modalidad as string || 'local',
-          canal: parseCanal(p.canal as string),
-          clienteNombre: p.clienteNombre as string || '',
-          items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
-          total: p.total as number || 0,
-          creadoEn: p.creadoEn as string || '',
-          mesaZona: p.mesaZona as string || '',
-          meseroId: p.meseroId as string || '',
-          meseroNombre: p.meseroNombre as string || '',
-          estadoPago: p.estadoPago as string || 'pendiente',
-          metodoPago: p.metodoPago as string || undefined,
-          observaciones: p.observaciones as string || '',
-        }));
-      }
+      // Disponibles para recoger: listo_para_servir sin mesero asignado
+      const disponibles = todosPedidos.filter(p =>
+        p.estado === 'listo_para_servir' && !p.meseroNombre
+      );
 
-      // Separate: disponibles sin asignar vs mis pedidos
-      const sinAsignar = disponibles.filter(p => !p.meseroNombre);
-      const misAsignados = disponibles.filter(p => p.meseroNombre === meseroNombre);
-      const misServidos = servidos.filter(p => p.meseroNombre === meseroNombre && p.estadoPago !== 'pagado');
+      // Mis pedidos activos: los que tienen mi nombre (en cualquier estado, no pagados)
+      const misActivos = todosPedidos.filter(p =>
+        p.meseroNombre === meseroNombre && p.estadoPago !== 'pagado'
+      );
 
-      // Pedidos pagados del día (para historial)
-      const misPagadosHoy = servidos.filter(p => p.meseroNombre === meseroNombre && p.estadoPago === 'pagado');
+      // Mis pedidos completados hoy (pagados)
+      const misPagados = todosPedidos.filter(p =>
+        p.meseroNombre === meseroNombre && p.estadoPago === 'pagado'
+      );
 
-      setPedidosDisponibles(sinAsignar);
-      setMisPedidos([...misAsignados, ...misServidos]);
-      setMisPedidosDia(misPagadosHoy);
+      setPedidosDisponibles(disponibles);
+      setMisPedidos(misActivos);
+      setMisPedidosDia(misPagados);
 
       // Sound on new available orders
-      if (sinAsignar.length > pedidosDisponibles.length && pedidosDisponibles.length > 0) {
+      if (disponibles.length > pedidosDisponibles.length && pedidosDisponibles.length > 0) {
         playNotificationSound();
       }
 
       // Sound + alert when a client chooses efectivo (mesero needs to go collect)
-      const pedidosCobrar = [...misAsignados, ...misServidos].filter(
+      const pedidosCobrar = misActivos.filter(
         p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo'
       );
       const prevCobrar = misPedidos.filter(
