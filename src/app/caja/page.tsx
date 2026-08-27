@@ -605,7 +605,13 @@ function ModalCobrarEfectivo({ cuenta, onClose, onConfirm }: {
   onClose: () => void;
   onConfirm: (billete: number, cambio: number) => void;
 }) {
-  const [billete, setBillete] = useState<number | null>(null);
+  // Extraer info del billete que el cliente indicó
+  const observaciones = cuenta.pedidos.map(p => p.observaciones || '').join(' ');
+  const billeteClienteMatch = observaciones.match(/Paga con \$(\d+)/);
+  const billeteCliente = billeteClienteMatch ? parseInt(billeteClienteMatch[1], 10) : null;
+  const esExacto = observaciones.includes('Monto exacto');
+
+  const [billete, setBillete] = useState<number | null>(billeteCliente ?? (esExacto ? 0 : null));
   const [montoCustom, setMontoCustom] = useState('');
   const [procesando, setProcesando] = useState(false);
 
@@ -635,6 +641,21 @@ function ModalCobrarEfectivo({ cuenta, onClose, onConfirm }: {
 
         {/* Body */}
         <div className="p-5 space-y-5">
+          {/* Info del cliente — qué billete indicó */}
+          {(billeteCliente || esExacto) && (
+            <div className="rounded-xl bg-brand-500/5 border border-brand-500/10 p-4">
+              <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Info del cliente</p>
+              {billeteCliente ? (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-white font-medium">Paga con: <span className="text-brand-400 font-bold">${billeteCliente}</span></p>
+                  <p className="text-sm text-green-400 font-bold">Cambio: ${billeteCliente - cuenta.total > 0 ? billeteCliente - cuenta.total : 0}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-green-400 font-medium">💰 Monto exacto — sin cambio</p>
+              )}
+            </div>
+          )}
+
           {/* Total a cobrar */}
           <div className="text-center py-4 rounded-xl bg-green-500/5 border border-green-500/10">
             <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total a cobrar</p>
