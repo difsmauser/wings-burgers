@@ -180,9 +180,6 @@ export default function CajaPage() {
     );
   });
 
-  // Pedidos sin mesa (mostrador, domicilio)
-  const pedidosSinMesa = activos.filter(p => !p.mesaZona);
-
   // KPIs
   const totalEfectivo = pagados.filter(p => p.metodoPago === 'efectivo').reduce((s, p) => s + p.total, 0);
   const totalTransfer = pagados.filter(p => p.metodoPago === 'transferencia').reduce((s, p) => s + p.total, 0);
@@ -285,20 +282,34 @@ export default function CajaPage() {
           </div>
         </div>
 
-        {/* ═══════════ PEDIDOS SIN MESA (Mostrador, Domicilio) ═══════════ */}
-        {pedidosSinMesa.length > 0 && (
-          <div className="rounded-2xl bg-[#12121a] border border-white/5 p-5">
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-              📱 Pedidos sin Mesa
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-400">{pedidosSinMesa.length}</span>
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[350px] overflow-y-auto">
-              {pedidosSinMesa.map(p => (
-                <PedidoSinMesaCard key={p.id} pedido={p} onDetail={setSelectedPedido} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ═══════════ PEDIDOS POR CANAL — 5 canales de venta ═══════════ */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <ChannelSection
+            icon="🍽️" title="En Sucursal" count={activos.filter(p => p.canal === 'MESA_LOCAL' || (!p.canal && p.modalidad !== 'domicilio')).length}
+            color="yellow" pedidos={activos.filter(p => p.canal === 'MESA_LOCAL' || (!p.canal && p.modalidad !== 'domicilio' && !['MESA_LLEVAR','MOSTRADOR','DOMICILIO','MESERO'].includes(p.canal)))}
+            onDetail={setSelectedPedido}
+          />
+          <ChannelSection
+            icon="🛍️" title="Mesa → Llevar" count={activos.filter(p => p.canal === 'MESA_LLEVAR').length}
+            color="amber" pedidos={activos.filter(p => p.canal === 'MESA_LLEVAR')}
+            onDetail={setSelectedPedido}
+          />
+          <ChannelSection
+            icon="📱" title="Mostrador" count={activos.filter(p => p.canal === 'MOSTRADOR').length}
+            color="amber" pedidos={activos.filter(p => p.canal === 'MOSTRADOR')}
+            onDetail={setSelectedPedido}
+          />
+          <ChannelSection
+            icon="🛵" title="A Domicilio" count={activos.filter(p => p.canal === 'DOMICILIO').length}
+            color="green" pedidos={activos.filter(p => p.canal === 'DOMICILIO')}
+            onDetail={setSelectedPedido}
+          />
+          <ChannelSection
+            icon="🧑‍🍳" title="Mesero" count={activos.filter(p => p.canal === 'MESERO').length}
+            color="blue" pedidos={activos.filter(p => p.canal === 'MESERO')}
+            onDetail={setSelectedPedido}
+          />
+        </div>
 
         {/* ═══════════ COBRADOS HOY ═══════════ */}
         {pagados.length > 0 && (
@@ -819,33 +830,152 @@ function ModalValidarTransferencia({ cuenta, onClose, onConfirm, onReject }: {
 }
 
 // ============================================================
-// Card: Pedido sin mesa
+// Card: Pedido en canal (con lógica correcta de botones)
 // ============================================================
 
-function PedidoSinMesaCard({ pedido, onDetail }: { pedido: PedidoCaja; onDetail: (p: PedidoCaja) => void }) {
+function OrderCard({ pedido, onDetail }: {
+  pedido: PedidoCaja;
+  onDetail: (p: PedidoCaja) => void;
+}) {
   const canal = getCanal(pedido);
   const estado = getEstadoLabel(pedido.estado);
 
+  // Lógica de estado para el mensaje
+  const getStatusMessage = (): { text: string; color: string; icon: string } | null => {
+    if (pedido.estadoPago === 'pagado') return null;
+    switch (pedido.estado) {
+      case 'recibido': return { text: 'Recibido por cocina', icon: '📋', color: 'text-brand-400 bg-brand-500/5 border-brand-500/10' };
+      case 'en_preparacion': return { text: 'En preparación', icon: '🔥', color: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
+      case 'empacado': return { text: 'Listo — esperando mesero', icon: '📦', color: 'text-purple-400 bg-purple-500/5 border-purple-500/10' };
+      case 'listo_para_servir': return { text: 'Mesero en camino', icon: '🍽️', color: 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' };
+      default: return null;
+    }
+  };
+
+  const statusMsg = getStatusMessage();
+
+  // LÓGICA DE BOTONES CORRECTA:
+  // - Solo mostrar si el cliente YA eligió método
+  // - Efectivo: solo si metodoPago='efectivo' Y pedido ya servido/entregado (mesero entregó)
+  // - Transferencia: solo si estadoPago='validando' (voucher subido)
+  const mostrarBotonEfectivo = pedido.metodoPago === 'efectivo'
+    && ['servido', 'entregado'].includes(pedido.estado)
+    && pedido.estadoPago !== 'pagado';
+
+  const mostrarBotonTransferencia = pedido.estadoPago === 'validando';
+
+  // Mensaje cuando el cliente eligió método pero aún no está listo
+  const esperandoMesero = pedido.metodoPago === 'efectivo'
+    && !['servido', 'entregado'].includes(pedido.estado)
+    && pedido.estadoPago !== 'pagado';
+
   return (
     <div className="rounded-xl bg-[#0d0d14] border border-white/[0.06] p-3 hover:border-white/10 transition-all">
-      <div className="flex items-center justify-between mb-1.5">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => onDetail(pedido)} className="text-xs font-bold text-white hover:text-brand-400">
+          <button onClick={() => onDetail(pedido)} className="text-xs font-bold text-white hover:text-brand-400 transition-colors">
             #{pedido.numero.split('-').pop()}
           </button>
-          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${canal.color}`}>{canal.icon}</span>
-          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${estado.color}`}>{estado.label}</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${canal.color}`}>{canal.icon} {canal.label}</span>
+          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${estado.color}`}>{estado.label}</span>
         </div>
         <span className="text-sm font-bold text-brand-400">{formatMXN(pedido.total)}</span>
       </div>
-      <div className="text-[10px] text-gray-500 line-clamp-1">
+      {pedido.mesaZona && (
+        <p className="text-[10px] text-gray-500 mb-1">📍 {pedido.mesaZona}</p>
+      )}
+      {pedido.meseroNombre && (
+        <p className="text-[10px] text-cyan-400 mb-1">🧑‍🍳 {pedido.meseroNombre}</p>
+      )}
+      {/* Items preview */}
+      <div className="text-[10px] text-gray-500 mb-2 line-clamp-2">
         {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
       </div>
-      {pedido.metodoPago && (
-        <div className="mt-1.5">
-          <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${pedido.metodoPago === 'efectivo' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
-            {pedido.metodoPago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}
-          </span>
+
+      {/* Status progression */}
+      {statusMsg && !mostrarBotonEfectivo && !mostrarBotonTransferencia && !esperandoMesero && (
+        <div className={`py-2 rounded-lg border text-center ${statusMsg.color}`}>
+          <span className="text-[10px] font-medium">{statusMsg.icon} {statusMsg.text}</span>
+        </div>
+      )}
+
+      {/* Esperando: cliente eligió efectivo pero mesero no ha entregado */}
+      {esperandoMesero && (
+        <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+          <span className="text-[10px] text-amber-400 font-medium">🧑‍🍳 Esperando que mesero entregue dinero</span>
+        </div>
+      )}
+
+      {/* Botón efectivo: SOLO cuando cliente eligió efectivo Y mesero ya entregó */}
+      {mostrarBotonEfectivo && (
+        <div className="space-y-2">
+          <div className="py-1.5 rounded-lg bg-green-500/5 border border-green-500/10 text-center mb-2">
+            <span className="text-[10px] text-green-400 font-bold">💵 Cliente pagó efectivo — Mesero entregó</span>
+          </div>
+          <button
+            onClick={() => onDetail(pedido)}
+            className="w-full py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 transition-all active:scale-95"
+          >
+            💵 Cobrar Efectivo
+          </button>
+        </div>
+      )}
+
+      {/* Botón transferencia: SOLO cuando cliente subió voucher */}
+      {mostrarBotonTransferencia && (
+        <div className="space-y-2">
+          <div className="py-1.5 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center mb-2">
+            <span className="text-[10px] text-purple-400 font-bold">📎 Voucher subido — Pendiente validación</span>
+          </div>
+          <button
+            onClick={() => onDetail(pedido)}
+            className="w-full py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 transition-all active:scale-95"
+          >
+            🏦 Validar Transferencia
+          </button>
+        </div>
+      )}
+
+      {/* Pagado */}
+      {pedido.estadoPago === 'pagado' && (
+        <div className="text-center py-1.5 rounded-lg bg-green-500/5 border border-green-500/10">
+          <span className="text-[10px] text-green-400 font-bold">✓ Pagado — {pedido.metodoPago}</span>
+        </div>
+      )}
+
+      {/* Sin método elegido aún y pedido servido */}
+      {!pedido.metodoPago && ['servido', 'entregado'].includes(pedido.estado) && pedido.estadoPago !== 'pagado' && (
+        <div className="py-2 rounded-lg bg-gray-500/5 border border-gray-500/10 text-center">
+          <span className="text-[10px] text-gray-400">⏳ Esperando que cliente elija método de pago</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Channel Section Component
+// ============================================================
+
+function ChannelSection({ icon, title, count, color, pedidos, onDetail }: {
+  icon: string; title: string; count: number; color: string;
+  pedidos: PedidoCaja[];
+  onDetail: (p: PedidoCaja) => void;
+}) {
+  const borderColor = color === 'green' ? 'border-green-500/10' : color === 'amber' ? 'border-amber-500/10' : color === 'blue' ? 'border-blue-500/10' : 'border-yellow-500/10';
+  const badgeColor = color === 'green' ? 'bg-green-500/10 text-green-400' : color === 'amber' ? 'bg-amber-500/10 text-amber-400' : color === 'blue' ? 'bg-blue-500/10 text-blue-400' : 'bg-yellow-500/10 text-yellow-400';
+
+  return (
+    <div className={`rounded-2xl bg-[#12121a] border border-white/5 ${borderColor} p-4`}>
+      <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+        {icon} {title}
+        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeColor}`}>{count}</span>
+      </h2>
+      {pedidos.length === 0 ? (
+        <p className="text-xs text-gray-500 text-center py-6">Sin pedidos</p>
+      ) : (
+        <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
+          {pedidos.map(p => <OrderCard key={p.id} pedido={p} onDetail={onDetail} />)}
         </div>
       )}
     </div>
