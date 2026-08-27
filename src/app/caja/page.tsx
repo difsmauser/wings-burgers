@@ -361,29 +361,16 @@ export default function CajaPage() {
           onClose={() => setModalEfectivo(null)}
           onConfirm={async (billete, cambio) => {
             // Marcar todos los pedidos de la cuenta como pagados
-            for (const p of modalEfectivo.pedidos) {
-              await fetch(`/api/pedidos/${p.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  estadoPago: 'pagado',
-                  metodoPago: 'efectivo',
-                }),
-              });
-            }
-            // Registrar billete y cambio
-            if (billete >= 0) {
-              await fetch(`/api/pagos/efectivo/confirmar`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  pedidoIds: modalEfectivo.pedidos.map(p => p.id),
-                  billete,
-                  cambio,
-                  total: modalEfectivo.total,
-                }),
-              });
-            }
+            await fetch('/api/pagos/confirmar-cobro', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pedidoIds: modalEfectivo.pedidos.map(p => p.id),
+                metodoPago: 'efectivo',
+                billete,
+                cambio,
+              }),
+            });
             // Liberar la mesa
             if (modalEfectivo.mesaZona) {
               await fetch('/api/mesas/liberar', {
@@ -404,16 +391,14 @@ export default function CajaPage() {
           cuenta={modalTransferencia}
           onClose={() => setModalTransferencia(null)}
           onConfirm={async () => {
-            for (const p of modalTransferencia.pedidos) {
-              await fetch(`/api/pedidos/${p.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  estadoPago: 'pagado',
-                  metodoPago: 'transferencia',
-                }),
-              });
-            }
+            await fetch('/api/pagos/confirmar-cobro', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pedidoIds: modalTransferencia.pedidos.map(p => p.id),
+                metodoPago: 'transferencia',
+              }),
+            });
             // Liberar la mesa
             if (modalTransferencia.mesaZona) {
               await fetch('/api/mesas/liberar', {
@@ -426,11 +411,18 @@ export default function CajaPage() {
             fetchData();
           }}
           onReject={async () => {
-            for (const p of modalTransferencia.pedidos) {
-              await fetch(`/api/pedidos/${p.id}`, {
-                method: 'PUT',
+            // Rechazar — volver a pendiente
+            for (const id of modalTransferencia.pedidos.map(p => p.id)) {
+              const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+              // Usar endpoint público
+              await fetch('/api/pagos/confirmar-cobro', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ estadoPago: 'pendiente' }),
+                body: JSON.stringify({
+                  pedidoIds: [id],
+                  metodoPago: 'transferencia',
+                  rechazar: true,
+                }),
               });
             }
             setModalTransferencia(null);
