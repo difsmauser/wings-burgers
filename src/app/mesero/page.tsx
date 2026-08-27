@@ -459,6 +459,50 @@ export default function MeseroPage() {
     finally { setProcesandoId(null); }
   };
 
+  // Mesero cobra efectivo directamente (pedido por mesa sin QR)
+  const cobrarEfectivoMesero = async (pedidoId: string) => {
+    setProcesandoId(pedidoId);
+    try {
+      // Marcar como efectivo
+      await fetch('/api/pagos/efectivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId, billete: 0 }),
+      });
+      // Marcar que mesero recogió
+      await fetch('/api/mesero/dinero-recogido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId, meseroNombre }),
+      });
+      await fetchPedidos();
+    } catch { /* */ }
+    finally { setProcesandoId(null); }
+  };
+
+  // Mesero sube foto del voucher de transferencia
+  const subirFotoVoucher = async (pedidoId: string, file: File) => {
+    setProcesandoId(pedidoId);
+    try {
+      const formData = new FormData();
+      formData.append('pedidoId', pedidoId);
+      formData.append('archivo', file);
+
+      const res = await fetch('/api/pagos/comprobante', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        console.error('Error subiendo voucher:', await res.text());
+      }
+      await fetchPedidos();
+    } catch (e) {
+      console.error('Error subiendo voucher:', e);
+    }
+    finally { setProcesandoId(null); }
+  };
+
   const handleLogout = async () => {
     localStorage.removeItem(MESERO_STORAGE_KEY);
     setMeseroNombre('');
@@ -668,9 +712,31 @@ export default function MeseroPage() {
                             )}
                           </div>
                         ) : (
-                          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
+                          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center space-y-3">
                             <p className="text-xs text-gray-400">✓ Pedido entregado</p>
-                            <p className="text-[10px] text-gray-600 mt-0.5">Esperando que cliente elija forma de pago</p>
+                            <p className="text-[10px] text-gray-600">¿Cómo paga el cliente?</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => cobrarEfectivoMesero(pedido.id)}
+                                disabled={procesandoId === pedido.id}
+                                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                              >
+                                💵 Efectivo
+                              </button>
+                              <label className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97]">
+                                📷 Foto Transfer
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) subirFotoVoucher(pedido.id, file);
+                                  }}
+                                />
+                              </label>
+                            </div>
                           </div>
                         )}
                       </div>
