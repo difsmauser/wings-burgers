@@ -877,6 +877,125 @@ function ResumenPedido({
   );
 }
 
+// ============================================================
+// Pantalla de Celebración — Pago Completado
+// ============================================================
+
+/**
+ * Pantalla fullscreen de celebración cuando el pago fue confirmado por caja.
+ * Muestra confetti animado, mensaje de agradecimiento y logo.
+ * Se auto-limpia después de 10 segundos.
+ */
+function PagoCelebradoScreen({ mesaZona }: { mesaZona: string }) {
+  const [showConfetti, setShowConfetti] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowConfetti(false), 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0f] overflow-hidden">
+      {/* Animated confetti particles */}
+      {showConfetti && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 60 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute animate-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `-5%`,
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2.5 + Math.random() * 2}s`,
+                fontSize: `${12 + Math.random() * 16}px`,
+                opacity: 0.9,
+              }}
+            >
+              {['🎉', '🎊', '✨', '🍔', '🍗', '⭐', '💛', '🔥', '🥳'][Math.floor(Math.random() * 9)]}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Radial glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-500/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-green-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      {/* Content */}
+      <div className="relative text-center px-6 max-w-md animate-scale-in">
+        {/* Checkmark circle with glow */}
+        <div className="relative inline-block mb-6">
+          <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
+          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.4)]">
+            <svg className="w-12 h-12 text-white animate-check" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h1 className="text-3xl sm:text-4xl font-black text-white mb-3 tracking-tight">
+          ¡Pago Completado!
+        </h1>
+
+        {/* Subtitle */}
+        <p className="text-lg text-green-400 font-semibold mb-2">
+          Gracias por tu preferencia
+        </p>
+
+        {/* Mesa info */}
+        {mesaZona && (
+          <p className="text-sm text-gray-400 mb-6">
+            {mesaZona}
+          </p>
+        )}
+
+        {/* Fun message */}
+        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 mb-6">
+          <p className="text-sm text-gray-300 leading-relaxed">
+            🍔 Esperamos que hayas disfrutado tu comida.
+            <br />
+            <span className="text-brand-400 font-medium">¡Vuelve pronto!</span>
+          </p>
+        </div>
+
+        {/* Auto-redirect notice */}
+        <div className="flex items-center justify-center gap-2 text-[11px] text-gray-600">
+          <div className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+          Esta pantalla se cerrará automáticamente
+        </div>
+
+        {/* Logo */}
+        <div className="mt-8 opacity-40">
+          <img src="/logo.png" alt="A-la Burguer" className="h-10 w-10 mx-auto rounded-full" />
+        </div>
+      </div>
+
+      {/* CSS for confetti animation */}
+      <style jsx>{`
+        @keyframes confetti-fall {
+          0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+          100% { transform: translateY(100vh) rotate(720deg) scale(0.3); opacity: 0; }
+        }
+        .animate-confetti {
+          animation: confetti-fall linear forwards;
+        }
+        @keyframes check-draw {
+          0% { stroke-dashoffset: 24; }
+          100% { stroke-dashoffset: 0; }
+        }
+        .animate-check {
+          stroke-dasharray: 24;
+          animation: check-draw 0.6s ease-out 0.3s forwards;
+        }
+      `}</style>
+    </div>
+  );
+}
+
 /**
  * Pedido (cart) page for the client module.
  *
@@ -903,7 +1022,7 @@ export default function PedidoPage() {
     total,
   } = useCarrito();
 
-  const { qrMesa } = useQrMesa();
+  const { qrMesa, setQrMesa } = useQrMesa();
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1040,29 +1159,59 @@ export default function PedidoPage() {
     }
   };
 
-  // Check if session is complete (all paid) — clear everything
+  // ═══════════════════════════════════════════════════
+  // PAGO CELEBRADO — Pantalla de celebración + limpieza
+  // ═══════════════════════════════════════════════════
+  const [pagoCelebrado, setPagoCelebrado] = useState(false);
+
+  // Check if session is complete (all paid) — trigger celebration
   useEffect(() => {
-    if (!confirmado || !qrMesa) return;
+    if (!qrMesa) return;
+    // No need to wait for confirmado — any device on this mesa should detect payment
     const checkPaid = async () => {
       try {
         const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(qrMesa.mesaZona)}`);
         if (res.ok) {
           const json = await res.json();
-          const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
-          if (activos.length === 0 && json.data.length > 0) {
-            // All paid — clean session
-            limpiarCarrito();
-            localStorage.removeItem('alaburguer-pedido-ids');
-            localStorage.removeItem('alaburguer-pedido-id');
+          const todos = json.data || [];
+          const activos = todos.filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
+          // Si hay pedidos y TODOS están pagados → celebrar
+          if (activos.length === 0 && todos.length > 0) {
+            setPagoCelebrado(true);
           }
         }
       } catch { /* */ }
     };
-    const interval = setInterval(checkPaid, 10000);
+    const interval = setInterval(checkPaid, 5000);
     checkPaid();
     return () => clearInterval(interval);
+  }, [qrMesa]);
+
+  // Después de celebración: limpiar TODO y redirigir
+  useEffect(() => {
+    if (!pagoCelebrado) return;
+    const timer = setTimeout(() => {
+      // Limpiar carrito
+      limpiarCarrito();
+      // Limpiar pedido IDs
+      localStorage.removeItem('alaburguer-pedido-ids');
+      localStorage.removeItem('alaburguer-pedido-id');
+      // Limpiar datos del cliente
+      localStorage.removeItem('alaburguer-cliente-nombre');
+      localStorage.removeItem('alaburguer-cliente-telefono');
+      // Limpiar QR mesa context (esto también limpia localStorage)
+      setQrMesa(null);
+      // Redirigir a pantalla neutra
+      window.location.href = '/menu';
+    }, 10000); // 10 segundos de celebración
+    return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmado, qrMesa]);
+  }, [pagoCelebrado]);
+
+  // Si estamos celebrando, mostrar la pantalla de celebración
+  if (pagoCelebrado) {
+    return <PagoCelebradoScreen mesaZona={qrMesa?.mesaZona || ''} />;
+  }
 
   // Check if there are active orders on this mesa (regardless of cart state)
   const [hayPedidosActivos, setHayPedidosActivos] = useState(false);

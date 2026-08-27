@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useQrMesa } from '../_context/QrMesaContext';
+import { useCarrito } from '../_context/CarritoContext';
 
 /**
  * Formats a number as Mexican Peso currency.
@@ -131,13 +132,15 @@ interface PedidoTracking {
  * Supports both mesa flow (multiple orders) and single-order flow (domicilio/retiro).
  */
 export default function RastreoPage() {
-  const { qrMesa } = useQrMesa();
+  const { qrMesa, setQrMesa } = useQrMesa();
+  const { limpiarCarrito } = useCarrito();
   const menuHref = qrMesa ? `/menu?qr=${qrMesa.codigo}` : '/menu';
 
   const [pedido, setPedido] = useState<PedidoTracking | null>(null);
   const [pedidosMesa, setPedidosMesa] = useState<PedidoTracking[]>([]);
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(true);
+  const [pagoCelebrado, setPagoCelebrado] = useState(false);
 
   // Get pedidoId from localStorage
   const getPedidoId = (): string | null => {
@@ -162,7 +165,8 @@ export default function RastreoPage() {
         const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(qrMesa.mesaZona)}`);
         if (res.ok) {
           const json = await res.json();
-          const activos = (json.data || [])
+          const todos = json.data || [];
+          const activos = todos
             .filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado')
             .map((p: Record<string, unknown>) => ({
               id: p.id as string,
@@ -175,6 +179,11 @@ export default function RastreoPage() {
               estaciones: { cocina: null, bar: null },
             }));
           setPedidosMesa(activos);
+
+          // Detectar pago completado — todos pagados
+          if (activos.length === 0 && todos.length > 0) {
+            setPagoCelebrado(true);
+          }
         }
       } catch { /* */ }
       finally { setLoading(false); }
@@ -184,6 +193,22 @@ export default function RastreoPage() {
     const interval = setInterval(fetchMesa, 5000);
     return () => clearInterval(interval);
   }, [qrMesa]);
+
+  // Limpieza después de celebración
+  useEffect(() => {
+    if (!pagoCelebrado) return;
+    const timer = setTimeout(() => {
+      limpiarCarrito();
+      localStorage.removeItem('alaburguer-pedido-ids');
+      localStorage.removeItem('alaburguer-pedido-id');
+      localStorage.removeItem('alaburguer-cliente-nombre');
+      localStorage.removeItem('alaburguer-cliente-telefono');
+      setQrMesa(null);
+      window.location.href = '/menu';
+    }, 10000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagoCelebrado]);
 
   // Fetch for single-order flow (domicilio/retiro)
   useEffect(() => {
@@ -234,6 +259,57 @@ export default function RastreoPage() {
       <div className="max-w-md mx-auto px-4 py-16 text-center">
         <div className="animate-spin h-8 w-8 border-2 border-brand-400 border-t-transparent rounded-full mx-auto mb-4" />
         <p className="text-sm text-gray-400">Cargando estado del pedido...</p>
+      </div>
+    );
+  }
+
+  // Celebración de pago
+  if (pagoCelebrado) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0f] overflow-hidden">
+        {/* Confetti */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <span
+              key={i}
+              className="absolute"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `-5%`,
+                animation: `confetti-fall ${2.5 + Math.random() * 2}s ${Math.random() * 3}s linear forwards`,
+                fontSize: `${12 + Math.random() * 16}px`,
+              }}
+            >
+              {['🎉', '🎊', '✨', '🍔', '🍗', '⭐', '💛', '🔥', '🥳'][Math.floor(Math.random() * 9)]}
+            </span>
+          ))}
+        </div>
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-green-500/10 rounded-full blur-[100px] animate-pulse" />
+        {/* Content */}
+        <div className="relative text-center px-6 max-w-md animate-scale-in">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-[0_0_40px_rgba(34,197,94,0.4)]">
+              <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h1 className="text-3xl font-black text-white mb-2">¡Pago Completado!</h1>
+          <p className="text-lg text-green-400 font-semibold mb-2">Gracias por tu preferencia</p>
+          <p className="text-sm text-gray-400 mb-6">🍔 ¡Vuelve pronto!</p>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-gray-600">
+            <div className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            Esta pantalla se cerrará automáticamente
+          </div>
+        </div>
+        <style jsx>{`
+          @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+          }
+        `}</style>
       </div>
     );
   }

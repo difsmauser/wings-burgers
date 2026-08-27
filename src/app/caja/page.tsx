@@ -352,8 +352,8 @@ export default function CajaPage() {
                 }),
               });
             }
-            // Registrar billete y cambio en el primer pedido (observaciones)
-            if (billete > 0) {
+            // Registrar billete y cambio
+            if (billete >= 0) {
               await fetch(`/api/pagos/efectivo/confirmar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -363,6 +363,14 @@ export default function CajaPage() {
                   cambio,
                   total: modalEfectivo.total,
                 }),
+              });
+            }
+            // Liberar la mesa
+            if (modalEfectivo.mesaZona) {
+              await fetch('/api/mesas/liberar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mesaZona: modalEfectivo.mesaZona }),
               });
             }
             setModalEfectivo(null);
@@ -387,11 +395,18 @@ export default function CajaPage() {
                 }),
               });
             }
+            // Liberar la mesa
+            if (modalTransferencia.mesaZona) {
+              await fetch('/api/mesas/liberar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mesaZona: modalTransferencia.mesaZona }),
+              });
+            }
             setModalTransferencia(null);
             fetchData();
           }}
           onReject={async () => {
-            // Rechazar — volver a pendiente para que suba otro comprobante
             for (const p of modalTransferencia.pedidos) {
               await fetch(`/api/pedidos/${p.id}`, {
                 method: 'PUT',
