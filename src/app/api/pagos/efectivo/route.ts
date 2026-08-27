@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Actualizar metodo_pago a "efectivo" — el cobro real se confirma en caja
+    // Actualizar metodo_pago a "efectivo" y estado_pago a "esperando_mesero"
     const updateRes = await fetch(
       `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
       {
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           metodo_pago: 'efectivo',
+          estado_pago: 'esperando_mesero',
           actualizado_en: new Date().toISOString(),
         }),
         cache: 'no-store',

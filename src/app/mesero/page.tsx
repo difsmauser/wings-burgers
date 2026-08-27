@@ -455,7 +455,12 @@ export default function MeseroPage() {
   // Count today's deliveries
   const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length;
   const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir').length;
-  const pendientesPago = misPedidos.filter(p => p.estado === 'servido' && p.estadoPago !== 'pagado').length;
+  // Solo contar "ir a cobrar" cuando el cliente YA eligió efectivo
+  const pendientesCobro = misPedidos.filter(p =>
+    p.estado === 'servido' &&
+    p.estadoPago !== 'pagado' &&
+    (p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]'))
+  ).length;
 
   // Separate by channel
   const getCanal = (p: PedidoMesero): { label: string; icon: string; color: string } => {
@@ -509,7 +514,7 @@ export default function MeseroPage() {
             <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Por entregar</p>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-green-500/5 to-transparent border border-green-500/10 p-3 text-center">
-            <p className="text-2xl font-black text-green-400">{pendientesPago}</p>
+            <p className="text-2xl font-black text-green-400">{pendientesCobro}</p>
             <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Ir a cobrar</p>
           </div>
           <div className="rounded-xl bg-gradient-to-br from-purple-500/5 to-transparent border border-purple-500/10 p-3 text-center">
