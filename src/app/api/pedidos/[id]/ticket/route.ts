@@ -139,29 +139,46 @@ export async function POST(
       `📌 Estado pago: ${estadoPago}\n\n` +
       `¡Gracias por tu preferencia, ${nombreCliente}! 🙏`;
 
-    // Enviar por WhatsApp
-    const container = getContainer();
-    const mensajeria = container.getMensajeriaService();
-    const resultado = await mensajeria.enviarWhatsApp(telefonoDestino, mensaje);
+    // Intentar enviar por WhatsApp Cloud API
+    const whatsappToken = process.env.WHATSAPP_TOKEN;
+    const whatsappPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-    if (!resultado.exitoso) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'WHATSAPP_ERROR',
-            message: resultado.error || 'Error al enviar WhatsApp',
-          },
-        },
-        { status: 502 }
-      );
+    if (whatsappToken && whatsappPhoneId) {
+      // API configurada — enviar por servidor
+      try {
+        const container = getContainer();
+        const mensajeria = container.getMensajeriaService();
+        const resultado = await mensajeria.enviarWhatsApp(telefonoDestino, mensaje);
+
+        if (resultado.exitoso) {
+          return NextResponse.json({
+            data: {
+              mode: 'api',
+              message: 'Ticket enviado por WhatsApp',
+              pedidoId: id,
+              telefono: telefonoDestino,
+              mensajeId: resultado.mensajeId,
+            },
+          });
+        }
+      } catch {
+        // API falló — caer al fallback wa.me
+      }
     }
+
+    // Fallback: generar link wa.me para envío manual desde el navegador
+    const telefonoLimpio = telefonoDestino.replace(/\D/g, '');
+    const telefonoConPais = telefonoLimpio.length <= 10 ? `52${telefonoLimpio}` : telefonoLimpio;
+    const mensajeCodificado = encodeURIComponent(mensaje);
+    const waLink = `https://wa.me/${telefonoConPais}?text=${mensajeCodificado}`;
 
     return NextResponse.json({
       data: {
-        message: 'Ticket enviado por WhatsApp',
+        mode: 'link',
+        message: 'Link de WhatsApp generado (API no configurada)',
         pedidoId: id,
         telefono: telefonoDestino,
-        mensajeId: resultado.mensajeId,
+        waLink,
       },
     });
   } catch (error) {

@@ -1029,6 +1029,13 @@ function EnviarTicketWhatsApp({ pedidoId }: { pedidoId: string }) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error?.message || 'Error al enviar ticket');
       }
+      const json = await res.json();
+
+      // Si la API no está configurada, abre wa.me en nueva pestaña
+      if (json.data?.mode === 'link' && json.data?.waLink) {
+        window.open(json.data.waLink, '_blank');
+      }
+
       setEstado('enviado');
     } catch (err) {
       setEstado('error');
