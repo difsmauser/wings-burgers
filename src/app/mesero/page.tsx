@@ -259,6 +259,7 @@ export default function MeseroPage() {
   const [registrado, setRegistrado] = useState(false);
   const [pedidosDisponibles, setPedidosDisponibles] = useState<PedidoMesero[]>([]);
   const [misPedidos, setMisPedidos] = useState<PedidoMesero[]>([]);
+  const [misPedidosDia, setMisPedidosDia] = useState<PedidoMesero[]>([]);
   const [loading, setLoading] = useState(true);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const audioRef = useRef<AudioContext | null>(null);
@@ -335,8 +336,12 @@ export default function MeseroPage() {
       const misAsignados = disponibles.filter(p => p.meseroNombre === meseroNombre);
       const misServidos = servidos.filter(p => p.meseroNombre === meseroNombre && p.estadoPago !== 'pagado');
 
+      // Pedidos pagados del día (para historial)
+      const misPagadosHoy = servidos.filter(p => p.meseroNombre === meseroNombre && p.estadoPago === 'pagado');
+
       setPedidosDisponibles(sinAsignar);
       setMisPedidos([...misAsignados, ...misServidos]);
+      setMisPedidosDia(misPagadosHoy);
 
       // Sound on new available orders
       if (sinAsignar.length > pedidosDisponibles.length && pedidosDisponibles.length > 0) {
@@ -476,7 +481,7 @@ export default function MeseroPage() {
 
   // ========== Main View ==========
   // Count today's deliveries
-  const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length;
+  const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length + misPedidosDia.length;
   const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir').length;
   // Solo contar "ir a cobrar" cuando el cliente YA eligió efectivo Y mesero NO ha entregado
   const pendientesCobro = misPedidos.filter(p =>
@@ -728,6 +733,35 @@ export default function MeseroPage() {
             </div>
           )}
         </section>
+
+        {/* ═══════ COMPLETADOS HOY ═══════ */}
+        {misPedidosDia.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              ✅ Completados Hoy
+              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold">
+                {misPedidosDia.length}
+              </span>
+              <span className="text-[10px] text-gray-500 font-normal ml-auto">
+                Total: ${misPedidosDia.reduce((s, p) => s + p.total, 0).toFixed(0)}
+              </span>
+            </h2>
+            <div className="rounded-2xl bg-[#16161f] border border-green-500/10 divide-y divide-white/5 overflow-hidden">
+              {misPedidosDia.map(p => (
+                <div key={p.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-400 text-xs">✓</span>
+                    <div>
+                      <span className="text-xs font-bold text-white">#{p.numero.split('-').pop()}</span>
+                      {p.mesaZona && <span className="text-[10px] text-gray-500 ml-2">{p.mesaZona.split(' - ')[0]}</span>}
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-brand-400">${p.total.toFixed(0)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ═══════ ACCIONES RÁPIDAS ═══════ */}
         <div className="pt-4 border-t border-white/5 space-y-2">
