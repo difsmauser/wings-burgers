@@ -61,6 +61,29 @@ export async function POST(request: NextRequest) {
       const ruta = `comprobantes/${pedidoId}/${archivo.name}`;
       const url = await storageService.subirImagen(archivo, ruta);
 
+      // Guardar URL del comprobante en el pedido y marcar como validando
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+      await fetch(
+        `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            metodo_pago: 'transferencia',
+            estado_pago: 'validando',
+            observaciones: `[COMPROBANTE] ${url}`,
+            actualizado_en: new Date().toISOString(),
+          }),
+          cache: 'no-store',
+        }
+      );
+
       return NextResponse.json({ data: { pedidoId, comprobanteUrl: url } }, { status: 201 });
     } else {
       // Verificar comprobante (admin aprueba/rechaza)
