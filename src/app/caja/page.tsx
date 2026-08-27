@@ -173,11 +173,19 @@ export default function CajaPage() {
     if (p.estadoPago === 'validando') cuenta.estadoPago = 'validando';
     // Mesero entregó = todos los pedidos están servidos/entregados
   });
-  // Determinar si mesero ya entregó todo
+  // Determinar si mesero ya entregó el dinero a caja
   Object.values(cuentasMesa).forEach(cuenta => {
-    cuenta.meseroEntrego = cuenta.pedidos.every(p =>
+    // Mesero entregó = al menos un pedido tiene [MESERO_ENTREGO] en observaciones
+    // O todos los pedidos están servidos Y tienen metodo_pago = efectivo (retrocompat)
+    const algunoConMeseroEntrego = cuenta.pedidos.some(p =>
+      p.observaciones?.includes('[MESERO_ENTREGO]')
+    );
+    const todosServidos = cuenta.pedidos.every(p =>
       ['servido', 'entregado'].includes(p.estado)
     );
+    cuenta.meseroEntrego = algunoConMeseroEntrego || (todosServidos && cuenta.metodoPago === 'efectivo' && algunoConMeseroEntrego);
+    // Simplificado: mesero presionó el botón
+    cuenta.meseroEntrego = algunoConMeseroEntrego;
   });
 
   // KPIs

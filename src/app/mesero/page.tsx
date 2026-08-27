@@ -434,6 +434,27 @@ export default function MeseroPage() {
     finally { setProcesandoId(null); }
   };
 
+  // Mesero confirma que recogió el dinero del cliente — notifica a caja
+  const confirmarDineroRecogido = async (pedidoId: string) => {
+    setProcesandoId(pedidoId);
+    try {
+      // Actualizar observaciones para que caja sepa que el mesero ya tiene el dinero
+      await fetch('/api/pagos/efectivo/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pedidoIds: [pedidoId],
+          billete: 0,
+          cambio: 0,
+          total: 0,
+          nota: `[MESERO_ENTREGO] ${meseroNombre} recogió el dinero`,
+        }),
+      });
+      await fetchPedidos();
+    } catch { /* silent */ }
+    finally { setProcesandoId(null); }
+  };
+
   const handleLogout = async () => {
     localStorage.removeItem(MESERO_STORAGE_KEY);
     setMeseroNombre('');
@@ -609,7 +630,7 @@ export default function MeseroPage() {
                     {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
                       <div>
                         {necesitaCobrar ? (
-                          <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center space-y-2">
+                          <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center space-y-3">
                             <div className="flex items-center justify-center gap-2">
                               <span className="text-xl">💵</span>
                               <p className="text-sm text-green-400 font-bold">Ir a cobrar efectivo</p>
@@ -622,6 +643,13 @@ export default function MeseroPage() {
                                 {pedido.observaciones.match(/Paga con \$\d+/)?.[0] || 'Monto exacto'}
                               </p>
                             )}
+                            <button
+                              onClick={() => confirmarDineroRecogido(pedido.id)}
+                              disabled={procesandoId === pedido.id}
+                              className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+                            >
+                              {procesandoId === pedido.id ? '⏳ Procesando...' : '✓ Dinero recogido — entregar a caja'}
+                            </button>
                           </div>
                         ) : (
                           <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center">
