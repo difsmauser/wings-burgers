@@ -24,6 +24,7 @@ export default function PagarPage() {
   const [total, setTotal] = useState(0);
   const [pedidoIds, setPedidoIds] = useState<string[]>([]);
   const [pedidoEstado, setPedidoEstado] = useState<string>('');
+  const [meseroNombre, setMeseroNombre] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [comprobante, setComprobante] = useState<File | null>(null);
   const [billete, setBillete] = useState<number | null>(null);
@@ -55,6 +56,9 @@ export default function PagarPage() {
         setPedidoIds(activos.map((p: { id: string }) => p.id));
         if (activos.length > 0) {
           setPedidoEstado(activos[0].estado || '');
+          // Obtener nombre del mesero asignado
+          const mesero = activos.find((p: { meseroNombre?: string }) => p.meseroNombre)?.meseroNombre || '';
+          if (mesero) setMeseroNombre(mesero);
         }
         // Check if already paid
         if (activos.length === 0 && (json.data || []).length > 0) {
@@ -236,7 +240,9 @@ export default function PagarPage() {
 
           <h2 className="text-2xl font-black text-white mb-2">¡Listo!</h2>
           <p className="text-lg text-brand-400 font-semibold mb-4">
-            Tu mesero irá a cobrar
+            {meseroNombre
+              ? `${meseroNombre} irá a cobrar`
+              : 'Tu mesero irá a cobrar'}
           </p>
 
           <div className="rounded-2xl bg-white/[0.03] border border-brand-400/20 p-5 mb-6">
