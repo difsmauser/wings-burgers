@@ -19,6 +19,7 @@ interface PedidoMesero {
   meseroId?: string;
   meseroNombre?: string;
   estadoPago?: string;
+  metodoPago?: string;
   observaciones?: string;
 }
 
@@ -300,6 +301,7 @@ export default function MeseroPage() {
           meseroId: p.meseroId as string || '',
           meseroNombre: p.meseroNombre as string || '',
           estadoPago: p.estadoPago as string || 'pendiente',
+          metodoPago: p.metodoPago as string || undefined,
           observaciones: p.observaciones as string || '',
         }));
       }
@@ -323,6 +325,7 @@ export default function MeseroPage() {
           meseroId: p.meseroId as string || '',
           meseroNombre: p.meseroNombre as string || '',
           estadoPago: p.estadoPago as string || 'pendiente',
+          metodoPago: p.metodoPago as string || undefined,
           observaciones: p.observaciones as string || '',
         }));
       }
@@ -342,10 +345,10 @@ export default function MeseroPage() {
 
       // Sound + alert when a client chooses efectivo (mesero needs to go collect)
       const pedidosCobrar = [...misAsignados, ...misServidos].filter(
-        p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')
+        p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo'
       );
       const prevCobrar = misPedidos.filter(
-        p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')
+        p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo'
       );
       if (pedidosCobrar.length > prevCobrar.length && prevCobrar.length >= 0 && misPedidos.length > 0) {
         // New payment request — play alert sound
@@ -459,7 +462,7 @@ export default function MeseroPage() {
   const pendientesCobro = misPedidos.filter(p =>
     p.estado === 'servido' &&
     p.estadoPago !== 'pagado' &&
-    (p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]'))
+    (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo')
   ).length;
 
   // Separate by channel
@@ -524,7 +527,7 @@ export default function MeseroPage() {
         </div>
 
         {/* ═══════ ALERTA: Ir a cobrar ═══════ */}
-        {misPedidos.filter(p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')).length > 0 && (
+        {misPedidos.filter(p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo').length > 0 && (
           <div className="rounded-2xl bg-gradient-to-r from-green-500/10 to-green-900/5 border border-green-500/20 p-4 animate-pulse">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center border border-green-500/30">
@@ -533,7 +536,7 @@ export default function MeseroPage() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-green-400">¡Ir a cobrar!</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {misPedidos.filter(p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')).map(p =>
+                  {misPedidos.filter(p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo').map(p =>
                     p.mesaZona ? p.mesaZona.split(' - ')[0] : 'Cliente'
                   ).join(', ')}
                 </p>
@@ -555,7 +558,7 @@ export default function MeseroPage() {
             <div className="space-y-3">
               {misPedidos.map(pedido => {
                 const canal = getCanal(pedido);
-                const necesitaCobrar = pedido.estadoPago === 'esperando_mesero' || pedido.observaciones?.includes('[EFECTIVO]');
+                const necesitaCobrar = pedido.observaciones?.includes('[EFECTIVO]') || pedido.metodoPago === 'efectivo';
                 return (
                   <div key={pedido.id} className={`rounded-2xl border p-4 transition-all ${
                     necesitaCobrar

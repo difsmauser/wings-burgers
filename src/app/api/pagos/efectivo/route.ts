@@ -59,18 +59,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Actualizar metodo_pago a "efectivo" y estado_pago a "esperando_mesero"
-    // También guardar billete en observaciones si viene
+    // Actualizar metodo_pago a "efectivo" y guardar billete en observaciones
     const billeteInfo = body.billete && body.billete > 0
       ? `[EFECTIVO] Paga con $${body.billete}`
       : '[EFECTIVO] Monto exacto';
 
-    const obsExistentes = pedido.observaciones || '';
+    const obsExistentes = (pedido.observaciones as string) || '';
     const nuevasObs = obsExistentes.includes('[EFECTIVO]')
       ? obsExistentes
-      : obsExistentes ? `${obsExistentes}\n${billeteInfo}` : billeteInfo;
+      : obsExistentes ? `${obsExistentes} ${billeteInfo}` : billeteInfo;
 
-    const updateRes = await fetch(
+    // Intentar actualizar con todos los campos
+    let updateRes = await fetch(
       `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
       {
         method: 'PATCH',
@@ -82,7 +82,6 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           metodo_pago: 'efectivo',
-          estado_pago: 'esperando_mesero',
           observaciones: nuevasObs,
           actualizado_en: new Date().toISOString(),
         }),
@@ -90,9 +89,31 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    // Si falla (por constraint de observaciones), intentar solo metodo_pago
     if (!updateRes.ok) {
+      updateRes = await fetch(
+        `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            metodo_pago: 'efectivo',
+            actualizado_en: new Date().toISOString(),
+          }),
+          cache: 'no-store',
+        }
+      );
+    }
+
+    if (!updateRes.ok) {
+      const errBody = await updateRes.text();
       return NextResponse.json(
-        { error: { message: 'Error al actualizar método de pago' } },
+        { error: { message: `Error al actualizar: ${errBody}` } },
         { status: 500 }
       );
     }
