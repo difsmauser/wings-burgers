@@ -18,7 +18,7 @@ import { handleApiError } from '@/app/api/_lib/errorHandler';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { pedidoIds, billete, cambio, total } = body;
+    const { pedidoIds, billete, cambio, total, nota } = body;
 
     if (!Array.isArray(pedidoIds) || pedidoIds.length === 0) {
       return NextResponse.json(
@@ -30,52 +30,65 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-    // Registrar en las observaciones del primer pedido los datos del cobro
-    const datosCobro = `[COBRO_EFECTIVO] Billete: $${billete || 'exacto'} | Cambio: $${cambio || 0} | Total: $${total}`;
-
-    // Actualizar el primer pedido con los detalles del cobro
-    const firstId = pedidoIds[0];
-    const getRes = await fetch(
-      `${supabaseUrl}/rest/v1/pedido?id=eq.${firstId}&select=observaciones`,
-      {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        cache: 'no-store',
-      }
-    );
-
-    let obsExistentes = '';
-    if (getRes.ok) {
-      const data = await getRes.json();
-      if (data && data.length > 0) {
-        obsExistentes = data[0].observaciones || '';
-      }
+    // Construir texto a agregar a observaciones
+    let datosCobro: string;
+    if (nota) {
+      // Viene del mesero confirmando que recogió dinero
+      datosCobro = nota;
+    } else {
+      // Viene de caja confirmando el cobro final
+      datosCobro = `[COBRO_EFECTIVO] Billete: $${billete || 'exacto'} | Cambio: $${cambio || 0} | Total: $${total}`;
     }
 
-    const nuevasObs = obsExistentes
-      ? `${obsExistentes}\n${datosCobro}`
-      : datosCobro;
+    // Actualizar cada pedido con la nota
+    for (const pedidoId of pedidoIds) {
+      const getRes = await fetch(
+        `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=observaciones`,
+        {
+          headers: { apikey: key, Authorization: `Bearer ${key}` },
+          cache: 'no-store',
+        }
+      );
 
-    await fetch(
-      `${supabaseUrl}/rest/v1/pedido?id=eq.${firstId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=minimal',
-        },
-        body: JSON.stringify({
-          observaciones: nuevasObs,
-          actualizado_en: new Date().toISOString(),
-        }),
-        cache: 'no-store',
+      let obsExistentes = '';
+      if (getRes.ok) {
+        const data = await getRes.json();
+        if (data && data.length > 0) {
+          obsExistentes = data[0].observaciones || '';
+        }
       }
-    );
+
+      // No duplicar si ya tiene la misma marca
+      if (nota && obsExistentes.includes('[MESERO_ENTREGO]')) {
+        continue;
+      }
+
+      const nuevasObs = obsExistentes
+        ? `${obsExistentes} ${datosCobro}`
+        : datosCobro;
+
+      await fetch(
+        `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            apikey: key,
+            Authorization: `Bearer ${key}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            observaciones: nuevasObs,
+            actualizado_en: new Date().toISOString(),
+          }),
+          cache: 'no-store',
+        }
+      );
+    }
 
     return NextResponse.json({
       data: {
-        message: 'Cobro en efectivo registrado',
+        message: nota ? 'Mesero confirmó dinero recogido' : 'Cobro en efectivo registrado',
         pedidoIds,
         billete,
         cambio,
