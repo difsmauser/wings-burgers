@@ -478,11 +478,12 @@ export default function MeseroPage() {
   // Count today's deliveries
   const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length;
   const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir').length;
-  // Solo contar "ir a cobrar" cuando el cliente YA eligió efectivo
+  // Solo contar "ir a cobrar" cuando el cliente YA eligió efectivo Y mesero NO ha entregado
   const pendientesCobro = misPedidos.filter(p =>
     p.estado === 'servido' &&
     p.estadoPago !== 'pagado' &&
-    (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo')
+    (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo') &&
+    !p.observaciones?.includes('[MESERO_ENTREGO]')
   ).length;
 
   // Separate by channel
@@ -547,7 +548,7 @@ export default function MeseroPage() {
         </div>
 
         {/* ═══════ ALERTA: Ir a cobrar ═══════ */}
-        {misPedidos.filter(p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo').length > 0 && (
+        {misPedidos.filter(p => (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo') && !p.observaciones?.includes('[MESERO_ENTREGO]')).length > 0 && (
           <div className="rounded-2xl bg-gradient-to-r from-green-500/10 to-green-900/5 border border-green-500/20 p-4 animate-pulse">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center border border-green-500/30">
@@ -556,7 +557,7 @@ export default function MeseroPage() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-green-400">¡Ir a cobrar!</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {misPedidos.filter(p => p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo').map(p =>
+                  {misPedidos.filter(p => (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo') && !p.observaciones?.includes('[MESERO_ENTREGO]')).map(p =>
                     p.mesaZona ? p.mesaZona.split(' - ')[0] : 'Cliente'
                   ).join(', ')}
                 </p>

@@ -51,8 +51,18 @@ export default function PagarPage() {
       const res = await fetch(`/api/pedidos/mesa?mesaZona=${encodeURIComponent(qrMesa.mesaZona)}`);
       if (res.ok) {
         const json = await res.json();
-        const activos = (json.data || []).filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
-        setTotal(activos.reduce((s: number, p: { total: number }) => s + p.total, 0));
+        const todos = json.data || [];
+        const activos = todos.filter((p: { estadoPago?: string }) => p.estadoPago !== 'pagado');
+        const totalTodos = todos.reduce((s: number, p: { total: number }) => s + p.total, 0);
+        const totalActivos = activos.reduce((s: number, p: { total: number }) => s + p.total, 0);
+
+        // Siempre mantener el total más alto (no resetear a 0)
+        if (totalActivos > 0) {
+          setTotal(totalActivos);
+        } else if (totalTodos > 0) {
+          setTotal(totalTodos);
+        }
+
         setPedidoIds(activos.map((p: { id: string }) => p.id));
         if (activos.length > 0) {
           setPedidoEstado(activos[0].estado || '');
@@ -61,7 +71,7 @@ export default function PagarPage() {
           if (mesero) setMeseroNombre(mesero);
         }
         // Check if already paid
-        if (activos.length === 0 && (json.data || []).length > 0) {
+        if (activos.length === 0 && todos.length > 0) {
           setPaso('completado');
           return;
         }
