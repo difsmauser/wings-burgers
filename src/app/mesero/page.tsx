@@ -616,137 +616,51 @@ export default function MeseroPage() {
           </div>
         )}
 
-        {/* ═══════ MIS PEDIDOS ═══════ */}
-        {misPedidos.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-              🎯 Mis Pedidos
-              <span className="px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 text-[10px] font-bold">
-                {misPedidos.length}
-              </span>
-            </h2>
-            <div className="space-y-3">
-              {misPedidos.map(pedido => {
-                const canal = getCanal(pedido);
-                const necesitaCobrar = pedido.observaciones?.includes('[EFECTIVO]') || pedido.metodoPago === 'efectivo';
-                return (
-                  <div key={pedido.id} className={`rounded-2xl border p-4 transition-all ${
-                    necesitaCobrar
-                      ? 'bg-gradient-to-br from-green-500/5 to-[#16161f] border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.05)]'
-                      : 'bg-[#16161f] border-white/5 hover:border-brand-400/20'
-                  }`}>
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-black text-white">#{pedido.numero.split('-').pop()}</span>
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full border border-white/10 font-medium ${canal.color}`}>{canal.icon} {canal.label}</span>
-                        {pedido.mesaZona && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                            📍 {pedido.mesaZona.split(' - ')[0]}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-base font-black text-brand-400">${pedido.total.toFixed(0)}</span>
-                    </div>
+        {/* ═══════ MIS PEDIDOS — Separados por origen ═══════ */}
+        {misPedidos.length > 0 && (() => {
+          const pedidosMesero = misPedidos.filter(p => p.canal === 'MESERO');
+          const pedidosQR = misPedidos.filter(p => p.canal !== 'MESERO');
 
-                    {/* Items */}
-                    <div className="rounded-xl bg-black/20 p-3 mb-3 space-y-1">
-                      {pedido.items.map((item, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <p className="text-xs text-gray-300"><span className="text-brand-400 font-bold mr-1">{item.cantidad}x</span>{item.nombre}</p>
-                          <span className="text-[10px] text-gray-500">${(item.precioUnitario * item.cantidad).toFixed(0)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Actions */}
-                    {pedido.estado === 'listo_para_servir' && (
-                      <button
-                        onClick={() => marcarServido(pedido.id)}
-                        disabled={procesandoId === pedido.id}
-                        className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
-                      >
-                        {procesandoId === pedido.id ? '⏳ Actualizando...' : '🍽️ Marcar como Entregado'}
-                      </button>
-                    )}
-
-                    {pedido.estado === 'servido' && pedido.estadoPago === 'pagado' && (
-                      <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-3 text-center">
-                        <p className="text-sm text-green-400 font-bold">✅ Pagado y entregado</p>
-                      </div>
-                    )}
-
-                    {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
-                      <div>
-                        {necesitaCobrar ? (
-                          <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center space-y-3">
-                            {pedido.observaciones?.includes('[MESERO_ENTREGO]') ? (
-                              /* Ya se entregó a caja */
-                              <div>
-                                <p className="text-sm text-green-400 font-bold">✅ Dinero entregado a caja</p>
-                                <p className="text-[10px] text-gray-500 mt-1">Esperando que caja confirme el cobro</p>
-                              </div>
-                            ) : (
-                              /* Aún no se entrega */
-                              <>
-                                <div className="flex items-center justify-center gap-2">
-                                  <span className="text-xl">💵</span>
-                                  <p className="text-sm text-green-400 font-bold">Ir a cobrar efectivo</p>
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                  {pedido.mesaZona ? pedido.mesaZona : 'Cliente esperando'}
-                                </p>
-                                {pedido.observaciones?.includes('Paga con') && (
-                                  <p className="text-xs text-brand-400 font-semibold">
-                                    {pedido.observaciones.match(/Paga con \$\d+/)?.[0] || 'Monto exacto'}
-                                  </p>
-                                )}
-                                <button
-                                  onClick={() => confirmarDineroRecogido(pedido.id)}
-                                  disabled={procesandoId === pedido.id}
-                                  className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
-                                >
-                                  {procesandoId === pedido.id ? '⏳ Procesando...' : '✓ Dinero recogido — entregar a caja'}
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="rounded-xl bg-white/[0.02] border border-white/5 p-3 text-center space-y-3">
-                            <p className="text-xs text-gray-400">✓ Pedido entregado</p>
-                            <p className="text-[10px] text-gray-600">¿Cómo paga el cliente?</p>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => cobrarEfectivoMesero(pedido.id)}
-                                disabled={procesandoId === pedido.id}
-                                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
-                              >
-                                💵 Efectivo
-                              </button>
-                              <label className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97]">
-                                📷 Foto Transfer
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  capture="environment"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) subirFotoVoucher(pedido.id, file);
-                                  }}
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+          return (
+            <>
+              {/* Pedidos tomados por mí (canal MESERO) */}
+              {pedidosMesero.length > 0 && (
+                <section>
+                  <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    🧑‍🍳 Pedidos que tomé
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold">{pedidosMesero.length}</span>
+                    <span className="text-[10px] text-gray-500 font-normal ml-auto">Canal: Mesero</span>
+                  </h2>
+                  <div className="space-y-3">
+                    {pedidosMesero.map(pedido => (
+                      <MeseroPedidoCard key={pedido.id} pedido={pedido} procesandoId={procesandoId}
+                        onMarcarServido={marcarServido} onConfirmarDinero={confirmarDineroRecogido}
+                        onCobrarEfectivo={cobrarEfectivoMesero} onSubirFoto={subirFotoVoucher} />
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
+                </section>
+              )}
+
+              {/* Pedidos asignados por QR mesa */}
+              {pedidosQR.length > 0 && (
+                <section>
+                  <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    📱 Pedidos asignados (QR Mesa)
+                    <span className="px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] font-bold">{pedidosQR.length}</span>
+                    <span className="text-[10px] text-gray-500 font-normal ml-auto">Clientes con celular</span>
+                  </h2>
+                  <div className="space-y-3">
+                    {pedidosQR.map(pedido => (
+                      <MeseroPedidoCard key={pedido.id} pedido={pedido} procesandoId={procesandoId}
+                        onMarcarServido={marcarServido} onConfirmarDinero={confirmarDineroRecogido}
+                        onCobrarEfectivo={cobrarEfectivoMesero} onSubirFoto={subirFotoVoucher} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          );
+        })()}
 
         {/* ═══════ DISPONIBLES PARA RECOGER ═══════ */}
         <section>
@@ -845,6 +759,158 @@ export default function MeseroPage() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ============================================================
+// Componente: Card de pedido del mesero (reutilizable)
+// ============================================================
+
+function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDinero, onCobrarEfectivo, onSubirFoto }: {
+  pedido: PedidoMesero;
+  procesandoId: string | null;
+  onMarcarServido: (id: string) => void;
+  onConfirmarDinero: (id: string) => void;
+  onCobrarEfectivo: (id: string) => void;
+  onSubirFoto: (id: string, file: File) => void;
+}) {
+  const necesitaCobrar = pedido.observaciones?.includes('[EFECTIVO]') || pedido.metodoPago === 'efectivo';
+  const yaEntregoACaja = pedido.observaciones?.includes('[MESERO_ENTREGO]');
+
+  // Estado visual del pedido
+  const getEstadoBadge = () => {
+    if (pedido.estadoPago === 'pagado') return { text: '✅ Pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (pedido.estado === 'listo_para_servir') return { text: '🍽️ Listo para servir', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+    if (pedido.estado === 'servido' && necesitaCobrar) return { text: '💵 Por cobrar', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (pedido.estado === 'servido') return { text: '✓ Entregado', color: 'bg-white/5 text-gray-400 border-white/10' };
+    if (pedido.estado === 'en_preparacion') return { text: '🔥 Preparando', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+    if (pedido.estado === 'recibido') return { text: '📋 En cocina', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' };
+    return { text: pedido.estado, color: 'bg-white/5 text-gray-400 border-white/10' };
+  };
+
+  const badge = getEstadoBadge();
+
+  return (
+    <div className={`rounded-2xl border p-4 transition-all ${
+      necesitaCobrar && !yaEntregoACaja
+        ? 'bg-gradient-to-br from-green-500/5 to-[#16161f] border-green-500/20'
+        : 'bg-[#16161f] border-white/5 hover:border-brand-400/20'
+    }`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-black text-white">#{pedido.numero.split('-').pop()}</span>
+          {pedido.mesaZona && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+              📍 {pedido.mesaZona.split(' - ')[0]}
+            </span>
+          )}
+          <span className={`text-[9px] px-2 py-0.5 rounded-full border font-bold ${badge.color}`}>
+            {badge.text}
+          </span>
+        </div>
+        <span className="text-base font-black text-brand-400">${pedido.total.toFixed(0)}</span>
+      </div>
+
+      {/* Items */}
+      <div className="rounded-xl bg-black/20 p-3 mb-3 space-y-1">
+        {pedido.items.map((item, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <p className="text-xs text-gray-300"><span className="text-brand-400 font-bold mr-1">{item.cantidad}x</span>{item.nombre}</p>
+            <span className="text-[10px] text-gray-500">${(item.precioUnitario * item.cantidad).toFixed(0)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Acción: Marcar como entregado */}
+      {pedido.estado === 'listo_para_servir' && (
+        <button
+          onClick={() => onMarcarServido(pedido.id)}
+          disabled={procesandoId === pedido.id}
+          className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+        >
+          {procesandoId === pedido.id ? '⏳ Actualizando...' : '🍽️ Marcar como Entregado'}
+        </button>
+      )}
+
+      {/* Pagado */}
+      {pedido.estado === 'servido' && pedido.estadoPago === 'pagado' && (
+        <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-3 text-center">
+          <p className="text-sm text-green-400 font-bold">✅ Pagado y entregado</p>
+        </div>
+      )}
+
+      {/* Servido + pago pendiente */}
+      {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
+        <div>
+          {necesitaCobrar ? (
+            <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-center space-y-3">
+              {yaEntregoACaja ? (
+                <div>
+                  <p className="text-sm text-green-400 font-bold">✅ Dinero entregado a caja</p>
+                  <p className="text-[10px] text-gray-500 mt-1">Esperando que caja confirme</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xl">💵</span>
+                    <p className="text-sm text-green-400 font-bold">Ir a cobrar</p>
+                  </div>
+                  <p className="text-xs text-gray-400">{pedido.mesaZona || 'Cliente esperando'}</p>
+                  {pedido.observaciones?.includes('Paga con') && (
+                    <p className="text-xs text-brand-400 font-semibold">
+                      {pedido.observaciones.match(/Paga con \$\d+/)?.[0] || 'Monto exacto'}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => onConfirmarDinero(pedido.id)}
+                    disabled={procesandoId === pedido.id}
+                    className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+                  >
+                    {procesandoId === pedido.id ? '⏳...' : '✓ Dinero recogido — entregar a caja'}
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            /* Sin método elegido — mesero puede cobrar directo */
+            <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 text-center space-y-3">
+              <p className="text-xs text-white font-medium">¿Cómo paga el cliente?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onCobrarEfectivo(pedido.id)}
+                  disabled={procesandoId === pedido.id}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                >
+                  💵 Efectivo
+                </button>
+                <label className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97] flex items-center justify-center gap-1">
+                  📷 Foto Transfer
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) onSubirFoto(pedido.id, file);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* En preparación — solo info */}
+      {['recibido', 'en_preparacion', 'empacado'].includes(pedido.estado) && (
+        <div className="rounded-xl bg-amber-500/5 border border-amber-500/10 p-2.5 text-center">
+          <p className="text-[10px] text-amber-400 font-medium">🔥 En preparación por cocina</p>
+        </div>
+      )}
     </div>
   );
 }
