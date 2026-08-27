@@ -339,6 +339,19 @@ export default function MeseroPage() {
       if (sinAsignar.length > pedidosDisponibles.length && pedidosDisponibles.length > 0) {
         playNotificationSound();
       }
+
+      // Sound + alert when a client chooses efectivo (mesero needs to go collect)
+      const pedidosCobrar = [...misAsignados, ...misServidos].filter(
+        p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')
+      );
+      const prevCobrar = misPedidos.filter(
+        p => p.estadoPago === 'esperando_mesero' || p.observaciones?.includes('[EFECTIVO]')
+      );
+      if (pedidosCobrar.length > prevCobrar.length && prevCobrar.length >= 0 && misPedidos.length > 0) {
+        // New payment request — play alert sound
+        playNotificationSound();
+        playNotificationSound(); // Double beep for urgency
+      }
     } catch {
       // silent
     } finally {
@@ -582,8 +595,26 @@ export default function MeseroPage() {
                     )}
 
                     {pedido.estado === 'servido' && pedido.estadoPago !== 'pagado' && (
-                      <div className="p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
-                        <p className="text-[10px] text-amber-400 font-medium">⏳ Esperando pago del cliente</p>
+                      <div>
+                        {/* Cliente eligió efectivo → mesero debe ir a cobrar */}
+                        {(pedido.observaciones?.includes('[EFECTIVO]') || pedido.estadoPago === 'esperando_mesero') ? (
+                          <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-center space-y-2 animate-pulse-slow">
+                            <p className="text-xs text-green-400 font-bold">💵 Ir a cobrar efectivo</p>
+                            <p className="text-[10px] text-gray-400">
+                              {pedido.mesaZona ? `Mesa: ${pedido.mesaZona.split(' - ')[0]}` : 'Cliente listo para pagar'}
+                            </p>
+                            {pedido.observaciones?.includes('Paga con') && (
+                              <p className="text-[10px] text-brand-400 font-medium">
+                                {pedido.observaciones.match(/Paga con \$\d+/)?.[0] || ''}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          /* Sin método elegido aún — pedido entregado */
+                          <div className="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 text-center">
+                            <p className="text-[10px] text-gray-400 font-medium">✓ Pedido entregado</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

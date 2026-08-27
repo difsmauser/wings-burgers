@@ -13,7 +13,7 @@ interface CuentaBancaria {
   referencia: string | null;
 }
 
-type PasoPago = 'esperando' | 'seleccion' | 'transferencia' | 'efectivo' | 'validando' | 'completado';
+type PasoPago = 'esperando' | 'seleccion' | 'transferencia' | 'efectivo' | 'esperando_mesero' | 'validando' | 'completado';
 
 export default function PagarPage() {
   const { qrMesa } = useQrMesa();
@@ -93,7 +93,7 @@ export default function PagarPage() {
 
   // Determine paso based on state
   useEffect(() => {
-    if (paso === 'validando' || paso === 'completado' || paso === 'transferencia' || paso === 'efectivo') return;
+    if (paso === 'validando' || paso === 'completado' || paso === 'transferencia' || paso === 'efectivo' || paso === 'esperando_mesero') return;
     const newPaso = determinarEstadoPago();
     setPaso(newPaso);
   }, [determinarEstadoPago, paso]);
@@ -156,7 +156,15 @@ export default function PagarPage() {
         }),
       });
     }
-    setPaso('validando');
+    // También notificar al endpoint de pagos para que mesero lo vea
+    for (const id of pedidoIds) {
+      await fetch('/api/pagos/efectivo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pedidoId: id }),
+      });
+    }
+    setPaso('esperando_mesero');
   };
 
   const fmt = (v: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(v);
@@ -212,17 +220,69 @@ export default function PagarPage() {
   }
 
   // ═══════════════════════════════════════════════════════
-  // RENDER: VALIDANDO
+  // RENDER: ESPERANDO MESERO (cliente eligió efectivo)
+  // ═══════════════════════════════════════════════════════
+  if (paso === 'esperando_mesero') {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center animate-fade-in">
+          {/* Animated waiter icon */}
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-brand-500/15 rounded-full blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-brand-400/20 to-brand-500/20 border-2 border-brand-400/30 flex items-center justify-center">
+              <span className="text-4xl animate-bounce" style={{ animationDuration: '2s' }}>🧑‍🍳</span>
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-black text-white mb-2">¡Listo!</h2>
+          <p className="text-lg text-brand-400 font-semibold mb-4">
+            Tu mesero irá a cobrar
+          </p>
+
+          <div className="rounded-2xl bg-white/[0.03] border border-brand-400/20 p-5 mb-6">
+            <p className="text-sm text-gray-300 leading-relaxed">
+              Un mesero pasará a tu mesa a recoger el pago.
+            </p>
+            {billete && billete > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <p className="text-xs text-gray-500">Pagas con: <span className="text-brand-400 font-bold">${billete}</span></p>
+                {billete > total && (
+                  <p className="text-xs text-gray-500">Cambio: <span className="text-green-400 font-bold">{fmt(billete - total)}</span></p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl bg-green-500/5 border border-green-500/10 p-4 mb-4">
+            <p className="text-sm font-bold text-green-400">Total: {fmt(total)}</p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 text-[11px] text-gray-500">
+            <div className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
+            Esperando confirmación del mesero
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // RENDER: VALIDANDO (transferencia - esperando que caja apruebe)
   // ═══════════════════════════════════════════════════════
   if (paso === 'validando') {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
-          <div className="w-14 h-14 rounded-full border-2 border-brand-500/20 border-t-brand-400 animate-spin mx-auto mb-6" />
-          <h2 className="text-xl font-bold text-white mb-2">Validando tu pago...</h2>
-          <p className="text-sm text-gray-400 mb-6">Estamos confirmando tu pago. No cierres esta página.</p>
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-purple-500/15 rounded-full blur-xl animate-pulse" />
+            <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-purple-400/20 to-purple-500/20 border-2 border-purple-400/30 flex items-center justify-center">
+              <span className="text-3xl">🏦</span>
+            </div>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Verificando transferencia</h2>
+          <p className="text-sm text-gray-400 mb-6">El equipo de caja está revisando tu comprobante. No cierres esta página.</p>
           <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-400 rounded-full animate-pulse w-2/3" />
+            <div className="h-full bg-purple-400 rounded-full animate-pulse w-2/3" />
           </div>
         </div>
       </div>

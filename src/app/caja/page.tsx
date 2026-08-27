@@ -831,6 +831,7 @@ function ModalValidarTransferencia({ cuenta, onClose, onConfirm, onReject }: {
 
 // ============================================================
 // Card: Pedido en canal (con lógica correcta de botones)
+// Agrupa visualmente por mesa cuando hay varios del mismo lugar
 // ============================================================
 
 function OrderCard({ pedido, onDetail }: {
@@ -854,19 +855,23 @@ function OrderCard({ pedido, onDetail }: {
 
   const statusMsg = getStatusMessage();
 
-  // LÓGICA DE BOTONES CORRECTA:
-  // - Solo mostrar si el cliente YA eligió método
-  // - Efectivo: solo si metodoPago='efectivo' Y pedido ya servido/entregado (mesero entregó)
-  // - Transferencia: solo si estadoPago='validando' (voucher subido)
+  // LÓGICA DE BOTONES:
+  // Efectivo: solo si metodoPago='efectivo' Y pedido servido/entregado
   const mostrarBotonEfectivo = pedido.metodoPago === 'efectivo'
     && ['servido', 'entregado'].includes(pedido.estado)
     && pedido.estadoPago !== 'pagado';
 
+  // Transferencia: solo si estadoPago='validando' (voucher subido)
   const mostrarBotonTransferencia = pedido.estadoPago === 'validando';
 
-  // Mensaje cuando el cliente eligió método pero aún no está listo
+  // Esperando mesero con dinero
   const esperandoMesero = pedido.metodoPago === 'efectivo'
     && !['servido', 'entregado'].includes(pedido.estado)
+    && pedido.estadoPago !== 'pagado';
+
+  // Cliente eligió efectivo y mesero ya entregó
+  const clienteEligioEfectivoServido = pedido.metodoPago === 'efectivo'
+    && ['servido', 'entregado'].includes(pedido.estado)
     && pedido.estadoPago !== 'pagado';
 
   return (
@@ -892,47 +897,31 @@ function OrderCard({ pedido, onDetail }: {
         {pedido.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ')}
       </div>
 
-      {/* Status progression */}
-      {statusMsg && !mostrarBotonEfectivo && !mostrarBotonTransferencia && !esperandoMesero && (
+      {/* Status progression (only when no payment action yet) */}
+      {statusMsg && !mostrarBotonEfectivo && !mostrarBotonTransferencia && !esperandoMesero && !clienteEligioEfectivoServido && (
         <div className={`py-2 rounded-lg border text-center ${statusMsg.color}`}>
           <span className="text-[10px] font-medium">{statusMsg.icon} {statusMsg.text}</span>
         </div>
       )}
 
-      {/* Esperando: cliente eligió efectivo pero mesero no ha entregado */}
+      {/* Esperando: cliente eligió efectivo pero pedido no servido */}
       {esperandoMesero && (
         <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
-          <span className="text-[10px] text-amber-400 font-medium">🧑‍🍳 Esperando que mesero entregue dinero</span>
+          <span className="text-[10px] text-amber-400 font-medium">💵 Efectivo — mesero en camino con dinero</span>
         </div>
       )}
 
-      {/* Botón efectivo: SOLO cuando cliente eligió efectivo Y mesero ya entregó */}
-      {mostrarBotonEfectivo && (
-        <div className="space-y-2">
-          <div className="py-1.5 rounded-lg bg-green-500/5 border border-green-500/10 text-center mb-2">
-            <span className="text-[10px] text-green-400 font-bold">💵 Cliente pagó efectivo — Mesero entregó</span>
-          </div>
-          <button
-            onClick={() => onDetail(pedido)}
-            className="w-full py-2 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 transition-all active:scale-95"
-          >
-            💵 Cobrar Efectivo
-          </button>
+      {/* Cliente eligió efectivo, mesero ya entregó → caja puede cobrar */}
+      {clienteEligioEfectivoServido && (
+        <div className="py-2 rounded-lg bg-green-500/5 border border-green-500/10 text-center">
+          <span className="text-[10px] text-green-400 font-bold">💵 Efectivo listo — cobrar en mesa</span>
         </div>
       )}
 
-      {/* Botón transferencia: SOLO cuando cliente subió voucher */}
+      {/* Voucher subido → caja debe validar */}
       {mostrarBotonTransferencia && (
-        <div className="space-y-2">
-          <div className="py-1.5 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center mb-2">
-            <span className="text-[10px] text-purple-400 font-bold">📎 Voucher subido — Pendiente validación</span>
-          </div>
-          <button
-            onClick={() => onDetail(pedido)}
-            className="w-full py-2 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 transition-all active:scale-95"
-          >
-            🏦 Validar Transferencia
-          </button>
+        <div className="py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center">
+          <span className="text-[10px] text-purple-400 font-bold">📎 Voucher pendiente de validación</span>
         </div>
       )}
 
@@ -943,10 +932,10 @@ function OrderCard({ pedido, onDetail }: {
         </div>
       )}
 
-      {/* Sin método elegido aún y pedido servido */}
+      {/* Sin método elegido + servido */}
       {!pedido.metodoPago && ['servido', 'entregado'].includes(pedido.estado) && pedido.estadoPago !== 'pagado' && (
         <div className="py-2 rounded-lg bg-gray-500/5 border border-gray-500/10 text-center">
-          <span className="text-[10px] text-gray-400">⏳ Esperando que cliente elija método de pago</span>
+          <span className="text-[10px] text-gray-400">⏳ Esperando que cliente elija pago</span>
         </div>
       )}
     </div>
