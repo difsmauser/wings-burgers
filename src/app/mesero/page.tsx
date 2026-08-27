@@ -12,7 +12,7 @@ interface PedidoMesero {
   modalidad: string;
   canal?: string;
   clienteNombre?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string }>;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string }>;
   total: number;
   creadoEn: string;
   mesaZona?: string;
@@ -290,7 +290,7 @@ export default function MeseroPage() {
         modalidad: p.modalidad as string || 'local',
         canal: parseCanal(p.canal as string),
         clienteNombre: p.clienteNombre as string || '',
-        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string }>) || [],
+        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string }>) || [],
         total: p.total as number || 0,
         creadoEn: p.creadoEn as string || '',
         mesaZona: p.mesaZona as string || '',
@@ -897,30 +897,45 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
       {/* En preparación — mostrar progreso por estación */}
       {['recibido', 'en_preparacion', 'empacado'].includes(pedido.estado) && (() => {
         const barCats = ['bar', 'bebidas'];
-        const tieneBar = pedido.items.some(i => barCats.includes(i.categoria || ''));
-        const tieneCocina = pedido.items.some(i => !barCats.includes(i.categoria || ''));
+        const itemsBar = pedido.items.filter(i => barCats.includes(i.categoria || ''));
+        const itemsCocina = pedido.items.filter(i => !barCats.includes(i.categoria || ''));
+        const tieneBar = itemsBar.length > 0;
+        const tieneCocina = itemsCocina.length > 0;
+
+        // Calcular estado por estación
+        const cocinaListo = tieneCocina && itemsCocina.every(i => i.itemEstado === 'listo');
+        const barListo = tieneBar && itemsBar.every(i => i.itemEstado === 'listo');
+
         if (tieneBar && tieneCocina) {
           return (
             <div className="flex items-center gap-2">
-              <div className="flex-1 rounded-lg bg-amber-500/5 border border-amber-500/10 p-2 text-center">
-                <p className="text-[9px] text-amber-400 font-medium">🔥 Cocina</p>
+              <div className={`flex-1 rounded-lg p-2 text-center border ${cocinaListo ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/5 border-amber-500/10'}`}>
+                <p className={`text-[9px] font-bold ${cocinaListo ? 'text-green-400' : 'text-amber-400'}`}>
+                  🔥 Cocina {cocinaListo ? '✓' : '...'}
+                </p>
               </div>
-              <div className="flex-1 rounded-lg bg-purple-500/5 border border-purple-500/10 p-2 text-center">
-                <p className="text-[9px] text-purple-400 font-medium">🍸 Bar</p>
+              <div className={`flex-1 rounded-lg p-2 text-center border ${barListo ? 'bg-green-500/10 border-green-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
+                <p className={`text-[9px] font-bold ${barListo ? 'text-green-400' : 'text-purple-400'}`}>
+                  🍸 Bar {barListo ? '✓' : '...'}
+                </p>
               </div>
             </div>
           );
         }
         if (tieneBar) {
           return (
-            <div className="rounded-xl bg-purple-500/5 border border-purple-500/10 p-2.5 text-center">
-              <p className="text-[10px] text-purple-400 font-medium">🍸 En preparación por Bar</p>
+            <div className={`rounded-xl p-2.5 text-center border ${barListo ? 'bg-green-500/10 border-green-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
+              <p className={`text-[10px] font-medium ${barListo ? 'text-green-400' : 'text-purple-400'}`}>
+                🍸 Bar {barListo ? '✓ Listo' : 'preparando...'}
+              </p>
             </div>
           );
         }
         return (
-          <div className="rounded-xl bg-amber-500/5 border border-amber-500/10 p-2.5 text-center">
-            <p className="text-[10px] text-amber-400 font-medium">🔥 En preparación por Cocina</p>
+          <div className={`rounded-xl p-2.5 text-center border ${cocinaListo ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/5 border-amber-500/10'}`}>
+            <p className={`text-[10px] font-medium ${cocinaListo ? 'text-green-400' : 'text-amber-400'}`}>
+              🔥 Cocina {cocinaListo ? '✓ Listo' : 'preparando...'}
+            </p>
           </div>
         );
       })()}

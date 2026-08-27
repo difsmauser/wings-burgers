@@ -66,10 +66,11 @@ export async function GET(request: NextRequest) {
           nombre: (d.producto as Record<string, unknown> | null)?.nombre || 'Producto',
           categoria: (d.producto as Record<string, unknown> | null)?.categoria || '',
           cantidad: d.cantidad,
-        precioUnitario: d.precio_unitario,
-        precioTotal: d.precio_total,
-        comentario: d.comentario,
-        personalizaciones: d.personalizaciones ?? [],
+          precioUnitario: d.precio_unitario,
+          precioTotal: d.precio_total,
+          comentario: d.comentario,
+          personalizaciones: d.personalizaciones ?? [],
+          itemEstado: d.item_estado || 'pendiente',
       })),
     };
     });
