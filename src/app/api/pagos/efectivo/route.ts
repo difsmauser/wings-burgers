@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar que el pedido existe
     const getRes = await fetch(
-      `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=id,estado,metodo_pago,estado_pago,mesa_zona,mesero_id`,
+      `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=id,estado,metodo_pago,estado_pago,mesa_zona,mesero_id,observaciones`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         cache: 'no-store',
@@ -60,6 +60,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar metodo_pago a "efectivo" y estado_pago a "esperando_mesero"
+    // También guardar billete en observaciones si viene
+    const billeteInfo = body.billete && body.billete > 0
+      ? `[EFECTIVO] Paga con $${body.billete}`
+      : '[EFECTIVO] Monto exacto';
+
+    const obsExistentes = pedido.observaciones || '';
+    const nuevasObs = obsExistentes.includes('[EFECTIVO]')
+      ? obsExistentes
+      : obsExistentes ? `${obsExistentes}\n${billeteInfo}` : billeteInfo;
+
     const updateRes = await fetch(
       `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
       {
@@ -73,6 +83,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           metodo_pago: 'efectivo',
           estado_pago: 'esperando_mesero',
+          observaciones: nuevasObs,
           actualizado_en: new Date().toISOString(),
         }),
         cache: 'no-store',

@@ -149,24 +149,33 @@ export default function PagarPage() {
 
   // Submit efectivo
   const handleEfectivo = async () => {
-    for (const id of pedidoIds) {
-      await fetch(`/api/pedidos/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          metodoPago: 'efectivo',
-          estadoPago: 'esperando_mesero',
-          observaciones: billete ? `[EFECTIVO] Paga con $${billete}` : '[EFECTIVO] Monto exacto',
-        }),
-      });
-    }
-    // También notificar al endpoint de pagos para que mesero lo vea
+    // Notificar al sistema que el cliente eligió efectivo
+    // POST /api/pagos/efectivo actualiza metodo_pago='efectivo' y estado_pago='esperando_mesero'
     for (const id of pedidoIds) {
       await fetch('/api/pagos/efectivo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pedidoId: id }),
+        body: JSON.stringify({
+          pedidoId: id,
+          billete: billete || 0,
+        }),
       });
+    }
+    // Guardar observaciones con info del billete (directo a Supabase via endpoint público)
+    if (billete && billete > 0) {
+      for (const id of pedidoIds) {
+        await fetch('/api/pagos/efectivo/confirmar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pedidoIds: [id],
+            billete,
+            cambio: billete > (total / pedidoIds.length) ? billete - (total / pedidoIds.length) : 0,
+            total: total / pedidoIds.length,
+            nota: `[EFECTIVO] Paga con $${billete}`,
+          }),
+        });
+      }
     }
     setPaso('esperando_mesero');
   };
