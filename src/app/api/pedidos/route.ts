@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('pedido')
-      .select('*, pedido_detalle(*, producto:producto_id(nombre))')
+      .select('*, pedido_detalle(*, producto:producto_id(nombre,categoria))')
       .order('creado_en', { ascending: false });
 
     if (estado) {
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         items: (Array.isArray(p.pedido_detalle) ? p.pedido_detalle : []).map((d: Record<string, unknown>) => ({
           productoId: d.producto_id,
           nombre: (d.producto as Record<string, unknown> | null)?.nombre || 'Producto',
+          categoria: (d.producto as Record<string, unknown> | null)?.categoria || '',
           cantidad: d.cantidad,
         precioUnitario: d.precio_unitario,
         precioTotal: d.precio_total,

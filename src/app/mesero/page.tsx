@@ -12,7 +12,7 @@ interface PedidoMesero {
   modalidad: string;
   canal?: string;
   clienteNombre?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string }>;
   total: number;
   creadoEn: string;
   mesaZona?: string;
@@ -290,7 +290,7 @@ export default function MeseroPage() {
         modalidad: p.modalidad as string || 'local',
         canal: parseCanal(p.canal as string),
         clienteNombre: p.clienteNombre as string || '',
-        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number }>) || [],
+        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string }>) || [],
         total: p.total as number || 0,
         creadoEn: p.creadoEn as string || '',
         mesaZona: p.mesaZona as string || '',
@@ -894,12 +894,36 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
         </div>
       )}
 
-      {/* En preparación — solo info */}
-      {['recibido', 'en_preparacion', 'empacado'].includes(pedido.estado) && (
-        <div className="rounded-xl bg-amber-500/5 border border-amber-500/10 p-2.5 text-center">
-          <p className="text-[10px] text-amber-400 font-medium">🔥 En preparación por cocina</p>
-        </div>
-      )}
+      {/* En preparación — mostrar progreso por estación */}
+      {['recibido', 'en_preparacion', 'empacado'].includes(pedido.estado) && (() => {
+        const barCats = ['bar', 'bebidas'];
+        const tieneBar = pedido.items.some(i => barCats.includes(i.categoria || ''));
+        const tieneCocina = pedido.items.some(i => !barCats.includes(i.categoria || ''));
+        if (tieneBar && tieneCocina) {
+          return (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-lg bg-amber-500/5 border border-amber-500/10 p-2 text-center">
+                <p className="text-[9px] text-amber-400 font-medium">🔥 Cocina</p>
+              </div>
+              <div className="flex-1 rounded-lg bg-purple-500/5 border border-purple-500/10 p-2 text-center">
+                <p className="text-[9px] text-purple-400 font-medium">🍸 Bar</p>
+              </div>
+            </div>
+          );
+        }
+        if (tieneBar) {
+          return (
+            <div className="rounded-xl bg-purple-500/5 border border-purple-500/10 p-2.5 text-center">
+              <p className="text-[10px] text-purple-400 font-medium">🍸 En preparación por Bar</p>
+            </div>
+          );
+        }
+        return (
+          <div className="rounded-xl bg-amber-500/5 border border-amber-500/10 p-2.5 text-center">
+            <p className="text-[10px] text-amber-400 font-medium">🔥 En preparación por Cocina</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }
