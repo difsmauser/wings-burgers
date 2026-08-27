@@ -124,7 +124,8 @@ export default function CapturaPage() {
         telefono: '0000000000',
         modalidad,
         canal: 'MESERO',
-        mesaZona: mesaZona === 'Parados / En espera' ? 'En espera' : (mesaZona.trim() || undefined),
+        // Para llevar (retiro) NO se asigna mesa
+        mesaZona: modalidad === 'retiro' ? undefined : (mesaZona === 'Parados / En espera' ? 'En espera' : (mesaZona.trim() || undefined)),
         meseroNombre: meseroNombreStored || undefined,
         items: items.map(i => ({
           productoId: i.productoId,

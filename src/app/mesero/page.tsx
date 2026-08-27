@@ -902,40 +902,69 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
         const tieneBar = itemsBar.length > 0;
         const tieneCocina = itemsCocina.length > 0;
 
-        // Calcular estado por estación
-        const cocinaListo = tieneCocina && itemsCocina.every(i => i.itemEstado === 'listo');
-        const barListo = tieneBar && itemsBar.every(i => i.itemEstado === 'listo');
+        // Calcular estado por estación basado en itemEstado
+        const getEstacionEstado = (items: typeof pedido.items) => {
+          if (items.length === 0) return 'none';
+          if (items.every(i => i.itemEstado === 'listo')) return 'listo';
+          if (items.some(i => i.itemEstado === 'preparando' || i.itemEstado === 'listo')) return 'preparando';
+          return 'pendiente';
+        };
+
+        const cocinaEstado = getEstacionEstado(itemsCocina);
+        const barEstado = getEstacionEstado(itemsBar);
+
+        const getLabel = (estacion: string, estado: string) => {
+          if (estado === 'listo') return `${estacion} ✓ Listo`;
+          if (estado === 'preparando') return `${estacion} preparando...`;
+          return `${estacion} en espera`;
+        };
+
+        const getStyle = (estado: string) => {
+          if (estado === 'listo') return 'bg-green-500/10 border-green-500/20 text-green-400';
+          if (estado === 'preparando') return 'bg-amber-500/5 border-amber-500/10 text-amber-400';
+          return 'bg-white/[0.02] border-white/5 text-gray-500';
+        };
 
         if (tieneBar && tieneCocina) {
           return (
-            <div className="flex items-center gap-2">
-              <div className={`flex-1 rounded-lg p-2 text-center border ${cocinaListo ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/5 border-amber-500/10'}`}>
-                <p className={`text-[9px] font-bold ${cocinaListo ? 'text-green-400' : 'text-amber-400'}`}>
-                  🔥 Cocina {cocinaListo ? '✓' : '...'}
-                </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`flex-1 rounded-lg p-2.5 text-center border ${getStyle(cocinaEstado)}`}>
+                  <p className="text-[9px] font-bold">🔥 {getLabel('Cocina', cocinaEstado)}</p>
+                </div>
+                <div className={`flex-1 rounded-lg p-2.5 text-center border ${getStyle(barEstado)}`}>
+                  <p className="text-[9px] font-bold">🍸 {getLabel('Bar', barEstado)}</p>
+                </div>
               </div>
-              <div className={`flex-1 rounded-lg p-2 text-center border ${barListo ? 'bg-green-500/10 border-green-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
-                <p className={`text-[9px] font-bold ${barListo ? 'text-green-400' : 'text-purple-400'}`}>
-                  🍸 Bar {barListo ? '✓' : '...'}
-                </p>
-              </div>
+              {/* Mensaje cuando una estación termina */}
+              {cocinaEstado === 'listo' && barEstado !== 'listo' && (
+                <div className="rounded-lg bg-green-500/5 border border-green-500/10 p-2 text-center">
+                  <p className="text-[9px] text-green-400 font-medium">✓ Cocina terminó — esperando Bar</p>
+                </div>
+              )}
+              {barEstado === 'listo' && cocinaEstado !== 'listo' && (
+                <div className="rounded-lg bg-green-500/5 border border-green-500/10 p-2 text-center">
+                  <p className="text-[9px] text-green-400 font-medium">✓ Bar terminó — esperando Cocina</p>
+                </div>
+              )}
+              {cocinaEstado === 'listo' && barEstado === 'listo' && (
+                <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-2 text-center">
+                  <p className="text-[10px] text-green-400 font-bold">🎉 Todo listo — recoger pedido</p>
+                </div>
+              )}
             </div>
           );
         }
         if (tieneBar) {
           return (
-            <div className={`rounded-xl p-2.5 text-center border ${barListo ? 'bg-green-500/10 border-green-500/20' : 'bg-purple-500/5 border-purple-500/10'}`}>
-              <p className={`text-[10px] font-medium ${barListo ? 'text-green-400' : 'text-purple-400'}`}>
-                🍸 Bar {barListo ? '✓ Listo' : 'preparando...'}
-              </p>
+            <div className={`rounded-xl p-2.5 text-center border ${getStyle(barEstado)}`}>
+              <p className="text-[10px] font-medium">🍸 {getLabel('Bar', barEstado)}</p>
             </div>
           );
         }
         return (
-          <div className={`rounded-xl p-2.5 text-center border ${cocinaListo ? 'bg-green-500/10 border-green-500/20' : 'bg-amber-500/5 border-amber-500/10'}`}>
-            <p className={`text-[10px] font-medium ${cocinaListo ? 'text-green-400' : 'text-amber-400'}`}>
-              🔥 Cocina {cocinaListo ? '✓ Listo' : 'preparando...'}
-            </p>
+          <div className={`rounded-xl p-2.5 text-center border ${getStyle(cocinaEstado)}`}>
+            <p className="text-[10px] font-medium">🔥 {getLabel('Cocina', cocinaEstado)}</p>
           </div>
         );
       })()}
