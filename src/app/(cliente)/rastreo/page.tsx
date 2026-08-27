@@ -198,13 +198,18 @@ export default function RastreoPage() {
   useEffect(() => {
     if (!pagoCelebrado) return;
     const timer = setTimeout(() => {
-      limpiarCarrito();
-      localStorage.removeItem('alaburguer-pedido-ids');
-      localStorage.removeItem('alaburguer-pedido-id');
-      localStorage.removeItem('alaburguer-cliente-nombre');
-      localStorage.removeItem('alaburguer-cliente-telefono');
-      setQrMesa(null);
-      window.location.href = '/menu';
+      try {
+        limpiarCarrito();
+        localStorage.removeItem('alaburguer-pedido-ids');
+        localStorage.removeItem('alaburguer-pedido-id');
+        localStorage.removeItem('alaburguer-cliente-nombre');
+        localStorage.removeItem('alaburguer-cliente-telefono');
+        localStorage.removeItem('alaburguer-qr-mesa');
+        localStorage.removeItem('alaburguer-qr-mesa-ts');
+        localStorage.removeItem('wings-burgers-carrito');
+        localStorage.removeItem('wings-burgers-carrito-ts');
+      } catch { /* */ }
+      window.location.replace('/menu');
     }, 10000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1191,27 +1191,31 @@ export default function PedidoPage() {
   useEffect(() => {
     if (!pagoCelebrado) return;
     const timer = setTimeout(() => {
-      // Limpiar carrito
-      limpiarCarrito();
-      // Limpiar pedido IDs
-      localStorage.removeItem('alaburguer-pedido-ids');
-      localStorage.removeItem('alaburguer-pedido-id');
-      // Limpiar datos del cliente
-      localStorage.removeItem('alaburguer-cliente-nombre');
-      localStorage.removeItem('alaburguer-cliente-telefono');
-      // Limpiar QR mesa context (esto también limpia localStorage)
-      setQrMesa(null);
-      // Redirigir a pantalla neutra
-      window.location.href = '/menu';
+      try {
+        // Limpiar carrito
+        limpiarCarrito();
+        // Limpiar pedido IDs
+        localStorage.removeItem('alaburguer-pedido-ids');
+        localStorage.removeItem('alaburguer-pedido-id');
+        // Limpiar datos del cliente
+        localStorage.removeItem('alaburguer-cliente-nombre');
+        localStorage.removeItem('alaburguer-cliente-telefono');
+        // Limpiar QR mesa
+        localStorage.removeItem('alaburguer-qr-mesa');
+        localStorage.removeItem('alaburguer-qr-mesa-ts');
+        // Limpiar carrito storage
+        localStorage.removeItem('wings-burgers-carrito');
+        localStorage.removeItem('wings-burgers-carrito-ts');
+      } catch { /* ignore */ }
+      // Redirigir — hard reload para limpiar todo el state de React
+      window.location.replace('/menu');
     }, 10000); // 10 segundos de celebración
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagoCelebrado]);
 
   // Si estamos celebrando, mostrar la pantalla de celebración
-  if (pagoCelebrado) {
-    return <PagoCelebradoScreen mesaZona={qrMesa?.mesaZona || ''} />;
-  }
+  // (Nota: este check está DESPUÉS de todos los hooks para cumplir Rules of Hooks)
 
   // Check if there are active orders on this mesa (regardless of cart state)
   const [hayPedidosActivos, setHayPedidosActivos] = useState(false);
@@ -1234,6 +1238,11 @@ export default function PedidoPage() {
   }, [qrMesa]);
 
   // Empty cart — only show if NO active orders on mesa
+  // PERO primero check celebración (después de todos los hooks)
+  if (pagoCelebrado) {
+    return <PagoCelebradoScreen mesaZona={qrMesa?.mesaZona || ''} />;
+  }
+
   if (items.length === 0 && !confirmado && !hayPedidosActivos) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
