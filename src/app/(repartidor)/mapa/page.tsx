@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { geocodificarLocal } from './_lib/geocoding';
+import { geocodificarCompleto } from './_lib/geocoding';
 import { calcularRuta, distanciaLinealMetros, estaCercaDelDestino } from './_lib/routing';
 import type { EntregaConRuta } from './_components/MapaRepartidor';
 
@@ -103,8 +103,8 @@ export default function MapaPage() {
       // Tomar la primera entrega activa (la más reciente)
       const entrega: EntregaRaw = activas[0];
 
-      // Geocodificar dirección — lookup local, SIEMPRE retorna coordenadas
-      const geoResult = geocodificarLocal(entrega.direccion);
+      // Geocodificar dirección — lookup local + Nominatim 15km
+      const geoResult = await geocodificarCompleto(entrega.direccion);
       const destino = geoResult.coordenadas;
       setGeocodePrecision(geoResult.precision);
 

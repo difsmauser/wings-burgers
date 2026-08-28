@@ -36,7 +36,7 @@ interface MapaRepartidorProps {
 // Coordenadas Toluca (centro por defecto)
 // ============================================================================
 
-const TOLUCA_CENTER: [number, number] = [19.2826, -99.6557];
+const TOLUCA_CENTER: [number, number] = [19.3570, -99.6625];
 const DEFAULT_ZOOM = 15;
 const ROUTE_ZOOM = 14;
 

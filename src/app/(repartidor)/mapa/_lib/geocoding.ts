@@ -1,14 +1,15 @@
 /**
- * Servicio de Geocoding — Optimizado para San Pablo Autopan y San Cristóbal Huichochitlán
+ * Geocoding para entregas — Radio 15km desde el restaurante
  *
- * Las entregas SIEMPRE son en estas dos localidades del norte de Toluca.
- * En vez de depender de Nominatim (que no tiene estas calles), usamos:
+ * Restaurante: Felipe Villanueva 280, San Pablo Autopan, CP 50290
+ * Coordenadas: 19.3570, -99.6625
  *
- * 1. Lookup local de calles conocidas con coordenadas GPS reales
- * 2. Identificación de localidad por nombre/CP
- * 3. Centro de la localidad como fallback (siempre funcional)
+ * Estrategia:
+ * 1. Lookup local de calles conocidas (instantáneo, confiable)
+ * 2. Nominatim con viewbox de 15km (para calles que no están en el lookup)
+ * 3. Fallback por CP / localidad (siempre retorna algo)
  *
- * Esto es 100% offline, instantáneo, y SIEMPRE retorna coordenadas útiles.
+ * Radio máximo de entrega: ~15-20km
  */
 
 // ============================================================================
@@ -22,257 +23,208 @@ export interface Coordenadas {
 
 export interface GeocodingResult {
   coordenadas: Coordenadas;
-  precision: 'exacto' | 'calle' | 'zona' | 'aproximado';
+  precision: 'calle' | 'zona' | 'aproximado';
   localidad: string;
 }
 
 // ============================================================================
-// Coordenadas de las localidades
+// Coordenadas del restaurante (Felipe Villanueva 280, San Pablo Autopan)
 // ============================================================================
 
-/** Centro de San Pablo Autopan (plaza principal) */
-const SAN_PABLO_AUTOPAN: Coordenadas = { lat: 19.3582, lng: -99.6623 };
+export const COORDENADAS_RESTAURANTE: Coordenadas = { lat: 19.3570, lng: -99.6625 };
 
-/** Centro de San Cristóbal Huichochitlán */
-const SAN_CRISTOBAL: Coordenadas = { lat: 19.3420, lng: -99.6580 };
+/**
+ * Viewbox de 15km alrededor del restaurante para Nominatim.
+ * ~0.135° ≈ 15km en esta latitud
+ */
+const RADIO_KM = 15;
+const DELTA_GRADOS = RADIO_KM / 111; // 1° ≈ 111km
 
-/** Restaurante A-la Burguer (punto de salida del repartidor) */
-export const COORDENADAS_RESTAURANTE: Coordenadas = { lat: 19.3550, lng: -99.6590 };
+const VIEWBOX = {
+  west: COORDENADAS_RESTAURANTE.lng - DELTA_GRADOS,
+  east: COORDENADAS_RESTAURANTE.lng + DELTA_GRADOS,
+  south: COORDENADAS_RESTAURANTE.lat - DELTA_GRADOS,
+  north: COORDENADAS_RESTAURANTE.lat + DELTA_GRADOS,
+};
 
 // ============================================================================
-// Base de datos local de calles con coordenadas GPS
-// Calles principales de San Pablo Autopan y San Cristóbal
+// DB local de calles conocidas en la zona de entrega
 // ============================================================================
 
-interface CalleConocida {
-  nombres: string[]; // Variantes del nombre (para matching flexible)
-  coordenadas: Coordenadas;
-  localidad: string;
+interface CalleInfo {
+  nombres: string[];
+  coords: Coordenadas;
+  zona: string;
 }
 
-const CALLES_CONOCIDAS: CalleConocida[] = [
+const CALLES: CalleInfo[] = [
   // ━━━ SAN PABLO AUTOPAN ━━━
-  {
-    nombres: ['plutarco gonzalez', 'plutarco gonzález', 'plutarco gonzalez pliego', 'plutarco gonzález pliego'],
-    coordenadas: { lat: 19.3575, lng: -99.6610 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['felipe villanueva'],
-    coordenadas: { lat: 19.3570, lng: -99.6625 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['independencia'],
-    coordenadas: { lat: 19.3585, lng: -99.6635 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['jose luis alamo', 'josé luis álamo', 'jose luis álamo'],
-    coordenadas: { lat: 19.3568, lng: -99.6605 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['lerdo', 'lerdo de tejada'],
-    coordenadas: { lat: 19.3578, lng: -99.6640 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['manuel buendia', 'manuel buendía', 'manuel buen dia', 'manuel buendía téllez'],
-    coordenadas: { lat: 19.3595, lng: -99.6620 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['morelos'],
-    coordenadas: { lat: 19.3590, lng: -99.6615 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['hidalgo'],
-    coordenadas: { lat: 19.3580, lng: -99.6630 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['benito juarez', 'benito juárez', 'juarez', 'juárez'],
-    coordenadas: { lat: 19.3565, lng: -99.6620 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['5 de mayo', 'cinco de mayo'],
-    coordenadas: { lat: 19.3588, lng: -99.6645 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['16 de septiembre', 'dieciseis de septiembre'],
-    coordenadas: { lat: 19.3572, lng: -99.6650 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['allende', 'ignacio allende'],
-    coordenadas: { lat: 19.3592, lng: -99.6608 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['aldama', 'juan aldama'],
-    coordenadas: { lat: 19.3583, lng: -99.6600 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['guerrero', 'vicente guerrero'],
-    coordenadas: { lat: 19.3560, lng: -99.6635 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['reforma'],
-    coordenadas: { lat: 19.3598, lng: -99.6628 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['constitucion', 'constitución'],
-    coordenadas: { lat: 19.3555, lng: -99.6618 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['emiliano zapata', 'zapata'],
-    coordenadas: { lat: 19.3602, lng: -99.6612 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['tierra y libertad'],
-    coordenadas: { lat: 19.3570, lng: -99.6618 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['pueblo nuevo'],
-    coordenadas: { lat: 19.3610, lng: -99.6640 },
-    localidad: 'San Pablo Autopan',
-  },
-  {
-    nombres: ['aviacion', 'aviación'],
-    coordenadas: { lat: 19.3620, lng: -99.6650 },
-    localidad: 'San Pablo Autopan',
-  },
+  { nombres: ['felipe villanueva'], coords: { lat: 19.3570, lng: -99.6625 }, zona: 'San Pablo Autopan' },
+  { nombres: ['plutarco gonzalez', 'plutarco gonzález', 'plutarco gonzalez pliego', 'plutarco gonzález pliego'], coords: { lat: 19.3575, lng: -99.6610 }, zona: 'San Pablo Autopan' },
+  { nombres: ['independencia'], coords: { lat: 19.3585, lng: -99.6635 }, zona: 'San Pablo Autopan' },
+  { nombres: ['jose luis alamo', 'josé luis álamo', 'jose luis álamo'], coords: { lat: 19.3568, lng: -99.6605 }, zona: 'San Pablo Autopan' },
+  { nombres: ['lerdo', 'lerdo de tejada'], coords: { lat: 19.3578, lng: -99.6640 }, zona: 'San Pablo Autopan' },
+  { nombres: ['manuel buendia', 'manuel buendía', 'manuel buendía téllez'], coords: { lat: 19.3595, lng: -99.6620 }, zona: 'San Pablo Autopan' },
+  { nombres: ['morelos'], coords: { lat: 19.3590, lng: -99.6615 }, zona: 'San Pablo Autopan' },
+  { nombres: ['hidalgo', 'miguel hidalgo'], coords: { lat: 19.3580, lng: -99.6630 }, zona: 'San Pablo Autopan' },
+  { nombres: ['benito juarez', 'benito juárez', 'juarez', 'juárez'], coords: { lat: 19.3565, lng: -99.6620 }, zona: 'San Pablo Autopan' },
+  { nombres: ['5 de mayo', 'cinco de mayo'], coords: { lat: 19.3588, lng: -99.6645 }, zona: 'San Pablo Autopan' },
+  { nombres: ['16 de septiembre'], coords: { lat: 19.3572, lng: -99.6650 }, zona: 'San Pablo Autopan' },
+  { nombres: ['allende', 'ignacio allende'], coords: { lat: 19.3592, lng: -99.6608 }, zona: 'San Pablo Autopan' },
+  { nombres: ['aldama', 'juan aldama'], coords: { lat: 19.3583, lng: -99.6600 }, zona: 'San Pablo Autopan' },
+  { nombres: ['guerrero', 'vicente guerrero'], coords: { lat: 19.3560, lng: -99.6635 }, zona: 'San Pablo Autopan' },
+  { nombres: ['reforma'], coords: { lat: 19.3598, lng: -99.6628 }, zona: 'San Pablo Autopan' },
+  { nombres: ['constitucion', 'constitución'], coords: { lat: 19.3555, lng: -99.6618 }, zona: 'San Pablo Autopan' },
+  { nombres: ['emiliano zapata', 'zapata'], coords: { lat: 19.3602, lng: -99.6612 }, zona: 'San Pablo Autopan' },
+  { nombres: ['tierra y libertad'], coords: { lat: 19.3570, lng: -99.6618 }, zona: 'San Pablo Autopan' },
+  { nombres: ['pueblo nuevo'], coords: { lat: 19.3610, lng: -99.6640 }, zona: 'San Pablo Autopan' },
+  { nombres: ['aviacion', 'aviación'], coords: { lat: 19.3620, lng: -99.6650 }, zona: 'Aviación Autopan' },
+  { nombres: ['ignacio lopez rayon', 'ignacio lópez rayón', 'lopez rayon', 'lópez rayón'], coords: { lat: 19.3562, lng: -99.6615 }, zona: 'San Pablo Autopan' },
+  { nombres: ['eduardo gonzalez', 'eduardo gonzález', 'eduardo gonzalez y pichardo'], coords: { lat: 19.3558, lng: -99.6630 }, zona: 'San Pablo Autopan' },
+  { nombres: ['de jesus', 'de jesús'], coords: { lat: 19.3545, lng: -99.6620 }, zona: 'De Jesús 1a Secc' },
 
   // ━━━ SAN CRISTÓBAL HUICHOCHITLÁN ━━━
-  {
-    nombres: ['san cristobal', 'san cristóbal'],
-    coordenadas: SAN_CRISTOBAL,
-    localidad: 'San Cristóbal Huichochitlán',
-  },
-  {
-    nombres: ['lazaro cardenas', 'lázaro cárdenas', 'cardenas', 'cárdenas'],
-    coordenadas: { lat: 19.3425, lng: -99.6575 },
-    localidad: 'San Cristóbal Huichochitlán',
-  },
-  {
-    nombres: ['venustiano carranza', 'carranza'],
-    coordenadas: { lat: 19.3430, lng: -99.6590 },
-    localidad: 'San Cristóbal Huichochitlán',
-  },
-  {
-    nombres: ['francisco i madero', 'madero', 'francisco i. madero'],
-    coordenadas: { lat: 19.3415, lng: -99.6570 },
-    localidad: 'San Cristóbal Huichochitlán',
-  },
-  {
-    nombres: ['nicolas bravo', 'nicolás bravo', 'bravo'],
-    coordenadas: { lat: 19.3435, lng: -99.6565 },
-    localidad: 'San Cristóbal Huichochitlán',
-  },
-  {
-    nombres: ['20 de noviembre', 'veinte de noviembre'],
-    coordenadas: { lat: 19.3410, lng: -99.6585 },
-    localidad: 'San Cristóbal Huichochitlán',
-  },
+  { nombres: ['lazaro cardenas', 'lázaro cárdenas', 'cardenas', 'cárdenas'], coords: { lat: 19.3425, lng: -99.6575 }, zona: 'San Cristóbal Huichochitlán' },
+  { nombres: ['venustiano carranza', 'carranza'], coords: { lat: 19.3430, lng: -99.6590 }, zona: 'San Cristóbal Huichochitlán' },
+  { nombres: ['francisco i madero', 'madero', 'francisco i. madero'], coords: { lat: 19.3415, lng: -99.6570 }, zona: 'San Cristóbal Huichochitlán' },
+  { nombres: ['nicolas bravo', 'nicolás bravo', 'bravo'], coords: { lat: 19.3435, lng: -99.6565 }, zona: 'San Cristóbal Huichochitlán' },
+  { nombres: ['20 de noviembre', 'veinte de noviembre'], coords: { lat: 19.3410, lng: -99.6585 }, zona: 'San Cristóbal Huichochitlán' },
 ];
 
-// ============================================================================
-// Lookup de Códigos Postales
-// ============================================================================
+// Localidades conocidas
+const LOCALIDADES: Record<string, Coordenadas> = {
+  'san pablo autopan': { lat: 19.3582, lng: -99.6623 },
+  'san cristobal': { lat: 19.3420, lng: -99.6580 },
+  'san cristóbal': { lat: 19.3420, lng: -99.6580 },
+  'huichochitlan': { lat: 19.3420, lng: -99.6580 },
+  'huichochitlán': { lat: 19.3420, lng: -99.6580 },
+  'pueblo nuevo': { lat: 19.3610, lng: -99.6640 },
+  'aviacion autopan': { lat: 19.3620, lng: -99.6650 },
+  'aviación autopan': { lat: 19.3620, lng: -99.6650 },
+  'de jesus': { lat: 19.3545, lng: -99.6620 },
+  'de jesús': { lat: 19.3545, lng: -99.6620 },
+  'ojo de agua': { lat: 19.3650, lng: -99.6670 },
+};
 
-const CP_LOCALIDAD: Record<string, { coordenadas: Coordenadas; localidad: string }> = {
-  '50070': { coordenadas: { lat: 19.3610, lng: -99.6640 }, localidad: 'San Pablo Autopan (Pueblo Nuevo)' },
-  '50200': { coordenadas: SAN_CRISTOBAL, localidad: 'San Cristóbal Huichochitlán' },
-  '50209': { coordenadas: SAN_PABLO_AUTOPAN, localidad: 'San Pablo Autopan' },
-  '50210': { coordenadas: { lat: 19.3560, lng: -99.6580 }, localidad: 'San Pablo Autopan (sur)' },
-  '50215': { coordenadas: { lat: 19.3600, lng: -99.6660 }, localidad: 'San Pablo Autopan (norte)' },
-  '50219': { coordenadas: { lat: 19.3550, lng: -99.6610 }, localidad: 'San Pablo Autopan' },
+// Códigos postales
+const CPS: Record<string, { coords: Coordenadas; zona: string }> = {
+  '50070': { coords: { lat: 19.3610, lng: -99.6640 }, zona: 'Pueblo Nuevo' },
+  '50200': { coords: { lat: 19.3420, lng: -99.6580 }, zona: 'San Cristóbal Huichochitlán' },
+  '50209': { coords: { lat: 19.3575, lng: -99.6610 }, zona: 'San Pablo Autopan' },
+  '50210': { coords: { lat: 19.3560, lng: -99.6580 }, zona: 'San Pablo Autopan (sur)' },
+  '50215': { coords: { lat: 19.3600, lng: -99.6660 }, zona: 'San Pablo Autopan (norte)' },
+  '50219': { coords: { lat: 19.3550, lng: -99.6610 }, zona: 'San Pablo Autopan' },
+  '50290': { coords: COORDENADAS_RESTAURANTE, zona: 'De Jesús 1a Secc / San Pablo' },
 };
 
 // ============================================================================
 // Cache
 // ============================================================================
 
-const geocodeCache = new Map<string, GeocodingResult>();
+const cache = new Map<string, GeocodingResult>();
 
 // ============================================================================
-// Funciones de matching
+// Helpers
 // ============================================================================
 
-/**
- * Normaliza un string para comparación flexible.
- * Elimina acentos, números de casa, y pasa a minúsculas.
- */
 function normalizar(str: string): string {
   return str
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[#.,]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-/**
- * Busca una calle en la base de datos local.
- * Usa matching parcial — si la dirección contiene el nombre de la calle, matchea.
- */
-function buscarCalle(direccion: string): CalleConocida | null {
-  const dirNorm = normalizar(direccion);
+function extraerCP(dir: string): string | null {
+  const m = dir.match(/\b(50\d{3})\b/);
+  return m ? m[1] : null;
+}
 
-  // Buscar match exacto de nombre de calle
-  for (const calle of CALLES_CONOCIDAS) {
+/**
+ * Busca en la DB local de calles.
+ */
+function buscarCalleLocal(direccion: string): CalleInfo | null {
+  const norm = normalizar(direccion);
+  for (const calle of CALLES) {
     for (const nombre of calle.nombres) {
-      const nombreNorm = normalizar(nombre);
-      if (dirNorm.includes(nombreNorm)) {
+      if (norm.includes(normalizar(nombre))) {
         return calle;
       }
     }
   }
-
   return null;
 }
 
 /**
- * Extrae el código postal de una dirección.
+ * Detecta localidad por nombre en la dirección.
  */
-function extraerCP(direccion: string): string | null {
-  const cpMatch = direccion.match(/\b(50\d{3})\b/);
-  return cpMatch ? cpMatch[1] : null;
+function detectarLocalidad(direccion: string): { coords: Coordenadas; zona: string } | null {
+  const norm = normalizar(direccion);
+  for (const [key, coords] of Object.entries(LOCALIDADES)) {
+    if (norm.includes(normalizar(key))) {
+      return { coords, zona: key };
+    }
+  }
+  return null;
 }
 
 /**
- * Detecta la localidad por contexto de la dirección.
+ * Busca en Nominatim con viewbox de 15km.
  */
-function detectarLocalidad(direccion: string): { coordenadas: Coordenadas; localidad: string } | null {
-  const dirLower = direccion.toLowerCase();
+async function buscarNominatim(query: string): Promise<Coordenadas | null> {
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      format: 'json',
+      limit: '1',
+      viewbox: `${VIEWBOX.west},${VIEWBOX.north},${VIEWBOX.east},${VIEWBOX.south}`,
+      bounded: '0',
+    });
 
-  if (dirLower.includes('san cristobal') || dirLower.includes('san cristóbal') || dirLower.includes('huichochitlan') || dirLower.includes('huichochitlán')) {
-    return { coordenadas: SAN_CRISTOBAL, localidad: 'San Cristóbal Huichochitlán' };
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?${params}`,
+      {
+        headers: {
+          'User-Agent': 'AlaBurguer-Delivery/1.0',
+          Accept: 'application/json',
+        },
+      }
+    );
+
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    if (data.length > 0) {
+      const lat = parseFloat(data[0].lat);
+      const lng = parseFloat(data[0].lon);
+
+      // Verificar que esté dentro del radio de 20km del restaurante
+      const distKm = haversineKm(COORDENADAS_RESTAURANTE, { lat, lng });
+      if (distKm <= 20) {
+        return { lat, lng };
+      }
+    }
+    return null;
+  } catch {
+    return null;
   }
+}
 
-  if (dirLower.includes('san pablo') || dirLower.includes('autopan')) {
-    return { coordenadas: SAN_PABLO_AUTOPAN, localidad: 'San Pablo Autopan' };
-  }
-
-  if (dirLower.includes('pueblo nuevo')) {
-    return { coordenadas: { lat: 19.3610, lng: -99.6640 }, localidad: 'San Pablo Autopan (Pueblo Nuevo)' };
-  }
-
-  if (dirLower.includes('aviacion') || dirLower.includes('aviación')) {
-    return { coordenadas: { lat: 19.3620, lng: -99.6650 }, localidad: 'Aviación Autopan' };
-  }
-
-  return null;
+/**
+ * Distancia Haversine en km.
+ */
+function haversineKm(a: Coordenadas, b: Coordenadas): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
 // ============================================================================
@@ -280,91 +232,90 @@ function detectarLocalidad(direccion: string): { coordenadas: Coordenadas; local
 // ============================================================================
 
 /**
- * Geocodifica una dirección de San Pablo Autopan o San Cristóbal.
+ * Geocodifica una dirección en un radio de 15km del restaurante.
  *
- * Estrategia (100% local, instantáneo):
- * 1. Buscar nombre de calle en DB local → coordenada exacta de la calle
- * 2. Detectar localidad por nombre → centro de localidad
- * 3. Buscar por código postal → coordenada del CP
- * 4. Fallback → centro de San Pablo Autopan (donde siempre están las entregas)
+ * 1. DB local de calles → instantáneo
+ * 2. Nominatim con viewbox 15km → si la calle no está en local
+ * 3. CP / localidad → zona aproximada
+ * 4. Centro del restaurante → siempre funciona
  *
- * SIEMPRE retorna coordenadas. Nunca falla. Nunca muestra "No se pudo ubicar".
+ * NUNCA retorna null. Siempre hay un punto en el mapa.
  */
-export async function geocodificarDireccion(
-  direccion: string
-): Promise<Coordenadas | null> {
-  const result = geocodificarLocal(direccion);
+export async function geocodificarDireccion(direccion: string): Promise<Coordenadas> {
+  const result = await geocodificarCompleto(direccion);
   return result.coordenadas;
 }
 
-/**
- * Versión con info de precisión.
- */
-export function geocodificarLocal(direccion: string): GeocodingResult {
+export async function geocodificarCompleto(direccion: string): Promise<GeocodingResult> {
   if (!direccion || direccion === 'Sin dirección') {
-    return {
-      coordenadas: SAN_PABLO_AUTOPAN,
-      precision: 'aproximado',
-      localidad: 'San Pablo Autopan',
-    };
+    return { coordenadas: COORDENADAS_RESTAURANTE, precision: 'aproximado', localidad: 'Restaurante' };
   }
 
-  // Cache
-  const cacheKey = direccion.toLowerCase().trim();
-  if (geocodeCache.has(cacheKey)) {
-    return geocodeCache.get(cacheKey)!;
-  }
+  const cacheKey = normalizar(direccion);
+  if (cache.has(cacheKey)) return cache.get(cacheKey)!;
 
-  // ━━━ NIVEL 1: Buscar calle en DB local ━━━
-  const calle = buscarCalle(direccion);
+  // ━━━ 1. Lookup local de calles ━━━
+  const calle = buscarCalleLocal(direccion);
   if (calle) {
-    const result: GeocodingResult = {
-      coordenadas: calle.coordenadas,
-      precision: 'calle',
-      localidad: calle.localidad,
-    };
-    geocodeCache.set(cacheKey, result);
-    return result;
+    const r: GeocodingResult = { coordenadas: calle.coords, precision: 'calle', localidad: calle.zona };
+    cache.set(cacheKey, r);
+    return r;
   }
 
-  // ━━━ NIVEL 2: Detectar localidad por nombre ━━━
-  const localidad = detectarLocalidad(direccion);
-  if (localidad) {
-    const result: GeocodingResult = {
-      coordenadas: localidad.coordenadas,
-      precision: 'zona',
-      localidad: localidad.localidad,
-    };
-    geocodeCache.set(cacheKey, result);
-    return result;
+  // ━━━ 2. Nominatim (15km viewbox) ━━━
+  const queryNom = direccion
+    .replace(/^Direcci[oó]n:\s*/i, '')
+    .replace(/#/g, ' ')
+    .trim();
+
+  // Agregar contexto geográfico si no lo tiene
+  const tieneCtx = /autopan|cristobal|cristóbal|toluca|metepec|estado de m/i.test(queryNom);
+  const queryFull = tieneCtx ? queryNom : `${queryNom}, San Pablo Autopan, Toluca, México`;
+
+  const nominatimResult = await buscarNominatim(queryFull);
+  if (nominatimResult) {
+    const r: GeocodingResult = { coordenadas: nominatimResult, precision: 'calle', localidad: 'Nominatim' };
+    cache.set(cacheKey, r);
+    return r;
   }
 
-  // ━━━ NIVEL 3: Buscar por código postal ━━━
+  // Intento 2 con Nominatim: solo el nombre sin número
+  const sinNumero = queryNom
+    .replace(/\b\d{1,4}\b/g, '')
+    .replace(/CP\s*\d{5}/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (sinNumero.length > 5) {
+    const nom2 = await buscarNominatim(`${sinNumero}, Toluca, México`);
+    if (nom2) {
+      const r: GeocodingResult = { coordenadas: nom2, precision: 'zona', localidad: 'Nominatim (zona)' };
+      cache.set(cacheKey, r);
+      return r;
+    }
+  }
+
+  // ━━━ 3. Detectar localidad por nombre ━━━
+  const loc = detectarLocalidad(direccion);
+  if (loc) {
+    const r: GeocodingResult = { coordenadas: loc.coords, precision: 'zona', localidad: loc.zona };
+    cache.set(cacheKey, r);
+    return r;
+  }
+
+  // ━━━ 4. Buscar por CP ━━━
   const cp = extraerCP(direccion);
-  if (cp && CP_LOCALIDAD[cp]) {
-    const result: GeocodingResult = {
-      coordenadas: CP_LOCALIDAD[cp].coordenadas,
-      precision: 'zona',
-      localidad: CP_LOCALIDAD[cp].localidad,
-    };
-    geocodeCache.set(cacheKey, result);
-    return result;
+  if (cp && CPS[cp]) {
+    const r: GeocodingResult = { coordenadas: CPS[cp].coords, precision: 'zona', localidad: CPS[cp].zona };
+    cache.set(cacheKey, r);
+    return r;
   }
 
-  // ━━━ NIVEL 4: Fallback — centro de San Pablo Autopan ━━━
-  // Las entregas SIEMPRE son en esta zona, así que el centro funciona bien
-  const result: GeocodingResult = {
-    coordenadas: SAN_PABLO_AUTOPAN,
-    precision: 'aproximado',
-    localidad: 'San Pablo Autopan',
-  };
-  geocodeCache.set(cacheKey, result);
-  return result;
+  // ━━━ 5. Fallback: centro del restaurante ━━━
+  const r: GeocodingResult = { coordenadas: COORDENADAS_RESTAURANTE, precision: 'aproximado', localidad: 'San Pablo Autopan' };
+  cache.set(cacheKey, r);
+  return r;
 }
 
-/**
- * Limpia cache.
- */
 export function limpiarCacheGeocode(): void {
-  geocodeCache.clear();
+  cache.clear();
 }
