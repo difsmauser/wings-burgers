@@ -147,8 +147,18 @@ export default function CajaPage() {
 
   const today = new Date().toDateString();
   const pedidosHoy = pedidos.filter(p => new Date(p.creadoEn).toDateString() === today);
-  const activos = pedidosHoy.filter(p => p.estadoPago !== 'pagado');
-  const pagados = pedidosHoy.filter(p => p.estadoPago === 'pagado');
+  // Domicilio: activo hasta que repartidor entregue (estado='entregado')
+  // Otros: activo mientras no esté pagado
+  const activos = pedidosHoy.filter(p => {
+    const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
+    if (esDom) return p.estado !== 'entregado';
+    return p.estadoPago !== 'pagado';
+  });
+  const pagados = pedidosHoy.filter(p => {
+    const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
+    if (esDom) return p.estado === 'entregado';
+    return p.estadoPago === 'pagado';
+  });
 
   // Consolidar por mesa — TODOS los pedidos de una mesa = 1 cuenta
   const cuentasMesa: Record<string, CuentaMesa> = {};
