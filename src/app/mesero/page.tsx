@@ -594,25 +594,57 @@ export default function MeseroPage() {
       </header>
 
       <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
-        {/* KPIs — Premium Glass Cards */}
-        <div className="grid grid-cols-4 gap-2">
-          <div className="rounded-xl bg-gradient-to-br from-brand-500/5 to-transparent border border-brand-500/10 p-3 text-center">
-            <p className="text-2xl font-black text-brand-400">{entregasHoy}</p>
-            <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Entregados</p>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-emerald-500/5 to-transparent border border-emerald-500/10 p-3 text-center">
-            <p className="text-2xl font-black text-emerald-400">{pendientesEntrega}</p>
-            <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Por entregar</p>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-green-500/5 to-transparent border border-green-500/10 p-3 text-center">
-            <p className="text-2xl font-black text-green-400">{pendientesCobro}</p>
-            <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Ir a cobrar</p>
-          </div>
-          <div className="rounded-xl bg-gradient-to-br from-purple-500/5 to-transparent border border-purple-500/10 p-3 text-center">
-            <p className="text-2xl font-black text-purple-400">{pedidosDisponibles.length}</p>
-            <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Disponibles</p>
-          </div>
-        </div>
+        {/* KPIs — Desglose por canal */}
+        {(() => {
+          const todosCompletados = [...misPedidos.filter(p => ['servido', 'en_camino', 'entregado'].includes(p.estado)), ...misPedidosDia];
+          const enMesa = todosCompletados.filter(p => p.canal === 'MESA_LOCAL' || p.canal === 'MESERO');
+          const paraLlevar = todosCompletados.filter(p => p.canal === 'MESA_LLEVAR' || p.canal === 'MOSTRADOR');
+          const aDomicilio = todosCompletados.filter(p => p.canal === 'DOMICILIO' || p.modalidad === 'domicilio');
+          const totalVentas = todosCompletados.reduce((s, p) => s + p.total, 0);
+
+          return (
+            <div className="space-y-2">
+              {/* Fila principal */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="rounded-xl bg-gradient-to-br from-brand-500/5 to-transparent border border-brand-500/10 p-3 text-center">
+                  <p className="text-2xl font-black text-brand-400">{entregasHoy}</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Entregados</p>
+                </div>
+                <div className="rounded-xl bg-gradient-to-br from-emerald-500/5 to-transparent border border-emerald-500/10 p-3 text-center">
+                  <p className="text-2xl font-black text-emerald-400">{pendientesEntrega}</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Por entregar</p>
+                </div>
+                <div className="rounded-xl bg-gradient-to-br from-green-500/5 to-transparent border border-green-500/10 p-3 text-center">
+                  <p className="text-2xl font-black text-green-400">{pendientesCobro}</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Ir a cobrar</p>
+                </div>
+                <div className="rounded-xl bg-gradient-to-br from-purple-500/5 to-transparent border border-purple-500/10 p-3 text-center">
+                  <p className="text-2xl font-black text-purple-400">{pedidosDisponibles.length}</p>
+                  <p className="text-[9px] text-gray-500 uppercase tracking-wider font-medium">Disponibles</p>
+                </div>
+              </div>
+              {/* Desglose por canal */}
+              <div className="grid grid-cols-4 gap-2">
+                <div className="rounded-lg bg-[#12121a] border border-white/5 p-2 text-center">
+                  <p className="text-sm font-bold text-yellow-400">{enMesa.length}</p>
+                  <p className="text-[8px] text-gray-600">🍽️ Mesa</p>
+                </div>
+                <div className="rounded-lg bg-[#12121a] border border-white/5 p-2 text-center">
+                  <p className="text-sm font-bold text-amber-400">{paraLlevar.length}</p>
+                  <p className="text-[8px] text-gray-600">🛍️ Llevar</p>
+                </div>
+                <div className="rounded-lg bg-[#12121a] border border-white/5 p-2 text-center">
+                  <p className="text-sm font-bold text-green-400">{aDomicilio.length}</p>
+                  <p className="text-[8px] text-gray-600">🛵 Domicilio</p>
+                </div>
+                <div className="rounded-lg bg-[#12121a] border border-white/5 p-2 text-center">
+                  <p className="text-sm font-bold text-brand-400">${totalVentas.toFixed(0)}</p>
+                  <p className="text-[8px] text-gray-600">💰 Total</p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ═══════ ALERTA: Ir a cobrar (solo mesa/local, NO domicilio) ═══════ */}
         {misPedidos.filter(p => (p.observaciones?.includes('[EFECTIVO]') || p.metodoPago === 'efectivo') && !p.observaciones?.includes('[MESERO_ENTREGO]') && p.canal !== 'DOMICILIO' && p.modalidad !== 'domicilio').length > 0 && (
@@ -765,18 +797,23 @@ export default function MeseroPage() {
               </span>
             </h2>
             <div className="rounded-2xl bg-[#16161f] border border-green-500/10 divide-y divide-white/5 overflow-hidden">
-              {misPedidosDia.map(p => (
-                <div key={p.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-green-400 text-xs">✓</span>
-                    <div>
-                      <span className="text-xs font-bold text-white">#{p.numero.split('-').pop()}</span>
-                      {p.mesaZona && <span className="text-[10px] text-gray-500 ml-2">{p.mesaZona.split(' - ')[0]}</span>}
+              {misPedidosDia.map(p => {
+                const canalIcon = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio' ? '🛵' : p.canal === 'MESA_LLEVAR' || p.canal === 'MOSTRADOR' ? '🛍️' : '🍽️';
+                const canalLabel = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio' ? 'Domicilio' : p.canal === 'MESA_LLEVAR' || p.canal === 'MOSTRADOR' ? 'Llevar' : 'Mesa';
+                return (
+                  <div key={p.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-green-400 text-xs">✓</span>
+                      <div>
+                        <span className="text-xs font-bold text-white">#{p.numero.split('-').pop()}</span>
+                        <span className="text-[9px] text-gray-500 ml-2">{canalIcon} {canalLabel}</span>
+                        {p.mesaZona && <span className="text-[9px] text-yellow-400 ml-1">{p.mesaZona.split(' - ')[0]}</span>}
+                      </div>
                     </div>
+                    <span className="text-xs font-bold text-brand-400">${p.total.toFixed(0)}</span>
                   </div>
-                  <span className="text-xs font-bold text-brand-400">${p.total.toFixed(0)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
