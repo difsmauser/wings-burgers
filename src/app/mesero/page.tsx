@@ -854,18 +854,79 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
       </div>
 
       {/* Acción: Marcar como entregado / entregar a repartidor */}
+      {/* Para domicilio: primero definir pago, DESPUÉS entregar */}
       {(pedido.estado === 'listo_para_servir' || (esDomicilio && pedido.estado === 'empacado')) && (
-        <button
-          onClick={() => onMarcarServido(pedido.id)}
-          disabled={procesandoId === pedido.id}
-          className={`w-full py-3.5 rounded-xl text-sm font-bold text-black shadow-lg disabled:opacity-50 transition-all active:scale-[0.97] ${
-            esDomicilio
-              ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-green-500/20'
-              : 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20'
-          }`}
-        >
-          {procesandoId === pedido.id ? '⏳ Actualizando...' : esDomicilio ? '🛵 Entregar a Repartidor' : '🍽️ Marcar como Entregado'}
-        </button>
+        <>
+          {/* Domicilio SIN método de pago: definir pago primero */}
+          {esDomicilio && !pedido.metodoPago && pedido.estadoPago !== 'pagado' && (
+            <div className="rounded-xl bg-white/[0.02] border border-brand-400/20 p-4 text-center space-y-3">
+              <p className="text-xs text-white font-bold">⚠️ Definir pago antes de entregar</p>
+              <p className="text-[10px] text-gray-500">¿Cómo pagará el cliente al recibir?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onCobrarEfectivo(pedido.id)}
+                  disabled={procesandoId === pedido.id}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                >
+                  💵 Efectivo
+                </button>
+                <label className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97] flex items-center justify-center gap-1">
+                  📷 Foto Transfer
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) onSubirFoto(pedido.id, file);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Domicilio con transferencia — esperando validación de caja */}
+          {esDomicilio && pedido.metodoPago === 'transferencia' && pedido.estadoPago !== 'pagado' && (
+            <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 p-4 text-center space-y-2">
+              <p className="text-sm text-purple-400 font-bold">📎 Voucher enviado a caja</p>
+              <p className="text-[10px] text-gray-500">Cuando caja valide, podrás entregar al repartidor</p>
+            </div>
+          )}
+
+          {/* Domicilio con pago definido (efectivo o transfer validado) → ENTREGAR */}
+          {esDomicilio && pedido.metodoPago === 'efectivo' && (
+            <button
+              onClick={() => onMarcarServido(pedido.id)}
+              disabled={procesandoId === pedido.id}
+              className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+            >
+              {procesandoId === pedido.id ? '⏳ Actualizando...' : '🛵 Entregar a Repartidor (Efectivo)'}
+            </button>
+          )}
+
+          {esDomicilio && pedido.estadoPago === 'pagado' && (
+            <button
+              onClick={() => onMarcarServido(pedido.id)}
+              disabled={procesandoId === pedido.id}
+              className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+            >
+              {procesandoId === pedido.id ? '⏳ Actualizando...' : '🛵 Entregar a Repartidor (Pagado ✓)'}
+            </button>
+          )}
+
+          {/* NO domicilio — entregar normal */}
+          {!esDomicilio && (
+            <button
+              onClick={() => onMarcarServido(pedido.id)}
+              disabled={procesandoId === pedido.id}
+              className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+            >
+              {procesandoId === pedido.id ? '⏳ Actualizando...' : '🍽️ Marcar como Entregado'}
+            </button>
+          )}
+        </>
       )}
 
       {/* Pagado */}
