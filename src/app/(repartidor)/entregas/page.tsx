@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 interface Entrega {
   id: string;
   pedidoId: string;
+  repartidorId?: string;
   numeroPedido: string;
   clienteNombre: string;
   direccion: string;
@@ -28,14 +29,18 @@ export default function EntregasPage() {
 
   const fetchEntregas = useCallback(async () => {
     try {
-      // Traer TODAS las entregas — cada repartidor ve las suyas y las disponibles
       const res = await fetch('/api/entregas');
       if (res.ok) {
         const json = await res.json();
         const data = json.data || [];
-        setPendientes(data.filter((e: Entrega) => e.estado === 'pendiente'));
-        setActivas(data.filter((e: Entrega) => e.estado === 'en_camino'));
-        setCompletadas(data.filter((e: Entrega) => e.estado === 'entregado' || e.estado === 'fallido'));
+        // Filtrar: solo las asignadas a MÍ (por repartidor_id guardado en localStorage)
+        const miId = typeof window !== 'undefined' ? localStorage.getItem('alaburguer-repartidor-id') || '' : '';
+        const misEntregas = miId
+          ? data.filter((e: Entrega) => e.repartidorId === miId)
+          : data;
+        setPendientes(misEntregas.filter((e: Entrega) => e.estado === 'pendiente'));
+        setActivas(misEntregas.filter((e: Entrega) => e.estado === 'en_camino'));
+        setCompletadas(misEntregas.filter((e: Entrega) => e.estado === 'entregado' || e.estado === 'fallido'));
       }
     } catch { /* */ }
     finally { setLoading(false); }

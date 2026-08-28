@@ -21,7 +21,7 @@ interface Repartidor {
 /**
  * Login por PIN para repartidores — mismo estilo que meseros.
  */
-function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
+function RepartidorLogin({ onLogin }: { onLogin: (nombre: string, id: string) => void }) {
   const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Repartidor | null>(null);
@@ -43,7 +43,7 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
   useEffect(() => {
     if (pinInput.length === 4 && selected) {
       if (!selected.pin || selected.pin === pinInput) {
-        onLogin(selected.nombre);
+        onLogin(selected.nombre, selected.id);
       } else {
         setPinError(true);
         setTimeout(() => { setPinError(false); setPinInput(''); }, 600);
@@ -156,8 +156,9 @@ export default function RepartidorLayout({ children }: { children: ReactNode }) 
     }
   }, []);
 
-  const handleLogin = (nombre: string) => {
+  const handleLogin = (nombre: string, id: string) => {
     localStorage.setItem(STORAGE_KEY, nombre);
+    localStorage.setItem('alaburguer-repartidor-id', id);
     setRepartidorNombre(nombre);
     setRegistrado(true);
   };

@@ -73,6 +73,7 @@ export async function GET(_request: NextRequest) {
       return {
         id: e.id as string,
         pedidoId: e.pedido_id as string,
+        repartidorId: e.repartidor_id as string,
         repartidorNombre,
         numeroPedido: (pedido?.numero as string) || 'N/A',
         clienteNombre: (cliente?.nombre as string) || 'Cliente',
