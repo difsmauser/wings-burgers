@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             metodo_pago: 'transferencia',
-            estado_pago: 'validando',
             observaciones: `[COMPROBANTE] ${url}`,
             actualizado_en: new Date().toISOString(),
           }),

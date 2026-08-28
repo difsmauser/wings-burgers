@@ -169,8 +169,8 @@ export default function CajaPage() {
     cuenta.total += p.total;
     // Si ALGÚN pedido tiene método de pago, esa es la elección del cliente
     if (p.metodoPago) cuenta.metodoPago = p.metodoPago;
-    // Si alguno está "validando" (voucher subido)
-    if (p.estadoPago === 'validando') cuenta.estadoPago = 'validando';
+    // Si alguno tiene transferencia con comprobante
+    if (p.metodoPago === 'transferencia' && p.estadoPago !== 'pagado') cuenta.estadoPago = 'validando';
     // Mesero entregó = todos los pedidos están servidos/entregados
   });
   // Determinar si mesero ya entregó el dinero a caja
@@ -882,8 +882,9 @@ function OrderCard({ pedido, onDetail }: {
     && ['servido', 'entregado'].includes(pedido.estado)
     && pedido.estadoPago !== 'pagado';
 
-  // Transferencia: solo si estadoPago='validando' (voucher subido)
-  const mostrarBotonTransferencia = pedido.estadoPago === 'validando';
+  // Transferencia: si metodoPago='transferencia' y tiene comprobante en observaciones
+  const mostrarBotonTransferencia = pedido.metodoPago === 'transferencia'
+    && pedido.estadoPago !== 'pagado';
 
   // Esperando mesero con dinero
   const esperandoMesero = pedido.metodoPago === 'efectivo'

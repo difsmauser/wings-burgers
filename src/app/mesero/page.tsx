@@ -863,6 +863,15 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
                 </>
               )}
             </div>
+          ) : pedido.metodoPago === 'transferencia' ? (
+            /* Ya subió voucher — esperando validación de caja */
+            <div className="rounded-xl bg-purple-500/10 border border-purple-500/20 p-4 text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xl">📎</span>
+                <p className="text-sm text-purple-400 font-bold">Voucher enviado a caja</p>
+              </div>
+              <p className="text-[10px] text-gray-500">Esperando que caja valide la transferencia</p>
+            </div>
           ) : (
             /* Sin método elegido — mesero puede cobrar directo */
             <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 text-center space-y-3">
