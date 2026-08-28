@@ -816,6 +816,8 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
 }) {
   const necesitaCobrar = pedido.observaciones?.includes('[EFECTIVO]') || pedido.metodoPago === 'efectivo';
   const yaEntregoACaja = pedido.observaciones?.includes('[MESERO_ENTREGO]');
+  const [mostrarBillete, setMostrarBillete] = useState(false);
+  const [billete, setBillete] = useState<number | null>(null);
 
   // Estado visual del pedido
   const getEstadoBadge = () => {
@@ -887,28 +889,64 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
             <div className="rounded-xl bg-white/[0.02] border border-brand-400/20 p-4 text-center space-y-3">
               <p className="text-xs text-white font-bold">⚠️ Definir pago antes de entregar</p>
               <p className="text-[10px] text-gray-500">¿Cómo pagará el cliente al recibir?</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onCobrarEfectivo(pedido.id)}
-                  disabled={procesandoId === pedido.id}
-                  className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
-                >
-                  💵 Efectivo
-                </button>
-                <label className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97] flex items-center justify-center gap-1">
-                  📷 Foto Transfer
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) onSubirFoto(pedido.id, file);
+              {!mostrarBillete ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMostrarBillete(true)}
+                    disabled={procesandoId === pedido.id}
+                    className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-green-600 hover:bg-green-500 disabled:opacity-50 transition-all active:scale-[0.97]"
+                  >
+                    💵 Efectivo
+                  </button>
+                  <label className="flex-1 py-3 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 text-center cursor-pointer transition-all active:scale-[0.97] flex items-center justify-center gap-1">
+                    📷 Foto Transfer
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) onSubirFoto(pedido.id, file);
+                      }}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-green-400 font-bold">💵 ¿Con cuánto pagará?</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[0, 100, 200, 500, 1000].map(monto => (
+                      <button
+                        key={monto}
+                        onClick={() => setBillete(monto)}
+                        className={`py-2.5 rounded-lg text-xs font-bold border transition-all ${billete === monto ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-white/[0.02] text-gray-400 border-white/[0.06]'}`}
+                      >
+                        {monto === 0 ? 'Exacto' : `$${monto}`}
+                      </button>
+                    ))}
+                  </div>
+                  {billete !== null && billete > 0 && billete > pedido.total && (
+                    <p className="text-[10px] text-amber-400 font-medium">Cambio repartidor: ${billete - pedido.total}</p>
+                  )}
+                  <button
+                    onClick={async () => {
+                      await fetch('/api/pagos/efectivo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pedidoId: pedido.id, billete: billete || 0 }),
+                      });
+                      setMostrarBillete(false);
+                      setBillete(null);
                     }}
-                  />
-                </label>
-              </div>
+                    disabled={billete === null || procesandoId === pedido.id}
+                    className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 disabled:opacity-40 transition-all active:scale-[0.97]"
+                  >
+                    ✓ Confirmar — {billete === 0 ? 'Pago exacto' : billete ? `Paga con $${billete}` : 'Selecciona monto'}
+                  </button>
+                  <button onClick={() => { setMostrarBillete(false); setBillete(null); }} className="text-[10px] text-gray-500 hover:text-white">← Cambiar método</button>
+                </div>
+              )}
             </div>
           )}
 

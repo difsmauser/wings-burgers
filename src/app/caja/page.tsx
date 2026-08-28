@@ -962,9 +962,14 @@ function OrderCard({ pedido, onDetail, onCobrarEfectivo, onValidarTransfer }: {
       )}
 
       {/* Esperando: cliente eligió efectivo pero pedido no servido */}
+      {/* Esperando mesero con dinero (solo mesa) O domicilio efectivo pendiente */}
       {esperandoMesero && (
         <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
-          <span className="text-[10px] text-amber-400 font-medium">💵 Efectivo — mesero en camino con dinero</span>
+          <span className="text-[10px] text-amber-400 font-medium">
+            {(pedido.canal === 'DOMICILIO' || pedido.modalidad === 'domicilio')
+              ? '💵 Efectivo — repartidor cobrará al entregar'
+              : '💵 Efectivo — mesero en camino con dinero'}
+          </span>
         </div>
       )}
 
