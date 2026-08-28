@@ -63,6 +63,7 @@ async function main() {
   // ── Limpiar datos existentes (orden FK-safe) ──
   console.log('🧹 Limpiando datos previos...');
   await supabase.from('mesa').update({ estado: 'disponible', pedido_activo_id: null }).neq('id', DUMMY_ID);
+  await supabase.from('entrega').delete().neq('id', DUMMY_ID);
   await supabase.from('pedido_detalle').delete().neq('id', DUMMY_ID);
   await supabase.from('pedido').delete().neq('id', DUMMY_ID);
   await supabase.from('cliente').delete().neq('id', DUMMY_ID);
