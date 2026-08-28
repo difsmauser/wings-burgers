@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { geocodificarDireccion, COORDENADAS_RESTAURANTE } from './_lib/geocoding';
+import { geocodificarDireccion, geocodificarDireccionConPrecision, COORDENADAS_RESTAURANTE } from './_lib/geocoding';
 import { calcularRuta, distanciaLinealMetros, estaCercaDelDestino } from './_lib/routing';
 import type { EntregaConRuta } from './_components/MapaRepartidor';
 
@@ -64,6 +64,7 @@ export default function MapaPage() {
   const [cercaDelDestino, setCercaDelDestino] = useState(false);
   const [llegueLoading, setLlegueLoading] = useState(false);
   const [sinEntregas, setSinEntregas] = useState(false);
+  const [geocodePrecision, setGeocodePrecision] = useState<string | null>(null);
 
   // Refs
   const watchIdRef = useRef<number | null>(null);
@@ -102,8 +103,10 @@ export default function MapaPage() {
       // Tomar la primera entrega activa (la más reciente)
       const entrega: EntregaRaw = activas[0];
 
-      // Geocodificar dirección si no tenemos coordenadas
-      const destino = await geocodificarDireccion(entrega.direccion);
+      // Geocodificar dirección — ahora SIEMPRE retorna algo
+      const geoResult = await geocodificarDireccionConPrecision(entrega.direccion);
+      const destino = geoResult ? geoResult.coordenadas : null;
+      setGeocodePrecision(geoResult?.precision || null);
 
       // Calcular ruta si tenemos posición y destino
       let ruta = null;
@@ -494,14 +497,26 @@ export default function MapaPage() {
         </div>
       )}
 
-      {/* Mensaje de geocoding fallido */}
-      {entregaActiva && !entregaActiva.destino && (
+      {/* Mensaje de precisión de geocoding */}
+      {entregaActiva && geocodePrecision && geocodePrecision !== 'exacto' && (
         <div className="absolute top-20 left-4 right-4 z-[1000]">
-          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-md px-4 py-3 flex items-center gap-3">
-            <span className="text-lg">⚠️</span>
+          <div className={`rounded-xl backdrop-blur-md px-4 py-3 flex items-center gap-3 ${
+            geocodePrecision === 'aproximado'
+              ? 'bg-amber-500/10 border border-amber-500/20'
+              : 'bg-blue-500/10 border border-blue-500/20'
+          }`}>
+            <span className="text-lg">{geocodePrecision === 'aproximado' ? '📍' : '📌'}</span>
             <div>
-              <p className="text-xs font-medium text-amber-400">No se pudo ubicar la dirección</p>
-              <p className="text-[10px] text-amber-400/60 mt-0.5">{entregaActiva.direccion}</p>
+              <p className={`text-xs font-medium ${geocodePrecision === 'aproximado' ? 'text-amber-400' : 'text-blue-400'}`}>
+                {geocodePrecision === 'aproximado'
+                  ? 'Ubicación aproximada — usa Google Maps para navegar'
+                  : geocodePrecision === 'cp'
+                  ? 'Ubicación por código postal (zona general)'
+                  : 'Ubicación por nombre de calle'}
+              </p>
+              <p className={`text-[10px] mt-0.5 ${geocodePrecision === 'aproximado' ? 'text-amber-400/60' : 'text-blue-400/60'}`}>
+                {entregaActiva.direccion}
+              </p>
             </div>
           </div>
         </div>
