@@ -32,7 +32,7 @@ interface PedidoCaja {
   meseroNombre?: string;
   creadoEn: string;
   comprobanteUrl?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number }>;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string }>;
 }
 
 /** Cuenta consolidada por mesa — agrupa todos los pedidos de una mesa */
@@ -865,9 +865,16 @@ function OrderCard({ pedido, onDetail }: {
   // Lógica de estado para el mensaje
   const getStatusMessage = (): { text: string; color: string; icon: string } | null => {
     if (pedido.estadoPago === 'pagado') return null;
+
+    // Detectar estaciones
+    const barCats = ['bar', 'bebidas'];
+    const tieneBar = pedido.items.some(i => barCats.includes(i.categoria || ''));
+    const tieneCocina = pedido.items.some(i => !barCats.includes(i.categoria || ''));
+    const ambas = tieneBar && tieneCocina;
+
     switch (pedido.estado) {
-      case 'recibido': return { text: 'Recibido por cocina', icon: '📋', color: 'text-brand-400 bg-brand-500/5 border-brand-500/10' };
-      case 'en_preparacion': return { text: 'En preparación', icon: '🔥', color: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
+      case 'recibido': return { text: ambas ? 'Recibido — Cocina + Bar' : tieneBar ? 'Recibido por Bar' : 'Recibido por Cocina', icon: '📋', color: 'text-brand-400 bg-brand-500/5 border-brand-500/10' };
+      case 'en_preparacion': return { text: ambas ? 'Preparando — Cocina + Bar' : tieneBar ? 'Bar preparando' : 'Cocina preparando', icon: '🔥', color: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
       case 'empacado': return { text: 'Listo — esperando mesero', icon: '📦', color: 'text-purple-400 bg-purple-500/5 border-purple-500/10' };
       case 'listo_para_servir': return { text: 'Mesero en camino', icon: '🍽️', color: 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' };
       default: return null;
