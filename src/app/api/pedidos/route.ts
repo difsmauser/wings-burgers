@@ -285,6 +285,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Si es pedido domicilio, guardar la dirección en el registro del cliente
+    // Esto asegura que GET /api/entregas pueda leer la dirección directamente
+    if (canalVenta === 'DOMICILIO' && observaciones) {
+      try {
+        const supabase = createServerClient();
+        // Extraer dirección del campo observaciones
+        const dirMatch = observaciones.match(/Direcci[oó]n:\s*(.+?)(?:\s*\|\s*Notas:|\s*\[|$)/i);
+        const direccionExtraida = dirMatch ? dirMatch[1].trim() : '';
+
+        if (direccionExtraida && pedido.clienteId) {
+          await supabase
+            .from('cliente')
+            .update({ direccion: direccionExtraida })
+            .eq('id', pedido.clienteId);
+        }
+      } catch {
+        // Non-critical — dirección es best-effort
+      }
+    }
+
     return NextResponse.json({ data: pedido }, { status: 201 });
   } catch (error) {
     return handleApiError(error);
