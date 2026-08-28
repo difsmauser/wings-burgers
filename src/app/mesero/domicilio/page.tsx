@@ -118,26 +118,37 @@ export default function DomicilioCaptura() {
       const data = await res.json();
       const pedidoNumero = data?.data?.numero || 'PED';
 
-      // Build WhatsApp ticket message
+      // Build WhatsApp ticket message — formato premium
       const ticketLines = [
-        `🧾 *A-la Burguer — Ticket de Pedido*`,
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `📋 *Pedido:* #${pedidoNumero}`,
+        `╔══════════════════════╗`,
+        `   🍔 *A-LA BURGUER*`,
+        `╚══════════════════════╝`,
+        ``,
+        `📋 *Ticket de Pedido*`,
+        `▸ Pedido: *#${pedidoNumero}*`,
+        `▸ Canal: 🛵 A domicilio`,
+        ``,
         `👤 *Cliente:* ${nombreCliente.trim()}`,
         `📍 *Dirección:* ${direccion.trim()}`,
         referencia.trim() ? `📌 *Referencia:* ${referencia.trim()}` : '',
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `🍽️ *Tu pedido:*`,
-        ...items.map(i => `   ${i.cantidad}x ${i.nombre} — $${(i.precio * i.cantidad).toFixed(0)}${i.comentario ? ` _(${i.comentario})_` : ''}`),
-        `━━━━━━━━━━━━━━━━━━━━`,
-        `💰 *Total: $${total.toFixed(0)}*`,
+        notas.trim() ? `📝 *Notas:* ${notas.trim()}` : '',
         ``,
-        `⏱️ Tiempo estimado: 30-45 min`,
-        `🛵 Tu pedido está siendo preparado`,
+        `─────────────────────`,
+        `🛒 *Tu pedido:*`,
         ``,
-        `¡Gracias por tu preferencia! 🙌`,
-        `Para tu próximo pedido, usa nuestra app:`,
-        `👉 https://wings-burgers-mocha.vercel.app/menu-domicilio`,
+        ...items.map(i => `   ${i.cantidad}x ${i.nombre}  —  $${(i.precio * i.cantidad).toFixed(0)}${i.comentario ? `\n      💬 _${i.comentario}_` : ''}`),
+        ``,
+        `─────────────────────`,
+        `💰 *TOTAL:  $${total.toFixed(0)}*`,
+        `─────────────────────`,
+        ``,
+        `⏱️ *Tiempo estimado:* 30-45 min`,
+        `📦 Tu pedido está siendo preparado`,
+        ``,
+        `¡Gracias por tu preferencia! 🙏`,
+        ``,
+        `Para tu próximo pedido:`,
+        `🔗 https://wings-burgers-mocha.vercel.app/menu-domicilio`,
       ].filter(Boolean).join('\n');
 
       const whatsappUrl = `https://wa.me/52${telefono.trim()}?text=${encodeURIComponent(ticketLines)}`;

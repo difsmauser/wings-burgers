@@ -114,30 +114,69 @@ export async function POST(
       }
     }
 
-    // Generar mensaje del ticket
+    // Generar mensaje del ticket — formato premium WhatsApp
     const fecha = new Date(pedido.creado_en).toLocaleString('es-MX', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
-    const metodoPago = pedido.metodo_pago || 'pendiente';
-    const estadoPago = pedido.estado_pago || 'pendiente';
+
+    // Extraer dirección si existe en observaciones
+    const dirMatch = (pedido.observaciones || '').match(/Dirección:\s*([^|[\n]+)/);
+    const direccion = dirMatch ? dirMatch[1].trim() : '';
+    const refMatch = (pedido.observaciones || '').match(/\(([^)]+)\)/);
+    const referencia = refMatch ? refMatch[1].trim() : '';
+
+    // Canal legible
+    const canalMap: Record<string, string> = {
+      'MESA_LOCAL': '🍽️ En sucursal',
+      'MESA_LLEVAR': '🛍️ Para llevar',
+      'MOSTRADOR': '📱 Mostrador',
+      'DOMICILIO': '🛵 A domicilio',
+      'MESERO': '🧑‍🍳 Pedido en mesa',
+    };
+    const canalTexto = canalMap[pedido.canal] || pedido.canal || pedido.modalidad;
+
+    // Construir items formateados
+    const itemsFormateados = items.map((item: Record<string, unknown>) => {
+      const nombre = (item.producto as Record<string, unknown> | null)?.nombre || 'Producto';
+      const cantidad = item.cantidad as number;
+      const precioTotal = item.precio_total as number;
+      return `   ${cantidad}x ${nombre}  —  $${precioTotal}`;
+    }).join('\n');
 
     const mensaje =
-      `🍔 *A-la Burguer — Ticket #${pedido.numero}*\n` +
-      `━━━━━━━━━━━━━━━━━━\n` +
-      `📅 ${fecha}\n` +
-      `📋 Canal: ${pedido.canal || pedido.modalidad}\n` +
-      (pedido.mesa_zona ? `📍 ${pedido.mesa_zona}\n` : '') +
-      `━━━━━━━━━━━━━━━━━━\n\n` +
-      `*Detalle:*\n${resumen}\n\n` +
-      `━━━━━━━━━━━━━━━━━━\n` +
-      (pedido.subtotal !== pedido.total
-        ? `  Subtotal: $${pedido.subtotal}\n  Impuestos: $${pedido.impuestos}\n`
-        : '') +
-      `  💰 *TOTAL: $${totalFormateado}*\n\n` +
-      `💳 Método: ${metodoPago}\n` +
-      `📌 Estado pago: ${estadoPago}\n\n` +
-      `¡Gracias por tu preferencia, ${nombreCliente}! 🙏`;
+      `╔══════════════════════╗\n` +
+      `   🍔 *A-LA BURGUER*\n` +
+      `╚══════════════════════╝\n\n` +
+      `📋 *Ticket de Pedido*\n` +
+      `▸ Pedido: *#${pedido.numero}*\n` +
+      `▸ Fecha: ${fecha}\n` +
+      `▸ Canal: ${canalTexto}\n` +
+      (pedido.mesa_zona ? `▸ Mesa: ${pedido.mesa_zona}\n` : '') +
+      `\n` +
+      `👤 *Cliente:* ${nombreCliente}\n` +
+      (direccion ? `📍 *Dirección:* ${direccion}\n` : '') +
+      (referencia ? `📌 *Referencia:* ${referencia}\n` : '') +
+      `\n` +
+      `─────────────────────\n` +
+      `🛒 *Tu pedido:*\n\n` +
+      `${itemsFormateados}\n\n` +
+      `─────────────────────\n` +
+      `💰 *TOTAL:  $${totalFormateado}*\n` +
+      `─────────────────────\n\n` +
+      (pedido.canal === 'DOMICILIO'
+        ? `⏱️ *Tiempo estimado:* 30-45 min\n` +
+          `📦 Tu pedido está siendo preparado\n\n`
+        : pedido.mesa_zona
+          ? `🍽️ Tu pedido se servirá en tu mesa\n\n`
+          : `📦 Te avisaremos cuando esté listo\n\n`
+      ) +
+      `¡Gracias por tu preferencia! 🙏\n\n` +
+      `Para tu próximo pedido, usa nuestra app:\n` +
+      `🔗 https://wings-burgers-mocha.vercel.app/menu-domicilio`;
 
     // Intentar enviar por WhatsApp Cloud API
     const whatsappToken = process.env.WHATSAPP_TOKEN;
