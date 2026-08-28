@@ -30,8 +30,6 @@ const ROLE_PROTECTED_PATHS: { prefix: string; roles: Rol[] }[] = [
   { prefix: '/pedidos', roles: ['admin', 'vendedor'] },
   { prefix: '/bar', roles: ['admin', 'bar'] },
   { prefix: '/caja', roles: ['admin', 'caja'] },
-  { prefix: '/entregas', roles: ['admin', 'repartidor'] },
-  { prefix: '/mapa', roles: ['admin', 'repartidor'] },
 ];
 
 /**
@@ -63,6 +61,8 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/pago') ||
     pathname.startsWith('/rastreo') ||
     pathname.startsWith('/mesero') ||
+    pathname.startsWith('/entregas') ||
+    pathname.startsWith('/mapa') ||
     pathname.startsWith('/demo')
   ) {
     return true;
