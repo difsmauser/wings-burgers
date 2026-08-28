@@ -2,345 +2,507 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { geocodificarDireccion, COORDENADAS_RESTAURANTE } from './_lib/geocoding';
+import { calcularRuta, distanciaLinealMetros, estaCercaDelDestino } from './_lib/routing';
+import type { EntregaConRuta } from './_components/MapaRepartidor';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface EntregaActiva {
+interface EntregaRaw {
   id: string;
   pedidoId: string;
   numeroPedido: string;
   clienteNombre: string;
   direccion: string;
   telefono: string;
-  aceptadaEn: string;
-  lat?: number;
-  lng?: number;
+  estado: string;
+  repartidorId?: string;
+  metodoPago?: string | null;
+  estadoPago?: string;
+  observaciones?: string;
+  aceptadaEn?: string;
+  total?: number;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const GPS_UPDATE_INTERVAL_MS = 10_000; // 10 seconds (Req 14.3)
-const GPS_SIGNAL_LOSS_THRESHOLD_MS = 60_000; // 60 seconds (Req 14.4)
+const GPS_UPDATE_INTERVAL_MS = 10_000;
+const ROUTE_RECALC_INTERVAL_MS = 30_000;
+const ENTREGAS_POLL_MS = 15_000;
+const UMBRAL_LLEGADA_METROS = 100;
 
 // ============================================================================
-// Dynamic Leaflet Map (no SSR to avoid window reference errors)
+// Dynamic Map (no SSR)
 // ============================================================================
 
 const MapaRepartidor = dynamic(() => import('./_components/MapaRepartidor'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[300px] bg-brand-50 rounded-xl flex items-center justify-center animate-pulse">
-      <span className="text-wood-400 text-sm">Cargando mapa...</span>
+    <div className="w-full h-full flex items-center justify-center bg-[#1a1a2e]">
+      <div className="text-center space-y-3">
+        <div className="w-12 h-12 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm text-gray-400">Cargando mapa...</p>
+      </div>
     </div>
   ),
 });
 
 // ============================================================================
-// Main Page Component
+// Main Page
 // ============================================================================
 
-/**
- * Map page for the repartidor module.
- *
- * Features:
- * - Full-screen Leaflet + OpenStreetMap map showing current position
- * - Active delivery destinations shown as markers
- * - Route lines from repartidor to each active delivery
- * - GPS tracking via navigator.geolocation.watchPosition() every 10s (Req 14.3)
- * - GPS signal loss alert after 60s without position (Req 14.4)
- * - List of active deliveries as info overlay
- *
- * Requirements: 14.1, 14.3, 14.4
- */
 export default function MapaPage() {
   // State
   const [posicionActual, setPosicionActual] = useState<{ lat: number; lng: number } | null>(null);
-  const [entregasActivas, setEntregasActivas] = useState<EntregaActiva[]>([]);
+  const [entregaActiva, setEntregaActiva] = useState<EntregaConRuta | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [gpsSignalLost, setGpsSignalLost] = useState(false);
-  const [gpsPermissionDenied, setGpsPermissionDenied] = useState(false);
+  const [gpsActivo, setGpsActivo] = useState(false);
+  const [cercaDelDestino, setCercaDelDestino] = useState(false);
+  const [llegueLoading, setLlegueLoading] = useState(false);
+  const [sinEntregas, setSinEntregas] = useState(false);
 
   // Refs
   const watchIdRef = useRef<number | null>(null);
-  const gpsSendIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const gpsCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastGpsTimestampRef = useRef<number>(Date.now());
+  const routeRecalcRef = useRef<NodeJS.Timeout | null>(null);
+  const gpsSendRef = useRef<NodeJS.Timeout | null>(null);
+  const entregasPollRef = useRef<NodeJS.Timeout | null>(null);
+  const posicionRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // ============================================================================
-  // Fetch active entregas
+  // Fetch entregas activas del repartidor
   // ============================================================================
 
-  const fetchEntregas = useCallback(async () => {
+  const fetchEntregaActiva = useCallback(async () => {
     try {
-      setError(null);
-      const response = await fetch('/api/entregas');
-      if (!response.ok) {
-        throw new Error('Error al cargar entregas');
+      const res = await fetch('/api/entregas');
+      if (!res.ok) return;
+
+      const json = await res.json();
+      const data = json.data || [];
+      const miId = localStorage.getItem('alaburguer-repartidor-id') || '';
+
+      // Filtrar entregas activas (en_camino) del repartidor actual
+      const activas = data.filter(
+        (e: EntregaRaw) => e.repartidorId === miId && e.estado === 'en_camino'
+      );
+
+      if (activas.length === 0) {
+        setSinEntregas(true);
+        setEntregaActiva(null);
+        setLoading(false);
+        return;
       }
-      const data = await response.json();
-      setEntregasActivas(data.activas || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
+
+      setSinEntregas(false);
+
+      // Tomar la primera entrega activa (la más reciente)
+      const entrega: EntregaRaw = activas[0];
+
+      // Geocodificar dirección si no tenemos coordenadas
+      const destino = await geocodificarDireccion(entrega.direccion);
+
+      // Calcular ruta si tenemos posición y destino
+      let ruta = null;
+      if (posicionRef.current && destino) {
+        ruta = await calcularRuta(posicionRef.current, destino, false);
+      }
+
+      const entregaConRuta: EntregaConRuta = {
+        id: entrega.id,
+        pedidoId: entrega.pedidoId,
+        numeroPedido: entrega.numeroPedido,
+        clienteNombre: entrega.clienteNombre,
+        direccion: entrega.direccion,
+        telefono: entrega.telefono,
+        total: entrega.total,
+        metodoPago: entrega.metodoPago,
+        aceptadaEn: entrega.aceptadaEn,
+        destino,
+        ruta,
+      };
+
+      setEntregaActiva(entregaConRuta);
+      setLoading(false);
+    } catch {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchEntregas();
-  }, [fetchEntregas]);
-
   // ============================================================================
-  // Send GPS position to API (Req 14.3)
+  // GPS Tracking
   // ============================================================================
 
-  const sendGpsPosition = useCallback(async (lat: number, lng: number) => {
-    try {
-      await fetch('/api/entregas/ubicacion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lng, timestamp: Date.now() }),
-      });
-    } catch {
-      // Silent failure - GPS updates are best-effort
-    }
-  }, []);
+  const startGps = useCallback(() => {
+    if (!navigator.geolocation) return;
 
-  // ============================================================================
-  // GPS Tracking (Req 14.3, 14.4)
-  // ============================================================================
-
-  const startGpsTracking = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsSignalLost(true);
-      return;
-    }
-
-    // Watch position continuously
     const watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setPosicionActual({ lat: latitude, lng: longitude });
-        lastGpsTimestampRef.current = Date.now();
-        setGpsSignalLost(false);
-        setGpsPermissionDenied(false);
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setPosicionActual(coords);
+        posicionRef.current = coords;
+        setGpsActivo(true);
       },
-      (geoError) => {
-        if (geoError.code === geoError.PERMISSION_DENIED) {
-          setGpsPermissionDenied(true);
-        }
+      () => {
+        setGpsActivo(false);
       },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 10000,
-      }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
     );
     watchIdRef.current = watchId;
 
-    // Send position to server every 10 seconds (Req 14.3)
-    gpsSendIntervalRef.current = setInterval(() => {
-      if (posicionActual) {
-        sendGpsPosition(posicionActual.lat, posicionActual.lng);
+    // Enviar GPS al servidor cada 10s
+    gpsSendRef.current = setInterval(() => {
+      if (posicionRef.current) {
+        fetch('/api/entregas/ubicacion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lat: posicionRef.current.lat,
+            lng: posicionRef.current.lng,
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
       }
     }, GPS_UPDATE_INTERVAL_MS);
+  }, []);
 
-    // Check GPS signal loss every 5 seconds (Req 14.4)
-    gpsCheckIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - lastGpsTimestampRef.current;
-      if (elapsed > GPS_SIGNAL_LOSS_THRESHOLD_MS) {
-        setGpsSignalLost(true);
-      }
-    }, 5000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sendGpsPosition]);
-
-  const stopGpsTracking = useCallback(() => {
+  const stopGps = useCallback(() => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    if (gpsSendIntervalRef.current) {
-      clearInterval(gpsSendIntervalRef.current);
-      gpsSendIntervalRef.current = null;
-    }
-    if (gpsCheckIntervalRef.current) {
-      clearInterval(gpsCheckIntervalRef.current);
-      gpsCheckIntervalRef.current = null;
+    if (gpsSendRef.current) {
+      clearInterval(gpsSendRef.current);
+      gpsSendRef.current = null;
     }
   }, []);
 
-  // Start GPS tracking on mount (only if there are active deliveries)
+  // ============================================================================
+  // Recalcular ruta periódicamente
+  // ============================================================================
+
+  const recalcularRuta = useCallback(async () => {
+    if (!posicionRef.current || !entregaActiva?.destino) return;
+
+    const nuevaRuta = await calcularRuta(
+      posicionRef.current,
+      entregaActiva.destino,
+      false
+    );
+
+    if (nuevaRuta) {
+      setEntregaActiva((prev) =>
+        prev ? { ...prev, ruta: nuevaRuta } : null
+      );
+    }
+
+    // Verificar cercanía
+    const distancia = distanciaLinealMetros(
+      posicionRef.current,
+      entregaActiva.destino
+    );
+    setCercaDelDestino(estaCercaDelDestino(distancia, UMBRAL_LLEGADA_METROS));
+  }, [entregaActiva?.destino]);
+
+  // ============================================================================
+  // Effects
+  // ============================================================================
+
+  // Inicializar todo
   useEffect(() => {
-    if (entregasActivas.length > 0) {
-      startGpsTracking();
+    startGps();
+    fetchEntregaActiva();
+
+    // Polling entregas
+    entregasPollRef.current = setInterval(fetchEntregaActiva, ENTREGAS_POLL_MS);
+
+    return () => {
+      stopGps();
+      if (routeRecalcRef.current) clearInterval(routeRecalcRef.current);
+      if (entregasPollRef.current) clearInterval(entregasPollRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recalcular ruta cada 30s cuando hay entrega activa
+  useEffect(() => {
+    if (routeRecalcRef.current) {
+      clearInterval(routeRecalcRef.current);
+      routeRecalcRef.current = null;
+    }
+
+    if (entregaActiva?.destino) {
+      // Calcular ruta inmediatamente si no existe
+      if (!entregaActiva.ruta && posicionRef.current) {
+        recalcularRuta();
+      }
+      routeRecalcRef.current = setInterval(recalcularRuta, ROUTE_RECALC_INTERVAL_MS);
     }
 
     return () => {
-      stopGpsTracking();
+      if (routeRecalcRef.current) clearInterval(routeRecalcRef.current);
     };
-  }, [entregasActivas.length, startGpsTracking, stopGpsTracking]);
+  }, [entregaActiva?.destino, entregaActiva?.ruta, recalcularRuta]);
 
-  // Keep the interval's closure up to date with current position
+  // Verificar cercanía al destino con cada actualización de posición
   useEffect(() => {
-    // Re-create the send interval with the latest position reference
-    if (gpsSendIntervalRef.current && posicionActual) {
-      clearInterval(gpsSendIntervalRef.current);
-      gpsSendIntervalRef.current = setInterval(() => {
-        if (posicionActual) {
-          sendGpsPosition(posicionActual.lat, posicionActual.lng);
-        }
-      }, GPS_UPDATE_INTERVAL_MS);
+    if (!posicionActual || !entregaActiva?.destino) {
+      setCercaDelDestino(false);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posicionActual]);
+    const distancia = distanciaLinealMetros(posicionActual, entregaActiva.destino);
+    setCercaDelDestino(estaCercaDelDestino(distancia, UMBRAL_LLEGADA_METROS));
+  }, [posicionActual, entregaActiva?.destino]);
 
   // ============================================================================
-  // Render
+  // Acción: "Llegué"
+  // ============================================================================
+
+  const handleLlegue = async () => {
+    if (!entregaActiva) return;
+    setLlegueLoading(true);
+    try {
+      await fetch(`/api/entregas/${entregaActiva.id}/completar`, { method: 'POST' });
+      setEntregaActiva(null);
+      setSinEntregas(true);
+      setCercaDelDestino(false);
+    } catch {
+      // silencioso
+    } finally {
+      setLlegueLoading(false);
+    }
+  };
+
+  // ============================================================================
+  // Render: Loading
   // ============================================================================
 
   if (loading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-4rem)] animate-pulse">
-        <div className="h-8 bg-wood-100 rounded w-1/4 mb-4" />
-        <div className="flex-1 bg-wood-100 rounded-xl" />
+      <div className="h-[calc(100vh-56px)] bg-[#0a0a0f] flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-12 h-12 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-gray-400">Cargando mapa...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-wood-800">
-            Mapa de Ruta
-          </h2>
-          <p className="text-sm text-wood-500 mt-0.5">
-            {entregasActivas.length > 0
-              ? `${entregasActivas.length} entrega${entregasActivas.length > 1 ? 's' : ''} activa${entregasActivas.length > 1 ? 's' : ''}`
-              : 'Sin entregas activas'}
+  // ============================================================================
+  // Render: Sin entregas activas
+  // ============================================================================
+
+  if (sinEntregas) {
+    return (
+      <div className="h-[calc(100vh-56px)] bg-[#0a0a0f] flex items-center justify-center p-6">
+        <div className="text-center max-w-sm space-y-4 animate-fade-in">
+          <div className="w-20 h-20 mx-auto rounded-full bg-gray-800/50 flex items-center justify-center border border-gray-700/30">
+            <span className="text-4xl">🗺️</span>
+          </div>
+          <h2 className="text-xl font-bold text-white">Sin entregas activas</h2>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            Acepta una entrega desde la pestaña de Entregas para ver la ruta de navegación aquí.
           </p>
+          <a
+            href="/entregas"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-500/10 text-green-400 text-sm font-medium border border-green-500/20 hover:bg-green-500/20 transition-all"
+          >
+            📦 Ir a Entregas
+          </a>
         </div>
-        <button
-          onClick={fetchEntregas}
-          className="min-h-[44px] min-w-[44px] px-3 py-2 bg-wood-100 hover:bg-wood-200 text-wood-600 rounded-lg text-sm font-medium transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-          aria-label="Actualizar entregas"
-        >
-          🔄
-        </button>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // Render: Mapa con entrega activa
+  // ============================================================================
+
+  const tiempoTranscurrido = entregaActiva?.aceptadaEn
+    ? Math.floor((Date.now() - new Date(entregaActiva.aceptadaEn).getTime()) / 60000)
+    : 0;
+
+  return (
+    <div className="h-[calc(100vh-56px)] bg-[#0a0a0f] relative overflow-hidden">
+      {/* Mapa fullscreen */}
+      <div className="absolute inset-0">
+        <MapaRepartidor
+          posicionActual={posicionActual}
+          entregaActiva={entregaActiva}
+        />
       </div>
 
-      {/* GPS Alerts */}
-      {gpsPermissionDenied && (
-        <div
-          className="bg-fire-50 border border-fire-200 rounded-xl p-4 flex items-start gap-3 flex-shrink-0"
-          role="alert"
-        >
-          <span className="text-lg flex-shrink-0" aria-hidden="true">🚫</span>
-          <div>
-            <p className="text-sm font-semibold text-fire-800">
-              Permiso de ubicacion denegado
-            </p>
-            <p className="text-xs text-fire-600 mt-0.5">
-              Habilita el acceso a la ubicacion en la configuracion de tu navegador para poder rastrear tus entregas.
-            </p>
+      {/* Header overlay - Info GPS + ETA */}
+      <div className="absolute top-4 left-4 right-4 z-[1000] flex items-start justify-between pointer-events-none">
+        {/* Badge GPS */}
+        <div className="pointer-events-auto">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium backdrop-blur-md ${
+            gpsActivo
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+              : 'bg-red-500/20 text-red-400 border border-red-500/30'
+          }`}>
+            <span className={`w-2 h-2 rounded-full ${gpsActivo ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+            {gpsActivo ? 'GPS activo' : 'Sin señal GPS'}
           </div>
         </div>
-      )}
 
-      {gpsSignalLost && !gpsPermissionDenied && entregasActivas.length > 0 && (
-        <div
-          className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center gap-3 flex-shrink-0"
-          role="alert"
-          aria-live="assertive"
-        >
-          <span className="relative flex h-3 w-3 flex-shrink-0">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-          </span>
-          <p className="text-xs text-amber-700 font-medium">
-            Senal GPS perdida hace mas de 60 segundos. Mostrando ultima posicion conocida.
-          </p>
-        </div>
-      )}
+        {/* ETA Badge */}
+        {entregaActiva?.ruta && (
+          <div className="pointer-events-auto">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-black/70 backdrop-blur-md border border-white/10">
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">ETA</p>
+                <p className="text-sm font-bold text-white">{entregaActiva.ruta.etaTexto}</p>
+              </div>
+              <div className="w-px h-8 bg-white/10" />
+              <div className="text-right">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Distancia</p>
+                <p className="text-sm font-bold text-blue-400">{entregaActiva.ruta.distanciaTexto}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-      {/* Error */}
-      {error && (
-        <div
-          className="bg-fire-50 border border-fire-200 rounded-xl p-4 text-center flex-shrink-0"
-          role="alert"
-        >
-          <p className="text-sm text-fire-700">{error}</p>
+      {/* Botón re-centrar */}
+      {posicionActual && (
+        <div className="absolute bottom-[220px] right-4 z-[1000]">
           <button
-            onClick={fetchEntregas}
-            className="mt-2 min-h-[44px] px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors duration-150 motion-reduce:transition-none"
+            onClick={() => {
+              // Disparar re-fit del mapa
+              if (posicionActual && entregaActiva?.destino) {
+                window.dispatchEvent(new CustomEvent('refit-map'));
+              }
+            }}
+            className="w-10 h-10 rounded-full bg-[#1e1e2e] border border-white/10 flex items-center justify-center text-white shadow-lg hover:bg-[#2e2e4e] transition-all active:scale-90"
+            aria-label="Centrar mapa"
           >
-            Reintentar
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+            </svg>
           </button>
         </div>
       )}
 
-      {/* Map Area */}
-      <div className="flex-1 rounded-xl overflow-hidden shadow-sm border border-wood-100 relative">
-        {entregasActivas.length === 0 && !posicionActual ? (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-brand-50 p-6 text-center">
-            <span className="text-5xl mb-4" aria-hidden="true">🗺️</span>
-            <p className="text-wood-600 font-medium mb-1">
-              Sin entregas activas
-            </p>
-            <p className="text-sm text-wood-400">
-              Acepta una entrega desde la seccion de Entregas para ver la ruta en el mapa.
-            </p>
-          </div>
-        ) : (
-          <MapaRepartidor
-            posicionActual={posicionActual}
-            entregasActivas={entregasActivas}
-          />
-        )}
-      </div>
+      {/* Card flotante inferior - Info del pedido */}
+      {entregaActiva && (
+        <div className="absolute bottom-0 left-0 right-0 z-[1000] p-4">
+          <div className="rounded-2xl bg-[#16161f]/95 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 overflow-hidden">
+            {/* Indicador de cercanía */}
+            {cercaDelDestino && (
+              <div className="bg-green-500/10 border-b border-green-500/20 px-4 py-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-xs font-medium text-green-400">Estás cerca del destino</span>
+              </div>
+            )}
 
-      {/* Active Deliveries Info Overlay */}
-      {entregasActivas.length > 0 && (
-        <div className="flex-shrink-0 bg-white rounded-xl shadow-sm border border-wood-100 p-3 max-h-48 overflow-y-auto">
-          <h3 className="text-xs font-semibold text-wood-500 uppercase tracking-wide mb-2">
-            Entregas en ruta
-          </h3>
-          <div className="space-y-2">
-            {entregasActivas.map((entrega) => (
-              <div
-                key={entrega.id}
-                className="flex items-center gap-3 py-1.5 border-b border-wood-50 last:border-0"
-              >
-                <span
-                  className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm flex-shrink-0"
-                  aria-hidden="true"
-                >
-                  📍
+            {/* Info principal */}
+            <div className="p-4 space-y-3">
+              {/* Header: pedido + tiempo */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+                    #{entregaActiva.numeroPedido}
+                  </span>
+                  {entregaActiva.metodoPago && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      entregaActiva.metodoPago === 'efectivo'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : entregaActiva.metodoPago === 'transferencia'
+                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                    }`}>
+                      {entregaActiva.metodoPago === 'efectivo' ? '💵 Efectivo' :
+                       entregaActiva.metodoPago === 'transferencia' ? '📱 Transfer' : '💳 Tarjeta'}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-500">
+                  {tiempoTranscurrido > 0 ? `hace ${tiempoTranscurrido} min` : 'ahora'}
                 </span>
+              </div>
+
+              {/* Cliente + dirección */}
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
+                  <span className="text-sm">👤</span>
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-wood-800 truncate">
-                    {entrega.clienteNombre}
+                  <p className="text-sm font-semibold text-white truncate">
+                    {entregaActiva.clienteNombre}
                   </p>
-                  <p className="text-xs text-wood-500 truncate">
-                    {entrega.direccion}
+                  <p className="text-xs text-gray-400 truncate mt-0.5">
+                    📍 {entregaActiva.direccion}
                   </p>
                 </div>
-                <a
-                  href={`tel:${entrega.telefono}`}
-                  className="min-w-[44px] min-h-[44px] flex items-center justify-center bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors duration-150 motion-reduce:transition-none"
-                  aria-label={`Llamar a ${entrega.clienteNombre}`}
-                >
-                  <span className="text-lg" aria-hidden="true">📞</span>
-                </a>
+                {entregaActiva.total && (
+                  <span className="text-sm font-bold text-green-400 flex-shrink-0">
+                    ${entregaActiva.total}
+                  </span>
+                )}
               </div>
-            ))}
+
+              {/* Acciones */}
+              <div className="flex items-center gap-2 pt-1">
+                {/* Botón llamar */}
+                {entregaActiva.telefono && (
+                  <a
+                    href={`tel:${entregaActiva.telefono}`}
+                    className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+                    aria-label="Llamar al cliente"
+                  >
+                    <span className="text-lg">📞</span>
+                  </a>
+                )}
+
+                {/* Botón navegar en app externa */}
+                {entregaActiva.destino && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${entregaActiva.destino.lat},${entregaActiva.destino.lng}&travelmode=driving`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+                    aria-label="Abrir en Google Maps"
+                  >
+                    <span className="text-lg">🧭</span>
+                  </a>
+                )}
+
+                {/* Botón Llegué */}
+                <button
+                  onClick={handleLlegue}
+                  disabled={llegueLoading}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.97] ${
+                    cercaDelDestino
+                      ? 'bg-gradient-to-r from-green-500 to-green-400 text-black shadow-lg shadow-green-500/25'
+                      : 'bg-white/10 text-white border border-white/10 hover:bg-white/15'
+                  } disabled:opacity-50`}
+                >
+                  {llegueLoading
+                    ? '⏳ Procesando...'
+                    : cercaDelDestino
+                    ? '✓ Llegué al destino'
+                    : '✓ Marcar como entregado'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mensaje de geocoding fallido */}
+      {entregaActiva && !entregaActiva.destino && (
+        <div className="absolute top-20 left-4 right-4 z-[1000]">
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-md px-4 py-3 flex items-center gap-3">
+            <span className="text-lg">⚠️</span>
+            <div>
+              <p className="text-xs font-medium text-amber-400">No se pudo ubicar la dirección</p>
+              <p className="text-[10px] text-amber-400/60 mt-0.5">{entregaActiva.direccion}</p>
+            </div>
           </div>
         </div>
       )}
