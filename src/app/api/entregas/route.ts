@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest) {
 
     // Fetch entregas with pedido and cliente info
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/entrega?select=id,pedido_id,repartidor_id,estado,motivo_no_entrega,aceptada_en,completada_en,creado_en,pedido:pedido_id(numero,total,mesa_zona,observaciones,cliente_id,cliente:cliente_id(nombre,telefono,direccion))&order=creado_en.desc`,
+      `${supabaseUrl}/rest/v1/entrega?select=id,pedido_id,repartidor_id,estado,motivo_no_entrega,aceptada_en,completada_en,creado_en,pedido:pedido_id(numero,total,mesa_zona,observaciones,metodo_pago,estado_pago,cliente_id,cliente:cliente_id(nombre,telefono,direccion))&order=creado_en.desc`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         cache: 'no-store',
@@ -44,9 +44,12 @@ export async function GET(_request: NextRequest) {
         pedidoId: e.pedido_id as string,
         numeroPedido: (pedido?.numero as string) || 'N/A',
         clienteNombre: (cliente?.nombre as string) || 'Cliente',
-        direccion: (cliente?.direccion as string) || (pedido?.observaciones as string) || 'Sin dirección',
+        direccion: (cliente?.direccion as string) || (pedido?.observaciones as string)?.split('[')[0]?.trim() || 'Sin dirección',
         telefono: (cliente?.telefono as string) || '',
         estado: e.estado as string,
+        metodoPago: (pedido?.metodo_pago as string) || null,
+        estadoPago: (pedido?.estado_pago as string) || 'pendiente',
+        observaciones: (pedido?.observaciones as string) || '',
         aceptadaEn: e.aceptada_en as string | null,
         completadaEn: e.completada_en as string | null,
         total: (pedido?.total as number) || 0,

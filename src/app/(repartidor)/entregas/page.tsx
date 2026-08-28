@@ -10,6 +10,9 @@ interface Entrega {
   direccion: string;
   telefono: string;
   estado: string;
+  metodoPago?: string | null;
+  estadoPago?: string;
+  observaciones?: string;
   aceptadaEn?: string;
   total?: number;
 }
@@ -115,24 +118,73 @@ export default function EntregasPage() {
         <section>
           <h2 className="text-xs font-bold text-brand-400 uppercase tracking-wider mb-3">🚀 En Camino</h2>
           <div className="space-y-3">
-            {activas.map(e => (
-              <div key={e.id} className="rounded-xl bg-[#16161f] border border-brand-500/20 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-white">#{e.numeroPedido}</span>
-                  <span className="text-[10px] text-brand-400">{e.aceptadaEn ? `Hace ${Math.floor((Date.now() - new Date(e.aceptadaEn).getTime()) / 60000)} min` : ''}</span>
+            {activas.map(e => {
+              // Info de pago del pedido
+              const esEfectivo = e.metodoPago === 'efectivo';
+              const esTransferencia = e.metodoPago === 'transferencia';
+              const billeteMatch = e.observaciones?.match(/Paga con \$(\d+)/);
+              const billeteCliente = billeteMatch ? parseInt(billeteMatch[1], 10) : null;
+
+              return (
+                <div key={e.id} className="rounded-2xl bg-[#16161f] border border-brand-500/20 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white">#{e.numeroPedido}</span>
+                    <span className="text-[10px] text-brand-400">{e.aceptadaEn ? `Hace ${Math.floor((Date.now() - new Date(e.aceptadaEn).getTime()) / 60000)} min` : ''}</span>
+                  </div>
+
+                  {/* Cliente + dirección */}
+                  <div className="rounded-xl bg-black/20 p-3 space-y-1.5">
+                    <p className="text-sm text-white font-medium">👤 {e.clienteNombre}</p>
+                    <p className="text-xs text-gray-400">📍 {e.direccion}</p>
+                    <p className="text-xs text-gray-500">📞 <a href={`tel:${e.telefono}`} className="text-brand-400 hover:underline">{e.telefono}</a></p>
+                  </div>
+
+                  {/* Info de pago */}
+                  <div className={`rounded-xl p-3 border ${esEfectivo ? 'bg-green-500/5 border-green-500/10' : esTransferencia ? 'bg-purple-500/5 border-purple-500/10' : 'bg-white/[0.02] border-white/5'}`}>
+                    {esEfectivo && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-green-400">💵 Cobrar en efectivo</p>
+                        <p className="text-sm font-black text-white">Total: ${e.total}</p>
+                        {billeteCliente && (
+                          <p className="text-xs text-brand-400">Cliente paga con: ${billeteCliente} → Cambio: ${billeteCliente - (e.total || 0)}</p>
+                        )}
+                        {!billeteCliente && (
+                          <p className="text-xs text-gray-500">Monto exacto o preguntar al cliente</p>
+                        )}
+                      </div>
+                    )}
+                    {esTransferencia && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-purple-400">🏦 Transferencia — ya pagado</p>
+                        <p className="text-xs text-gray-400">Solo entregar pedido, no cobrar</p>
+                      </div>
+                    )}
+                    {!esEfectivo && !esTransferencia && (
+                      <p className="text-xs text-gray-500">💰 Total: ${e.total}</p>
+                    )}
+                  </div>
+
+                  {/* Botón de completar */}
+                  {esEfectivo ? (
+                    <EntregaCobroEfectivo
+                      entregaId={e.id}
+                      pedidoId={e.pedidoId}
+                      total={e.total || 0}
+                      billeteCliente={billeteCliente}
+                      onComplete={fetchEntregas}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => completarEntrega(e.id)}
+                      disabled={actionLoading === e.id}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-black bg-green-500 hover:bg-green-400 disabled:opacity-50 transition-all active:scale-[0.97]"
+                    >
+                      {actionLoading === e.id ? '⏳ Procesando...' : '✓ Pedido Entregado'}
+                    </button>
+                  )}
                 </div>
-                <p className="text-sm text-white mb-1">👤 {e.clienteNombre}</p>
-                <p className="text-xs text-gray-400 mb-1">📍 {e.direccion}</p>
-                <p className="text-xs text-gray-500 mb-3">📞 <a href={`tel:${e.telefono}`} className="text-brand-400 hover:underline">{e.telefono}</a></p>
-                <button
-                  onClick={() => completarEntrega(e.id)}
-                  disabled={actionLoading === e.id}
-                  className="w-full py-2.5 rounded-lg text-xs font-bold text-black bg-green-500 hover:bg-green-400 disabled:opacity-50 transition-all active:scale-[0.97]"
-                >
-                  {actionLoading === e.id ? 'Procesando...' : '✓ Entrega Completada'}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -187,6 +239,122 @@ export default function EntregasPage() {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+
+// ============================================================
+// Componente: Cobro efectivo del repartidor
+// ============================================================
+
+function EntregaCobroEfectivo({ entregaId, pedidoId, total, billeteCliente, onComplete }: {
+  entregaId: string;
+  pedidoId: string;
+  total: number;
+  billeteCliente: number | null;
+  onComplete: () => void;
+}) {
+  const [paso, setPaso] = useState<'entregar' | 'cobrar' | 'procesando'>('entregar');
+  const [billete, setBillete] = useState<number | null>(billeteCliente);
+  const [montoCustom, setMontoCustom] = useState('');
+
+  const montoReal = billete === 0 ? total : (billete ?? 0);
+  const cambio = montoReal > total ? montoReal - total : 0;
+
+  const confirmarCobro = async () => {
+    setPaso('procesando');
+    try {
+      // Confirmar cobro con caja
+      await fetch('/api/pagos/confirmar-cobro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pedidoIds: [pedidoId],
+          metodoPago: 'efectivo',
+          billete: montoReal,
+          cambio,
+        }),
+      });
+      // Completar entrega
+      await fetch(`/api/entregas/${entregaId}/completar`, { method: 'POST' });
+      onComplete();
+    } catch {
+      setPaso('cobrar');
+    }
+  };
+
+  if (paso === 'entregar') {
+    return (
+      <button
+        onClick={() => setPaso('cobrar')}
+        className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 shadow-lg shadow-green-500/20 transition-all active:scale-[0.97]"
+      >
+        💵 Llegué — Cobrar ${total}
+      </button>
+    );
+  }
+
+  if (paso === 'procesando') {
+    return (
+      <div className="py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+        <span className="text-xs text-green-400 font-bold">⏳ Confirmando cobro...</span>
+      </div>
+    );
+  }
+
+  // paso === 'cobrar'
+  return (
+    <div className="space-y-3 rounded-xl bg-[#0d0d14] border border-green-500/10 p-4">
+      <p className="text-xs font-bold text-white text-center">¿Con cuánto pagó el cliente?</p>
+
+      {/* Selector de billete */}
+      <div className="grid grid-cols-3 gap-2">
+        {[0, 50, 100, 200, 500, 1000].map(monto => (
+          <button
+            key={monto}
+            onClick={() => { setBillete(monto); setMontoCustom(''); }}
+            className={`py-2 rounded-lg text-xs font-bold border transition-all ${
+              billete === monto
+                ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                : 'bg-white/[0.02] text-gray-400 border-white/[0.06]'
+            }`}
+          >
+            {monto === 0 ? 'Exacto' : `$${monto}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Custom */}
+      <input
+        type="number"
+        placeholder="Otro monto..."
+        value={montoCustom}
+        onChange={(e) => { setMontoCustom(e.target.value); setBillete(Number(e.target.value) || null); }}
+        className="w-full px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-green-400/30"
+      />
+
+      {/* Cambio */}
+      {billete !== null && billete !== 0 && montoReal >= total && (
+        <div className="py-2 rounded-lg bg-amber-500/5 border border-amber-500/10 text-center">
+          <p className="text-xs text-amber-400 font-bold">Cambio: ${cambio}</p>
+        </div>
+      )}
+
+      {billete === 0 && (
+        <div className="py-2 rounded-lg bg-green-500/5 border border-green-500/10 text-center">
+          <p className="text-xs text-green-400 font-bold">Pago exacto ✓</p>
+        </div>
+      )}
+
+      {/* Confirmar */}
+      <button
+        onClick={confirmarCobro}
+        disabled={billete === null || (billete !== 0 && montoReal < total)}
+        className="w-full py-3 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-green-400 to-green-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.97]"
+      >
+        ✓ Confirmar Cobro — ${total}
+      </button>
     </div>
   );
 }
