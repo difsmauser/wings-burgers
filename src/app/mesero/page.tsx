@@ -12,7 +12,7 @@ interface PedidoMesero {
   modalidad: string;
   canal?: string;
   clienteNombre?: string;
-  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string }>;
+  items: Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string; comentario?: string }>;
   total: number;
   creadoEn: string;
   mesaZona?: string;
@@ -290,7 +290,7 @@ export default function MeseroPage() {
         modalidad: p.modalidad as string || 'local',
         canal: parseCanal(p.canal as string),
         clienteNombre: p.clienteNombre as string || '',
-        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string }>) || [],
+        items: (p.items as Array<{ nombre: string; cantidad: number; precioUnitario: number; categoria?: string; itemEstado?: string; comentario?: string }>) || [],
         total: p.total as number || 0,
         creadoEn: p.creadoEn as string || '',
         mesaZona: p.mesaZona as string || '',
@@ -825,11 +825,16 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
       </div>
 
       {/* Items */}
-      <div className="rounded-xl bg-black/20 p-3 mb-3 space-y-1">
+      <div className="rounded-xl bg-black/20 p-3 mb-3 space-y-1.5">
         {pedido.items.map((item, i) => (
-          <div key={i} className="flex items-center justify-between">
-            <p className="text-xs text-gray-300"><span className="text-brand-400 font-bold mr-1">{item.cantidad}x</span>{item.nombre}</p>
-            <span className="text-[10px] text-gray-500">${(item.precioUnitario * item.cantidad).toFixed(0)}</span>
+          <div key={i}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-300"><span className="text-brand-400 font-bold mr-1">{item.cantidad}x</span>{item.nombre}</p>
+              <span className="text-[10px] text-gray-500">${(item.precioUnitario * item.cantidad).toFixed(0)}</span>
+            </div>
+            {item.comentario && (
+              <p className="text-[9px] text-cyan-400/80 ml-5 mt-0.5 italic">💬 {item.comentario}</p>
+            )}
           </div>
         ))}
       </div>
