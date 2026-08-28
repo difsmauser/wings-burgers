@@ -42,6 +42,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Buscar un repartidor disponible para asignar
+    const repartidorRes = await fetch(
+      `${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id&limit=1`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+        cache: 'no-store',
+      }
+    );
+
+    let repartidorId: string | null = null;
+    if (repartidorRes.ok) {
+      const repartidores = await repartidorRes.json();
+      if (repartidores && repartidores.length > 0) {
+        repartidorId = repartidores[0].id;
+      }
+    }
+
+    if (!repartidorId) {
+      return NextResponse.json(
+        { error: { message: 'No hay repartidores disponibles. Registra al menos uno en Admin → Repartidores.' } },
+        { status: 400 }
+      );
+    }
+
     // Crear la entrega
     const createRes = await fetch(
       `${supabaseUrl}/rest/v1/entrega`,
@@ -55,6 +79,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           pedido_id: pedidoId,
+          repartidor_id: repartidorId,
           estado: 'pendiente',
           creado_en: new Date().toISOString(),
         }),
