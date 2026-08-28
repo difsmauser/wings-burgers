@@ -26,24 +26,15 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
   const [selected, setSelected] = useState<Repartidor | null>(null);
 
   useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (supabaseUrl && anonKey) {
-      fetch(`${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id,nombre,telefono&order=nombre.asc`, {
-        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    // Usar API route que tiene service role key (evita problemas de RLS)
+    fetch('/api/repartidores')
+      .then(res => res.ok ? res.json() : { data: [] })
+      .then(json => {
+        const data = json.data || json || [];
+        if (Array.isArray(data)) setRepartidores(data);
       })
-        .then(res => res.ok ? res.json() : [])
-        .then(data => { if (Array.isArray(data)) setRepartidores(data); })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    } else {
-      fetch('/api/repartidores')
-        .then(res => res.ok ? res.json() : { data: [] })
-        .then(json => setRepartidores(json.data || []))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {

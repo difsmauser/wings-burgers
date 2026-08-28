@@ -11,21 +11,18 @@ function getConfig() {
 
 /**
  * GET /api/repartidores — Lista repartidores activos
- * Auth: admin
+ * Público: necesario para el login del repartidor por perfil
  */
-export async function GET(request: NextRequest) {
-  const auth = await requireAuth(request, ['admin']);
-  if ('respuesta' in auth) return auth.respuesta;
-
+export async function GET(_request: NextRequest) {
   try {
     const { url, key } = getConfig();
-    const res = await fetch(`${url}/rest/v1/repartidor?activo=eq.true&select=*&order=nombre.asc`, {
+    const res = await fetch(`${url}/rest/v1/repartidor?activo=eq.true&select=id,nombre,telefono,vehiculo,pin&order=nombre.asc`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store',
     });
-    if (!res.ok) return NextResponse.json({ error: await res.text() }, { status: 500 });
+    if (!res.ok) return NextResponse.json({ data: [] });
     return NextResponse.json({ data: await res.json() });
-  } catch (e) {
-    return NextResponse.json({ error: { message: (e as Error).message } }, { status: 500 });
+  } catch {
+    return NextResponse.json({ data: [] });
   }
 }
 
