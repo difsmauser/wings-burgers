@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar un repartidor disponible para asignar
     const repartidorRes = await fetch(
-      `${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id&limit=1`,
+      `${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id,nombre&limit=1`,
       {
         headers: { apikey: key, Authorization: `Bearer ${key}` },
         cache: 'no-store',
@@ -52,10 +52,12 @@ export async function POST(request: NextRequest) {
     );
 
     let repartidorId: string | null = null;
+    let repartidorNombre: string = '';
     if (repartidorRes.ok) {
       const repartidores = await repartidorRes.json();
       if (repartidores && repartidores.length > 0) {
         repartidorId = repartidores[0].id;
+        repartidorNombre = repartidores[0].nombre || '';
       }
     }
 
@@ -97,7 +99,23 @@ export async function POST(request: NextRequest) {
 
     const entregaData = await createRes.json();
 
-    // Actualizar estado del pedido a 'en_camino' (listo para repartidor)
+    // Actualizar estado del pedido a 'en_camino' + guardar repartidor
+    // Leer observaciones actuales
+    const getObsRes = await fetch(
+      `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}&select=observaciones`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' }
+    );
+    let obsActuales = '';
+    if (getObsRes.ok) {
+      const obsData = await getObsRes.json();
+      if (obsData?.[0]) obsActuales = obsData[0].observaciones || '';
+    }
+
+    const repartidorInfo = `[REPARTIDOR] ${repartidorNombre}`;
+    const nuevasObs = obsActuales.includes('[REPARTIDOR]')
+      ? obsActuales
+      : obsActuales ? `${obsActuales} ${repartidorInfo}` : repartidorInfo;
+
     await fetch(
       `${supabaseUrl}/rest/v1/pedido?id=eq.${pedidoId}`,
       {
@@ -110,6 +128,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           estado: 'en_camino',
+          observaciones: nuevasObs,
           actualizado_en: new Date().toISOString(),
         }),
         cache: 'no-store',

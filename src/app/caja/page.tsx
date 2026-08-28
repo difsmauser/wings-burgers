@@ -899,6 +899,10 @@ function OrderCard({ pedido, onDetail, onCobrarEfectivo, onValidarTransfer }: {
       case 'en_preparacion': return { text: ambas ? 'Preparando — Cocina + Bar' : tieneBar ? 'Bar preparando' : 'Cocina preparando', icon: '🔥', color: 'text-amber-400 bg-amber-500/5 border-amber-500/10' };
       case 'empacado': return { text: 'Listo — esperando mesero', icon: '📦', color: 'text-purple-400 bg-purple-500/5 border-purple-500/10' };
       case 'listo_para_servir': return { text: 'Mesero en camino', icon: '🍽️', color: 'text-cyan-400 bg-cyan-500/5 border-cyan-500/10' };
+      case 'en_camino': {
+        const repMatch = pedido.observaciones?.match(/\[REPARTIDOR\]\s*(\S+)/);
+        return { text: `🛵 Repartidor${repMatch ? `: ${repMatch[1]}` : ' en camino'}`, icon: '🛵', color: 'text-blue-400 bg-blue-500/5 border-blue-500/10' };
+      }
       default: return null;
     }
   };

@@ -824,7 +824,11 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
       return { text: '🛵 En ruta — pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
     }
     if (pedido.estado === 'entregado') return { text: '✅ Entregado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (pedido.estado === 'en_camino') return { text: '🛵 Repartidor en camino', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+    if (pedido.estado === 'en_camino') {
+      const repMatch = pedido.observaciones?.match(/\[REPARTIDOR\]\s*(\S+)/);
+      const repNombre = repMatch ? repMatch[1] : '';
+      return { text: `🛵 En camino${repNombre ? ` — ${repNombre}` : ''}`, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+    }
     if (pedido.estadoPago === 'pagado' && !esDomicilio) return { text: '✅ Pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
     if (esDomicilio && pedido.estado === 'empacado') return { text: '📦 Listo — definir pago', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' };
     if (pedido.estado === 'listo_para_servir') return { text: esDomicilio ? '🛵 Listo para repartidor' : '🍽️ Listo para servir', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
