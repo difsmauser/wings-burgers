@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { geocodificarDireccion, geocodificarDireccionConPrecision, COORDENADAS_RESTAURANTE } from './_lib/geocoding';
+import { geocodificarLocal } from './_lib/geocoding';
 import { calcularRuta, distanciaLinealMetros, estaCercaDelDestino } from './_lib/routing';
 import type { EntregaConRuta } from './_components/MapaRepartidor';
 
@@ -103,10 +103,10 @@ export default function MapaPage() {
       // Tomar la primera entrega activa (la más reciente)
       const entrega: EntregaRaw = activas[0];
 
-      // Geocodificar dirección — ahora SIEMPRE retorna algo
-      const geoResult = await geocodificarDireccionConPrecision(entrega.direccion);
-      const destino = geoResult ? geoResult.coordenadas : null;
-      setGeocodePrecision(geoResult?.precision || null);
+      // Geocodificar dirección — lookup local, SIEMPRE retorna coordenadas
+      const geoResult = geocodificarLocal(entrega.direccion);
+      const destino = geoResult.coordenadas;
+      setGeocodePrecision(geoResult.precision);
 
       // Calcular ruta si tenemos posición y destino
       let ruta = null;
