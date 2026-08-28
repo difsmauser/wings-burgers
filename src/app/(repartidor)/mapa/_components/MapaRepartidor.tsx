@@ -45,6 +45,10 @@ const ROUTE_ZOOM = 14;
 // ============================================================================
 
 const CUSTOM_STYLES = `
+  .dark-tiles {
+    filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.2) saturate(0.3);
+  }
+  
   @keyframes pulse-blue {
     0% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.8); opacity: 0.4; }
@@ -216,14 +220,14 @@ export default function MapaRepartidor({
       attributionControl: true,
     });
 
-    // Tile layer con estilo oscuro (CartoDB Dark Matter)
+    // Tile layer: OSM estándar con filtro CSS oscuro (100% gratuito, sin API key)
     L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       {
         attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         maxZoom: 19,
-        subdomains: 'abcd',
+        className: 'dark-tiles',
       }
     ).addTo(map);
 
