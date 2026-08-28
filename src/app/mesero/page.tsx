@@ -542,8 +542,8 @@ export default function MeseroPage() {
 
   // ========== Main View ==========
   // Count today's deliveries
-  const entregasHoy = misPedidos.filter(p => p.estado === 'servido').length + misPedidosDia.length;
-  const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir').length;
+  const entregasHoy = misPedidos.filter(p => ['servido', 'en_camino'].includes(p.estado)).length + misPedidosDia.length;
+  const pendientesEntrega = misPedidos.filter(p => p.estado === 'listo_para_servir' || (p.estado === 'empacado' && (p.canal === 'DOMICILIO' || p.modalidad === 'domicilio'))).length;
   // Solo contar "ir a cobrar" cuando el cliente YA eligió efectivo Y mesero NO ha entregado
   const pendientesCobro = misPedidos.filter(p =>
     p.estado === 'servido' &&
