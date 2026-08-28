@@ -607,8 +607,9 @@ export default function MeseroPage() {
 
         {/* ═══════ MIS PEDIDOS — Separados por origen ═══════ */}
         {misPedidos.length > 0 && (() => {
-          const pedidosMesero = misPedidos.filter(p => p.canal === 'MESERO');
-          const pedidosQR = misPedidos.filter(p => p.canal !== 'MESERO');
+          const pedidosMesero = misPedidos.filter(p => p.canal === 'MESERO' && p.modalidad !== 'domicilio');
+          const pedidosQR = misPedidos.filter(p => p.canal !== 'MESERO' && p.canal !== 'DOMICILIO' && p.modalidad !== 'domicilio');
+          const pedidosDomicilio = misPedidos.filter(p => p.canal === 'DOMICILIO' || p.modalidad === 'domicilio');
 
           return (
             <>
@@ -643,6 +644,25 @@ export default function MeseroPage() {
                       <MeseroPedidoCard key={pedido.id} pedido={pedido} procesandoId={procesandoId}
                         onMarcarServido={marcarServido} onConfirmarDinero={confirmarDineroRecogido}
                         onCobrarEfectivo={cobrarEfectivoMesero} onSubirFoto={subirFotoVoucher} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Pedidos a domicilio */}
+              {pedidosDomicilio.length > 0 && (
+                <section>
+                  <h2 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    🛵 Pedidos a Domicilio
+                    <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold">{pedidosDomicilio.length}</span>
+                    <span className="text-[10px] text-gray-500 font-normal ml-auto">Entregar a repartidor</span>
+                  </h2>
+                  <div className="space-y-3">
+                    {pedidosDomicilio.map(pedido => (
+                      <MeseroPedidoCard key={pedido.id} pedido={pedido} procesandoId={procesandoId}
+                        onMarcarServido={marcarServido} onConfirmarDinero={confirmarDineroRecogido}
+                        onCobrarEfectivo={cobrarEfectivoMesero} onSubirFoto={subirFotoVoucher}
+                        esDomicilio />
                     ))}
                   </div>
                 </section>
@@ -757,13 +777,14 @@ export default function MeseroPage() {
 // Componente: Card de pedido del mesero (reutilizable)
 // ============================================================
 
-function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDinero, onCobrarEfectivo, onSubirFoto }: {
+function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDinero, onCobrarEfectivo, onSubirFoto, esDomicilio }: {
   pedido: PedidoMesero;
   procesandoId: string | null;
   onMarcarServido: (id: string) => void;
   onConfirmarDinero: (id: string) => void;
   onCobrarEfectivo: (id: string) => void;
   onSubirFoto: (id: string, file: File) => void;
+  esDomicilio?: boolean;
 }) {
   const necesitaCobrar = pedido.observaciones?.includes('[EFECTIVO]') || pedido.metodoPago === 'efectivo';
   const yaEntregoACaja = pedido.observaciones?.includes('[MESERO_ENTREGO]');
@@ -771,9 +792,9 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
   // Estado visual del pedido
   const getEstadoBadge = () => {
     if (pedido.estadoPago === 'pagado') return { text: '✅ Pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (pedido.estado === 'listo_para_servir') return { text: '🍽️ Listo para servir', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-    if (pedido.estado === 'servido' && necesitaCobrar) return { text: '💵 Por cobrar', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (pedido.estado === 'servido') return { text: '✓ Entregado', color: 'bg-white/5 text-gray-400 border-white/10' };
+    if (pedido.estado === 'listo_para_servir') return { text: esDomicilio ? '🛵 Listo para repartidor' : '🍽️ Listo para servir', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+    if (pedido.estado === 'servido' && necesitaCobrar) return { text: esDomicilio ? '🛵 En camino' : '💵 Por cobrar', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (pedido.estado === 'servido') return { text: esDomicilio ? '🛵 Entregado a repartidor' : '✓ Entregado', color: 'bg-white/5 text-gray-400 border-white/10' };
     if (pedido.estado === 'en_preparacion') return { text: '🔥 Preparando', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
     if (pedido.estado === 'recibido') return { text: '📋 En cocina', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' };
     return { text: pedido.estado, color: 'bg-white/5 text-gray-400 border-white/10' };
@@ -813,14 +834,18 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
         ))}
       </div>
 
-      {/* Acción: Marcar como entregado */}
+      {/* Acción: Marcar como entregado / entregar a repartidor */}
       {pedido.estado === 'listo_para_servir' && (
         <button
           onClick={() => onMarcarServido(pedido.id)}
           disabled={procesandoId === pedido.id}
-          className="w-full py-3.5 rounded-xl text-sm font-bold text-black bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all active:scale-[0.97]"
+          className={`w-full py-3.5 rounded-xl text-sm font-bold text-black shadow-lg disabled:opacity-50 transition-all active:scale-[0.97] ${
+            esDomicilio
+              ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-green-500/20'
+              : 'bg-gradient-to-r from-emerald-400 to-emerald-500 shadow-emerald-500/20'
+          }`}
         >
-          {procesandoId === pedido.id ? '⏳ Actualizando...' : '🍽️ Marcar como Entregado'}
+          {procesandoId === pedido.id ? '⏳ Actualizando...' : esDomicilio ? '🛵 Entregar a Repartidor' : '🍽️ Marcar como Entregado'}
         </button>
       )}
 
@@ -871,11 +896,12 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
                 <p className="text-sm text-purple-400 font-bold">Voucher enviado a caja</p>
               </div>
               <p className="text-[10px] text-gray-500">Esperando que caja valide la transferencia</p>
+              {esDomicilio && <p className="text-[10px] text-green-400 mt-1">🛵 Repartidor puede salir — pago confirmado</p>}
             </div>
           ) : (
-            /* Sin método elegido — mesero puede cobrar directo */
+            /* Sin método elegido — mesero define cómo paga */
             <div className="rounded-xl bg-white/[0.02] border border-white/5 p-4 text-center space-y-3">
-              <p className="text-xs text-white font-medium">¿Cómo paga el cliente?</p>
+              <p className="text-xs text-white font-medium">{esDomicilio ? '¿Cómo pagará el cliente al recibir?' : '¿Cómo paga el cliente?'}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => onCobrarEfectivo(pedido.id)}
@@ -898,6 +924,9 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
                   />
                 </label>
               </div>
+              {esDomicilio && (
+                <p className="text-[9px] text-gray-600">El repartidor recibirá la info de pago</p>
+              )}
             </div>
           )}
         </div>

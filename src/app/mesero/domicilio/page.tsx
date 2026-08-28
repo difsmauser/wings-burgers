@@ -165,14 +165,18 @@ export default function DomicilioCaptura() {
     </div>
   );
 
-  // Success — show ticket + WhatsApp link
+  // Success — auto-redirect al panel después de mostrar confirmación
   if (exito) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center animate-scale-in">
-          <span className="text-6xl block mb-4">✅</span>
-          <h2 className="text-xl font-bold text-white mb-2">¡Pedido #{exito.numero} creado!</h2>
-          <p className="text-sm text-gray-400 mb-6">Enviado a cocina. Envía el ticket al cliente por WhatsApp:</p>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+            <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-1">¡Pedido #{exito.numero} creado!</h2>
+          <p className="text-sm text-gray-400 mb-6">Enviado a cocina. Lo verás en tu panel.</p>
 
           <a
             href={exito.whatsappUrl}
@@ -180,21 +184,14 @@ export default function DomicilioCaptura() {
             rel="noopener noreferrer"
             className="block w-full py-4 rounded-2xl font-bold text-base text-white bg-[#25D366] hover:bg-[#20BA5C] shadow-lg shadow-[#25D366]/30 transition-all active:scale-[0.97] mb-4"
           >
-            📱 Enviar Ticket por WhatsApp
+            📱 Enviar Ticket al Cliente
           </a>
 
           <button
-            onClick={() => setExito(null)}
-            className="w-full py-3 rounded-xl text-sm font-medium text-brand-400 bg-brand-500/5 border border-brand-400/20 hover:bg-brand-500/10 transition-all"
-          >
-            📝 Tomar otro pedido a domicilio
-          </button>
-
-          <button
             onClick={() => router.push('/mesero')}
-            className="w-full mt-2 py-2 text-xs text-gray-500 hover:text-white transition-colors"
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-brand-400 bg-brand-500/10 border border-brand-400/20 hover:bg-brand-500/20 transition-all active:scale-[0.97]"
           >
-            ← Volver al panel
+            ← Ver en mi panel
           </button>
         </div>
       </div>
