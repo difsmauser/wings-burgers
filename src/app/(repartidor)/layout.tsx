@@ -15,6 +15,7 @@ interface Repartidor {
   id: string;
   nombre: string;
   telefono?: string;
+  pin?: string;
 }
 
 /**
@@ -24,9 +25,10 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
   const [repartidores, setRepartidores] = useState<Repartidor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Repartidor | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState(false);
 
   useEffect(() => {
-    // Usar API route que tiene service role key (evita problemas de RLS)
     fetch('/api/repartidores')
       .then(res => res.ok ? res.json() : { data: [] })
       .then(json => {
@@ -36,6 +38,19 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Auto-submit cuando escribe 4 dígitos
+  useEffect(() => {
+    if (pinInput.length === 4 && selected) {
+      if (!selected.pin || selected.pin === pinInput) {
+        onLogin(selected.nombre);
+      } else {
+        setPinError(true);
+        setTimeout(() => { setPinError(false); setPinInput(''); }, 600);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinInput, selected]);
 
   if (loading) {
     return (
@@ -57,6 +72,44 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
     );
   }
 
+  // Pantalla de PIN después de seleccionar
+  if (selected) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+        <div className="w-full max-w-xs text-center space-y-6 animate-fade-in">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+            <span className="text-2xl font-bold text-green-400">{selected.nombre.charAt(0).toUpperCase()}</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">{selected.nombre}</h2>
+            <p className="text-xs text-gray-500 mt-1">Ingresa tu PIN de 4 dígitos</p>
+          </div>
+
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            autoFocus
+            className={`w-full text-center text-2xl font-mono tracking-[0.5em] py-4 rounded-xl bg-white/[0.03] border ${pinError ? 'border-red-500 animate-shake' : 'border-white/[0.08]'} text-white focus:outline-none focus:ring-2 focus:ring-green-400/40`}
+            placeholder="····"
+          />
+
+          {pinError && <p className="text-xs text-red-400">PIN incorrecto</p>}
+
+          <button
+            onClick={() => { setSelected(null); setPinInput(''); }}
+            className="text-xs text-gray-500 hover:text-white transition-colors"
+          >
+            ← Cambiar perfil
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de selección de perfil
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6 animate-fade-in">
@@ -70,15 +123,8 @@ function RepartidorLogin({ onLogin }: { onLogin: (nombre: string) => void }) {
           {repartidores.map(r => (
             <button
               key={r.id}
-              onClick={() => {
-                setSelected(r);
-                onLogin(r.nombre);
-              }}
-              className={`w-full flex items-center gap-3 p-4 rounded-xl border transition-all active:scale-[0.97] ${
-                selected?.id === r.id
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : 'bg-[#16161f] border-white/5 hover:border-green-500/20'
-              }`}
+              onClick={() => setSelected(r)}
+              className="w-full flex items-center gap-3 p-4 rounded-xl border bg-[#16161f] border-white/5 hover:border-green-500/20 transition-all active:scale-[0.97]"
             >
               <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
                 <span className="text-lg font-bold text-green-400">{r.nombre.charAt(0).toUpperCase()}</span>
