@@ -28,10 +28,8 @@ export default function EntregasPage() {
 
   const fetchEntregas = useCallback(async () => {
     try {
-      // Obtener nombre del repartidor logueado para filtrar solo sus entregas
-      const miNombre = typeof window !== 'undefined' ? localStorage.getItem('alaburguer-repartidor-nombre') || '' : '';
-      const url = miNombre ? `/api/entregas?nombre=${encodeURIComponent(miNombre)}` : '/api/entregas';
-      const res = await fetch(url);
+      // Traer TODAS las entregas — cada repartidor ve las suyas y las disponibles
+      const res = await fetch('/api/entregas');
       if (res.ok) {
         const json = await res.json();
         const data = json.data || [];

@@ -70,6 +70,7 @@ export async function GET(_request: NextRequest) {
     });
 
     // Si se filtró por nombre, solo retornar las del repartidor (case-insensitive)
+    // Si no hay filtro, retornar todas
     const resultado = repartidorNombre
       ? entregas.filter((e: { repartidorNombre: string }) => 
           e.repartidorNombre.toLowerCase().trim() === repartidorNombre.toLowerCase().trim()
