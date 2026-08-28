@@ -76,8 +76,8 @@ export default function DemoPage() {
               />
               <CanalDesc
                 color="green" emoji="🛵" titulo="Domicilio"
-                desc="Link único que se comparte en redes sociales, WhatsApp, o grupos. El cliente abre desde su celular, arma su pedido, y paga antes de que se envíe a cocina. Si paga con transferencia, caja valida y luego va a cocina. Si paga en efectivo, dice con qué billete paga para que el repartidor lleve cambio."
-                flujo="Abre link → Agrega productos → Paga (transfer o efectivo) → Cocina prepara → Repartidor entrega → Ticket WhatsApp"
+                desc="El mesero recibe el pedido por WhatsApp, captura los datos (nombre, dirección, teléfono). Define método de pago: si es transferencia sube foto del voucher (caja valida). Si es efectivo indica billete. Cocina prepara, mesero entrega a repartidor con la info de pago. Repartidor entrega y cobra si es efectivo."
+                flujo="Mesero captura → Define pago → Cocina prepara → Mesero entrega a repartidor → Repartidor entrega → Caja confirma → Ticket WhatsApp"
               />
             </div>
           </div>
@@ -239,11 +239,11 @@ export default function DemoPage() {
           color="brand"
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>}
           titulo="Módulo Repartidor"
-          descripcion="Panel para el repartidor de domicilio. Ve sus entregas asignadas, dirección del cliente, monto a cobrar, y mapa de ruta. Marca entregas como completadas."
-          credenciales={{ usuario: 'repartidor@alaburguer.com', password: 'Repartidor123!', nota: 'Rol repartidor — solo entregas asignadas' }}
+          descripcion="Panel para repartidores con login por perfil (sin contraseña). Ve entregas asignadas con info de pago (efectivo + billete/cambio o transferencia pagada). Confirma entrega y cobro. Mapa con ruta."
+          credenciales={{ usuario: 'Selecciona perfil', password: 'Jorge Ramírez / Ana García', nota: 'Sin contraseña — click en perfil' }}
           links={[
-            { nombre: 'Entregas', desc: 'Lista de pedidos asignados para entregar', url: `${base}/entregas` },
-            { nombre: 'Mapa', desc: 'Mapa con rutas de entrega', url: `${base}/mapa` },
+            { nombre: 'Entregas', desc: 'Lista de entregas + info de pago + cobro', url: `${base}/entregas` },
+            { nombre: 'Mapa', desc: 'Mapa con GPS y rutas de entrega', url: `${base}/mapa` },
           ]}
           baseUrl={base}
         />
