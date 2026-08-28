@@ -221,8 +221,8 @@ export default function DomicilioCaptura() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Products */}
-          <div className="lg:col-span-2 space-y-4">
+          {/* Products — scroll limitado en móvil */}
+          <div className="lg:col-span-2 space-y-4 order-last lg:order-first">
             <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {categorias.map(cat => (
                 <button key={cat} onClick={() => setCategoriaFiltro(cat)}
@@ -260,8 +260,8 @@ export default function DomicilioCaptura() {
             </div>
           </div>
 
-          {/* Order form */}
-          <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-5 sticky top-4 space-y-4">
+          {/* Order form — aparece PRIMERO en móvil */}
+          <div className="rounded-2xl bg-[#12121a] border border-white/[0.06] p-5 sticky top-4 space-y-4 order-first lg:order-last">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
               Datos del Cliente
@@ -282,8 +282,7 @@ export default function DomicilioCaptura() {
               <DireccionAutocomplete
                 value={direccion}
                 onChange={setDireccion}
-                placeholder="Escribe la calle... (autocomplete Toluca)"
-                className="w-full px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-400/30 transition-all"
+                placeholder="Calle y número, ej: Hidalgo 108"
               />
             </div>
             <div>

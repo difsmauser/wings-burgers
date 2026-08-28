@@ -196,7 +196,7 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
     <div ref={containerRef} className="relative space-y-2">
       {/* Input principal */}
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
           <svg className="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -209,9 +209,10 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
           onChange={handleChange}
           onFocus={() => { if (sugerencias.length > 0) setShowDropdown(true); }}
           placeholder={placeholder || 'Calle y número, ej: Hidalgo 108'}
-          className={className || 'w-full pl-10 pr-10 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400/30 transition-all'}
+          className={`w-full !pl-10 pr-10 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400/30 transition-all ${className || ''}`}
           autoComplete="off"
           spellCheck={false}
+          style={{ paddingLeft: '2.5rem' }}
         />
         {/* Loading / Check icon */}
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
