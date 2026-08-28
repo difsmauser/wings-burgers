@@ -296,26 +296,36 @@ export default function CajaPage() {
             icon="🍽️" title="En Sucursal" count={activos.filter(p => p.canal === 'MESA_LOCAL' || (!p.canal && p.modalidad !== 'domicilio')).length}
             color="yellow" pedidos={activos.filter(p => p.canal === 'MESA_LOCAL' || (!p.canal && p.modalidad !== 'domicilio' && !['MESA_LLEVAR','MOSTRADOR','DOMICILIO','MESERO'].includes(p.canal)))}
             onDetail={setSelectedPedido}
+            onCobrarEfectivo={(p) => setModalEfectivo({ mesaZona: p.mesaZona || 'Sin mesa', pedidos: [p], total: p.total, metodoPago: 'efectivo', estadoPago: 'pendiente', meseroEntrego: true })}
+            onValidarTransfer={(p) => setModalTransferencia({ mesaZona: p.mesaZona || 'Sin mesa', pedidos: [p], total: p.total, metodoPago: 'transferencia', estadoPago: 'validando', meseroEntrego: false })}
           />
           <ChannelSection
             icon="🛍️" title="Mesa → Llevar" count={activos.filter(p => p.canal === 'MESA_LLEVAR').length}
             color="amber" pedidos={activos.filter(p => p.canal === 'MESA_LLEVAR')}
             onDetail={setSelectedPedido}
+            onCobrarEfectivo={(p) => setModalEfectivo({ mesaZona: p.mesaZona || 'Para llevar', pedidos: [p], total: p.total, metodoPago: 'efectivo', estadoPago: 'pendiente', meseroEntrego: true })}
+            onValidarTransfer={(p) => setModalTransferencia({ mesaZona: p.mesaZona || 'Para llevar', pedidos: [p], total: p.total, metodoPago: 'transferencia', estadoPago: 'validando', meseroEntrego: false })}
           />
           <ChannelSection
             icon="📱" title="Mostrador" count={activos.filter(p => p.canal === 'MOSTRADOR').length}
             color="amber" pedidos={activos.filter(p => p.canal === 'MOSTRADOR')}
             onDetail={setSelectedPedido}
+            onCobrarEfectivo={(p) => setModalEfectivo({ mesaZona: 'Mostrador', pedidos: [p], total: p.total, metodoPago: 'efectivo', estadoPago: 'pendiente', meseroEntrego: true })}
+            onValidarTransfer={(p) => setModalTransferencia({ mesaZona: 'Mostrador', pedidos: [p], total: p.total, metodoPago: 'transferencia', estadoPago: 'validando', meseroEntrego: false })}
           />
           <ChannelSection
             icon="🛵" title="A Domicilio" count={activos.filter(p => p.canal === 'DOMICILIO').length}
             color="green" pedidos={activos.filter(p => p.canal === 'DOMICILIO')}
             onDetail={setSelectedPedido}
+            onCobrarEfectivo={(p) => setModalEfectivo({ mesaZona: 'Domicilio', pedidos: [p], total: p.total, metodoPago: 'efectivo', estadoPago: 'pendiente', meseroEntrego: true })}
+            onValidarTransfer={(p) => setModalTransferencia({ mesaZona: 'Domicilio', pedidos: [p], total: p.total, metodoPago: 'transferencia', estadoPago: 'validando', meseroEntrego: false })}
           />
           <ChannelSection
             icon="🧑‍🍳" title="Mesero" count={activos.filter(p => p.canal === 'MESERO').length}
             color="blue" pedidos={activos.filter(p => p.canal === 'MESERO')}
             onDetail={setSelectedPedido}
+            onCobrarEfectivo={(p) => setModalEfectivo({ mesaZona: p.mesaZona || 'Pedido Mesero', pedidos: [p], total: p.total, metodoPago: 'efectivo', estadoPago: 'pendiente', meseroEntrego: true })}
+            onValidarTransfer={(p) => setModalTransferencia({ mesaZona: p.mesaZona || 'Pedido Mesero', pedidos: [p], total: p.total, metodoPago: 'transferencia', estadoPago: 'validando', meseroEntrego: false })}
           />
         </div>
 
@@ -855,9 +865,11 @@ function ModalValidarTransferencia({ cuenta, onClose, onConfirm, onReject }: {
 // Agrupa visualmente por mesa cuando hay varios del mismo lugar
 // ============================================================
 
-function OrderCard({ pedido, onDetail }: {
+function OrderCard({ pedido, onDetail, onCobrarEfectivo, onValidarTransfer }: {
   pedido: PedidoCaja;
   onDetail: (p: PedidoCaja) => void;
+  onCobrarEfectivo?: (p: PedidoCaja) => void;
+  onValidarTransfer?: (p: PedidoCaja) => void;
 }) {
   const canal = getCanal(pedido);
   const estado = getEstadoLabel(pedido.estado);
@@ -941,17 +953,24 @@ function OrderCard({ pedido, onDetail }: {
       )}
 
       {/* Cliente eligió efectivo, mesero ya entregó → caja puede cobrar */}
+      {/* Cliente eligió efectivo, mesero ya entregó → caja puede cobrar */}
       {clienteEligioEfectivoServido && (
-        <div className="py-2 rounded-lg bg-green-500/5 border border-green-500/10 text-center">
-          <span className="text-[10px] text-green-400 font-bold">💵 Efectivo listo — cobrar en mesa</span>
-        </div>
+        <button
+          onClick={() => onCobrarEfectivo?.(pedido)}
+          className="w-full py-2.5 rounded-lg text-[10px] font-bold text-white bg-green-600 hover:bg-green-500 transition-all active:scale-95"
+        >
+          💵 Cobrar Efectivo
+        </button>
       )}
 
       {/* Voucher subido → caja debe validar */}
       {mostrarBotonTransferencia && (
-        <div className="py-2 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center">
-          <span className="text-[10px] text-purple-400 font-bold">📎 Voucher pendiente de validación</span>
-        </div>
+        <button
+          onClick={() => onValidarTransfer?.(pedido)}
+          className="w-full py-2.5 rounded-lg text-[10px] font-bold text-white bg-purple-600 hover:bg-purple-500 transition-all active:scale-95"
+        >
+          🏦 Validar Transferencia
+        </button>
       )}
 
       {/* Pagado */}
@@ -975,10 +994,12 @@ function OrderCard({ pedido, onDetail }: {
 // Channel Section Component
 // ============================================================
 
-function ChannelSection({ icon, title, count, color, pedidos, onDetail }: {
+function ChannelSection({ icon, title, count, color, pedidos, onDetail, onCobrarEfectivo, onValidarTransfer }: {
   icon: string; title: string; count: number; color: string;
   pedidos: PedidoCaja[];
   onDetail: (p: PedidoCaja) => void;
+  onCobrarEfectivo: (p: PedidoCaja) => void;
+  onValidarTransfer: (p: PedidoCaja) => void;
 }) {
   const borderColor = color === 'green' ? 'border-green-500/10' : color === 'amber' ? 'border-amber-500/10' : color === 'blue' ? 'border-blue-500/10' : 'border-yellow-500/10';
   const badgeColor = color === 'green' ? 'bg-green-500/10 text-green-400' : color === 'amber' ? 'bg-amber-500/10 text-amber-400' : color === 'blue' ? 'bg-blue-500/10 text-blue-400' : 'bg-yellow-500/10 text-yellow-400';
@@ -993,7 +1014,7 @@ function ChannelSection({ icon, title, count, color, pedidos, onDetail }: {
         <p className="text-xs text-gray-500 text-center py-6">Sin pedidos</p>
       ) : (
         <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
-          {pedidos.map(p => <OrderCard key={p.id} pedido={p} onDetail={onDetail} />)}
+          {pedidos.map(p => <OrderCard key={p.id} pedido={p} onDetail={onDetail} onCobrarEfectivo={onCobrarEfectivo} onValidarTransfer={onValidarTransfer} />)}
         </div>
       )}
     </div>
