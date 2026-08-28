@@ -48,8 +48,9 @@ const MESEROS = [
 ];
 
 const REPARTIDORES = [
-  { nombre: 'Jorge Ramírez', telefono: '5551112222', vehiculo: 'Moto Honda', activo: true },
-  { nombre: 'Ana García', telefono: '5553334444', vehiculo: 'Moto Italika', activo: true },
+  { nombre: 'Jorge', telefono: '5551112222', vehiculo: 'Moto Honda', pin: '1111', activo: true },
+  { nombre: 'Ana', telefono: '5553334444', vehiculo: 'Moto Italika', pin: '2222', activo: true },
+  { nombre: 'Luis', telefono: '5556667777', vehiculo: 'Bicicleta', pin: '3333', activo: true },
 ];
 
 // ─── EJECUCIÓN ────────────────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ async function main() {
   console.log('\n🛵 Creando repartidores...');
   for (const rep of REPARTIDORES) {
     const { error } = await supabase.from('repartidor').insert(rep);
-    console.log(error ? `  ✗ ${rep.nombre}: ${error.message}` : `  ✓ ${rep.nombre} (${rep.vehiculo})`);
+    console.log(error ? `  ✗ ${rep.nombre}: ${error.message}` : `  ✓ ${rep.nombre} (${rep.vehiculo}, PIN: ${rep.pin})`);
   }
 
   // ── Resumen ──

@@ -240,7 +240,7 @@ export default function DemoPage() {
           icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>}
           titulo="Módulo Repartidor"
           descripcion="Panel para repartidores con login por perfil (sin contraseña). Ve entregas asignadas con info de pago (efectivo + billete/cambio o transferencia pagada). Confirma entrega y cobro. Mapa con ruta."
-          credenciales={{ usuario: 'Selecciona perfil', password: 'Jorge Ramírez / Ana García', nota: 'Sin contraseña — click en perfil' }}
+          credenciales={{ usuario: 'Selecciona perfil + PIN', password: 'Jorge (1111) / Ana (2222) / Luis (3333)', nota: 'Sin email — acceso por PIN' }}
           links={[
             { nombre: 'Entregas', desc: 'Lista de entregas + info de pago + cobro', url: `${base}/entregas` },
             { nombre: 'Mapa', desc: 'Mapa con GPS y rutas de entrega', url: `${base}/mapa` },
@@ -337,7 +337,7 @@ export default function DemoPage() {
               <p className="text-xs font-bold text-white mb-2">2. Limpiar base de datos (sin tocar productos)</p>
               <p className="text-[10px] text-gray-500 mb-2">Ejecuta en PowerShell dentro del proyecto:</p>
               <code className="block text-[10px] text-green-400 bg-black/30 p-3 rounded-lg font-mono select-all whitespace-pre-wrap break-all">$env:NEXT_PUBLIC_SUPABASE_URL=&quot;https://evhyieblmtivcnfqxwxc.supabase.co&quot;; $env:SUPABASE_SERVICE_ROLE_KEY=&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHlpZWJsbXRpdmNuZnF4d3hjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjAzMjM5NiwiZXhwIjoyMTAxNjA4Mzk2fQ.bq4DB1ssHbTr1IB_fsb6PyxM3GNRtVesGV6lg2HD4Q0&quot;; npx tsx src/scripts/setup-datos-base.ts</code>
-              <p className="text-[10px] text-gray-600 mt-2">Esto limpia pedidos, mesas, meseros, inventario, gastos y recrea 5 mesas + 3 meseros + 2 repartidores. No toca productos ni categorías.</p>
+              <p className="text-[10px] text-gray-600 mt-2">Esto limpia pedidos, mesas, meseros, inventario, gastos y recrea 5 mesas + 3 meseros (PIN: 1234/5678/0000) + 3 repartidores (PIN: 1111/2222/3333). No toca productos ni categorías.</p>
             </div>
           </div>
         </div>
