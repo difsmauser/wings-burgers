@@ -301,8 +301,8 @@ export default function MeseroPage() {
         observaciones: p.observaciones as string || '',
       });
 
-      // Fetch ALL active states
-      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido'];
+      // Fetch ALL active states (incluye en_camino y entregado para domicilio)
+      const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido', 'en_camino', 'entregado'];
       const todosPedidos: PedidoMesero[] = [];
 
       for (const estado of estados) {
@@ -318,15 +318,29 @@ export default function MeseroPage() {
         p.estado === 'listo_para_servir' && !p.meseroNombre
       );
 
-      // Mis pedidos activos: los que tienen mi nombre (en cualquier estado, no pagados)
-      const misActivos = todosPedidos.filter(p =>
-        p.meseroNombre === meseroNombre && p.estadoPago !== 'pagado'
-      );
+      // Mis pedidos activos: los que tienen mi nombre
+      // Para domicilio: se mantiene activo hasta que el repartidor confirme entrega (estado='entregado')
+      // Para mesa/local: se completa cuando está pagado
+      const misActivos = todosPedidos.filter(p => {
+        if (p.meseroNombre !== meseroNombre) return false;
+        const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
+        if (esDom) {
+          // Domicilio: activo hasta que repartidor entregue
+          return p.estado !== 'entregado';
+        }
+        // Mesa/local: activo mientras no esté pagado
+        return p.estadoPago !== 'pagado';
+      });
 
-      // Mis pedidos completados hoy (pagados)
-      const misPagados = todosPedidos.filter(p =>
-        p.meseroNombre === meseroNombre && p.estadoPago === 'pagado'
-      );
+      // Mis pedidos completados hoy
+      const misPagados = todosPedidos.filter(p => {
+        if (p.meseroNombre !== meseroNombre) return false;
+        const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
+        if (esDom) {
+          return p.estado === 'entregado';
+        }
+        return p.estadoPago === 'pagado';
+      });
 
       setPedidosDisponibles(disponibles);
       setMisPedidos(misActivos);
@@ -805,10 +819,17 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
 
   // Estado visual del pedido
   const getEstadoBadge = () => {
-    if (pedido.estadoPago === 'pagado') return { text: '✅ Pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    // Domicilio: pagado + no entregado = en ruta
+    if (esDomicilio && pedido.estadoPago === 'pagado' && pedido.estado !== 'entregado') {
+      return { text: '🛵 En ruta — pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    }
+    if (pedido.estado === 'entregado') return { text: '✅ Entregado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (pedido.estado === 'en_camino') return { text: '🛵 Repartidor en camino', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
+    if (pedido.estadoPago === 'pagado' && !esDomicilio) return { text: '✅ Pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+    if (esDomicilio && pedido.estado === 'empacado') return { text: '📦 Listo — definir pago', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' };
     if (pedido.estado === 'listo_para_servir') return { text: esDomicilio ? '🛵 Listo para repartidor' : '🍽️ Listo para servir', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
     if (pedido.estado === 'servido' && necesitaCobrar) return { text: esDomicilio ? '🛵 En camino' : '💵 Por cobrar', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
-    if (pedido.estado === 'servido') return { text: esDomicilio ? '🛵 Entregado a repartidor' : '✓ Entregado', color: 'bg-white/5 text-gray-400 border-white/10' };
+    if (pedido.estado === 'servido') return { text: esDomicilio ? '🛵 Con repartidor' : '✓ Entregado', color: 'bg-white/5 text-gray-400 border-white/10' };
     if (pedido.estado === 'en_preparacion') return { text: '🔥 Preparando', color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
     if (pedido.estado === 'recibido') return { text: '📋 En cocina', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' };
     return { text: pedido.estado, color: 'bg-white/5 text-gray-400 border-white/10' };
