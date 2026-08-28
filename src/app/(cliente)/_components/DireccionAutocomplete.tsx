@@ -69,7 +69,13 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
 
       if (res.ok) {
         const data = await res.json();
-        const mapped: Sugerencia[] = data.map((item: Record<string, unknown>, idx: number) => {
+
+        // Mapear y deduplicar por calle+colonia
+        const seen = new Set<string>();
+        const mapped: Sugerencia[] = [];
+
+        for (let idx = 0; idx < data.length; idx++) {
+          const item = data[idx];
           const addr = item.address as Record<string, string> | undefined;
           const calle = addr?.road || addr?.pedestrian || addr?.residential || '';
           const numeroAddr = addr?.house_number || '';
@@ -77,31 +83,39 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
           const cp = addr?.postcode || '';
           const ciudad = addr?.city || addr?.town || addr?.municipality || 'Toluca';
 
-          // Construir dirección completa formateada
+          // Deduplicar por calle + colonia (ignorar duplicados con diferente CP)
+          const dedupeKey = `${calle.toLowerCase()}-${colonia.toLowerCase()}`;
+          if (seen.has(dedupeKey)) continue;
+          seen.add(dedupeKey);
+
+          // Extraer número del texto del usuario si la API no lo tiene
+          const numUsuario = query.match(/\b(\d{1,5})\b/);
+          const numFinal = numeroAddr || (numUsuario ? numUsuario[1] : '');
+
+          // Construir dirección completa
           let completa = calle;
-          if (numeroAddr) completa += ` #${numeroAddr}`;
+          if (numFinal) completa += ` #${numFinal}`;
           if (colonia) completa += `, ${colonia}`;
           if (cp) completa += `, CP ${cp}`;
-          if (!completa) {
-            // Fallback al display_name limpio
-            const parts = (item.display_name as string || '').split(',').map(p => p.trim());
-            completa = parts.filter(p => p !== 'México' && p !== 'Mexico').slice(0, 4).join(', ');
+          if (!calle) {
+            const parts = (item.display_name as string || '').split(',').map((p: string) => p.trim());
+            completa = parts.filter((p: string) => p !== 'México' && p !== 'Mexico').slice(0, 3).join(', ');
           }
 
-          return {
+          mapped.push({
             id: `${idx}-${item.place_id}`,
             calle,
-            numero: numeroAddr,
+            numero: numFinal,
             colonia,
             cp,
             ciudad,
             completa,
             lat: parseFloat(item.lat as string),
             lon: parseFloat(item.lon as string),
-          };
-        });
+          });
+        }
 
-        setSugerencias(mapped);
+        setSugerencias(mapped.slice(0, 4));
         setShowDropdown(mapped.length > 0);
       }
     } catch {
@@ -238,7 +252,7 @@ export default function DireccionAutocomplete({ value, onChange, placeholder, cl
 
       {/* Dropdown de sugerencias — estilo premium */}
       {showDropdown && sugerencias.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 rounded-2xl bg-[#16161f] border border-white/10 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)] overflow-hidden animate-scale-in">
+        <div className="absolute z-50 w-full top-full mt-2 rounded-2xl bg-[#16161f] border border-white/10 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.7)] overflow-hidden animate-scale-in">
           <div className="py-1">
             {sugerencias.map((s) => (
               <button
