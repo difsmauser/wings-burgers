@@ -397,15 +397,29 @@ export default function MeseroPage() {
     finally { setProcesandoId(null); }
   };
 
-  // Mark as delivered (servido) — mesero took food to table
+  // Mark as delivered (servido) — mesero took food to table or gave to repartidor
   const marcarServido = async (pedidoId: string) => {
     setProcesandoId(pedidoId);
     try {
-      await fetch('/api/mesero/accion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accion: 'entregar', pedidoId, meseroNombre }),
-      });
+      // Verificar si es domicilio para crear entrega
+      const pedido = misPedidos.find(p => p.id === pedidoId);
+      const esDom = pedido?.canal === 'DOMICILIO' || pedido?.modalidad === 'domicilio';
+
+      if (esDom) {
+        // Crear entrega para repartidor + cambiar estado a en_camino
+        await fetch('/api/entregas/crear', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pedidoId }),
+        });
+      } else {
+        // Mesa normal — marcar como servido
+        await fetch('/api/mesero/accion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'entregar', pedidoId, meseroNombre }),
+        });
+      }
       await fetchPedidos();
     } catch { /* silent */ }
     finally { setProcesandoId(null); }
@@ -840,7 +854,7 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
       </div>
 
       {/* Acción: Marcar como entregado / entregar a repartidor */}
-      {pedido.estado === 'listo_para_servir' && (
+      {(pedido.estado === 'listo_para_servir' || (esDomicilio && pedido.estado === 'empacado')) && (
         <button
           onClick={() => onMarcarServido(pedido.id)}
           disabled={procesandoId === pedido.id}
