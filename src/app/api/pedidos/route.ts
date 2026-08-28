@@ -278,10 +278,10 @@ export async function POST(request: NextRequest) {
         const supabase = createServerClient();
         await supabase
           .from('pedido')
-          .update({ mesero_id: body.meseroNombre, mesero_nombre: body.meseroNombre })
+          .update({ mesero_nombre: body.meseroNombre })
           .eq('id', pedido.id);
       } catch {
-        // Non-critical
+        // Non-critical — mesero name is best-effort
       }
     }
 

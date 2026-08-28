@@ -244,6 +244,11 @@ function BarCard({ pedido, buttonLabel, buttonColor, onAction, updating }: {
         </span>
       </div>
 
+      {/* Mesero que tomó el pedido */}
+      {pedido.meseroNombre && (
+        <p className="text-[10px] text-cyan-400 mb-2 font-medium">🧑‍🍳 {pedido.meseroNombre}</p>
+      )}
+
       {/* Items */}
       <div className="space-y-1.5 mb-3">
         {pedido.items.map((item) => (
