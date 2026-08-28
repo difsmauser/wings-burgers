@@ -43,11 +43,18 @@ export async function GET(_request: NextRequest) {
       const cliente = pedido?.cliente as Record<string, unknown> | null;
       const repartidor = e.repartidor as Record<string, unknown> | null;
 
+      // Obtener nombre del repartidor del join O de observaciones como fallback
+      let repNombre = (repartidor?.nombre as string) || '';
+      if (!repNombre && pedido?.observaciones) {
+        const match = (pedido.observaciones as string).match(/\[REPARTIDOR\]\s*(\S+)/);
+        if (match) repNombre = match[1];
+      }
+
       return {
         id: e.id as string,
         pedidoId: e.pedido_id as string,
         repartidorId: e.repartidor_id as string,
-        repartidorNombre: (repartidor?.nombre as string) || '',
+        repartidorNombre: repNombre,
         numeroPedido: (pedido?.numero as string) || 'N/A',
         clienteNombre: (cliente?.nombre as string) || 'Cliente',
         direccion: (cliente?.direccion as string) || (pedido?.observaciones as string)?.split('[')[0]?.trim() || 'Sin dirección',
@@ -62,9 +69,11 @@ export async function GET(_request: NextRequest) {
       };
     });
 
-    // Si se filtró por nombre, solo retornar las del repartidor
+    // Si se filtró por nombre, solo retornar las del repartidor (case-insensitive)
     const resultado = repartidorNombre
-      ? entregas.filter((e: { repartidorNombre: string }) => e.repartidorNombre === repartidorNombre)
+      ? entregas.filter((e: { repartidorNombre: string }) => 
+          e.repartidorNombre.toLowerCase().trim() === repartidorNombre.toLowerCase().trim()
+        )
       : entregas;
 
     return NextResponse.json({ data: resultado });

@@ -149,14 +149,16 @@ export default function CajaPage() {
   const pedidosHoy = pedidos.filter(p => new Date(p.creadoEn).toDateString() === today);
   // Domicilio: activo hasta que repartidor entregue (estado='entregado')
   // Otros: activo mientras no esté pagado
+  const esDomicilio = (p: PedidoCaja) => 
+    p.canal === 'DOMICILIO' || p.canal === 'domicilio' || 
+    p.modalidad === 'domicilio' || p.modalidad === 'DOMICILIO';
+
   const activos = pedidosHoy.filter(p => {
-    const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
-    if (esDom) return p.estado !== 'entregado';
+    if (esDomicilio(p)) return p.estado !== 'entregado';
     return p.estadoPago !== 'pagado';
   });
   const pagados = pedidosHoy.filter(p => {
-    const esDom = p.canal === 'DOMICILIO' || p.modalidad === 'domicilio';
-    if (esDom) return p.estado === 'entregado';
+    if (esDomicilio(p)) return p.estado === 'entregado';
     return p.estadoPago === 'pagado';
   });
 
