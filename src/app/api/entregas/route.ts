@@ -1,84 +1,98 @@
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError } from '@/app/api/_lib/errorHandler';
 
 /**
  * GET /api/entregas
  * Lista entregas para el panel del repartidor.
- * Retorna pendientes y activas con datos del pedido y cliente.
- * Requirements: 14.1
+ * Query simple sin joins embebidos (evita problemas de RLS/FK).
  */
 export async function GET(_request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const headers = { apikey: key, Authorization: `Bearer ${key}` };
 
-    // Check if filtering by repartidor name
-    const { searchParams } = new URL(_request.url);
-    const repartidorNombre = searchParams.get('nombre');
+    // 1. Fetch entregas (sin joins)
+    const entregasRes = await fetch(
+      `${supabaseUrl}/rest/v1/entrega?select=id,pedido_id,repartidor_id,estado,aceptada_en,completada_en,creado_en&order=creado_en.desc`,
+      { headers, cache: 'no-store' }
+    );
 
-    // Build query — filter by repartidor if provided
-    let queryUrl = `${supabaseUrl}/rest/v1/entrega?select=id,pedido_id,repartidor_id,estado,motivo_no_entrega,aceptada_en,completada_en,creado_en,repartidor:repartidor_id(nombre),pedido:pedido_id(numero,total,mesa_zona,observaciones,metodo_pago,estado_pago,cliente_id,cliente:cliente_id(nombre,telefono,direccion))&order=creado_en.desc`;
-
-    const res = await fetch(queryUrl, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      // Si la tabla no existe aún, retornar vacío
-      const errText = await res.text();
-      if (errText.includes('relation') || res.status === 404) {
+    if (!entregasRes.ok) {
+      const errText = await entregasRes.text();
+      if (errText.includes('relation') || entregasRes.status === 404) {
         return NextResponse.json({ data: [] });
       }
-      throw new Error(`Error al consultar entregas: ${errText}`);
+      return NextResponse.json({ data: [], error: errText });
     }
 
-    const rawData = await res.json();
+    const entregasRaw = await entregasRes.json();
+    if (!entregasRaw || entregasRaw.length === 0) {
+      return NextResponse.json({ data: [] });
+    }
 
-    // Map to frontend format
-    const entregas = (rawData ?? []).map((e: Record<string, unknown>) => {
-      const pedido = e.pedido as Record<string, unknown> | null;
-      const cliente = pedido?.cliente as Record<string, unknown> | null;
-      const repartidor = e.repartidor as Record<string, unknown> | null;
+    // 2. Fetch pedidos relacionados
+    const pedidoIds = [...new Set(entregasRaw.map((e: { pedido_id: string }) => e.pedido_id))];
+    const pedidosRes = await fetch(
+      `${supabaseUrl}/rest/v1/pedido?id=in.(${pedidoIds.join(',')})&select=id,numero,total,mesa_zona,observaciones,metodo_pago,estado_pago,cliente_id`,
+      { headers, cache: 'no-store' }
+    );
+    const pedidosRaw = pedidosRes.ok ? await pedidosRes.json() : [];
+    const pedidosMap: Record<string, Record<string, unknown>> = {};
+    for (const p of pedidosRaw) pedidosMap[p.id] = p;
 
-      // Obtener nombre del repartidor del join O de observaciones como fallback
-      let repNombre = (repartidor?.nombre as string) || '';
-      if (!repNombre && pedido?.observaciones) {
-        const match = (pedido.observaciones as string).match(/\[REPARTIDOR\]\s*(\S+)/);
-        if (match) repNombre = match[1];
+    // 3. Fetch clientes relacionados
+    const clienteIds = [...new Set(pedidosRaw.filter((p: { cliente_id: string | null }) => p.cliente_id).map((p: { cliente_id: string }) => p.cliente_id))];
+    let clientesMap: Record<string, Record<string, unknown>> = {};
+    if (clienteIds.length > 0) {
+      const clientesRes = await fetch(
+        `${supabaseUrl}/rest/v1/cliente?id=in.(${clienteIds.join(',')})&select=id,nombre,telefono,direccion`,
+        { headers, cache: 'no-store' }
+      );
+      if (clientesRes.ok) {
+        const clientesRaw = await clientesRes.json();
+        for (const c of clientesRaw) clientesMap[c.id] = c;
       }
+    }
+
+    // 4. Map to frontend format
+    const entregas = entregasRaw.map((e: Record<string, unknown>) => {
+      const pedido = pedidosMap[e.pedido_id as string] || null;
+      const cliente = pedido ? clientesMap[pedido.cliente_id as string] || null : null;
+
+      // Extraer nombre del repartidor de observaciones
+      const obs = (pedido?.observaciones as string) || '';
+      const repMatch = obs.match(/\[REPARTIDOR\]\s*(\S+)/);
+      const repartidorNombre = repMatch ? repMatch[1] : '';
+
+      // Extraer dirección
+      const dirMatch = obs.match(/Dirección:\s*([^|[\n]+)/);
+      const direccionObs = dirMatch ? dirMatch[1].trim() : '';
 
       return {
         id: e.id as string,
         pedidoId: e.pedido_id as string,
-        repartidorId: e.repartidor_id as string,
-        repartidorNombre: repNombre,
+        repartidorNombre,
         numeroPedido: (pedido?.numero as string) || 'N/A',
         clienteNombre: (cliente?.nombre as string) || 'Cliente',
-        direccion: (cliente?.direccion as string) || (pedido?.observaciones as string)?.split('[')[0]?.trim() || 'Sin dirección',
+        direccion: (cliente?.direccion as string) || direccionObs || 'Sin dirección',
         telefono: (cliente?.telefono as string) || '',
         estado: e.estado as string,
         metodoPago: (pedido?.metodo_pago as string) || null,
         estadoPago: (pedido?.estado_pago as string) || 'pendiente',
-        observaciones: (pedido?.observaciones as string) || '',
+        observaciones: obs,
         aceptadaEn: e.aceptada_en as string | null,
         completadaEn: e.completada_en as string | null,
         total: (pedido?.total as number) || 0,
       };
     });
 
-    // Si se filtró por nombre, solo retornar las del repartidor (case-insensitive)
-    // Si no hay filtro, retornar todas
-    const resultado = repartidorNombre
-      ? entregas.filter((e: { repartidorNombre: string }) => 
-          e.repartidorNombre.toLowerCase().trim() === repartidorNombre.toLowerCase().trim()
-        )
-      : entregas;
-
-    return NextResponse.json({ data: resultado });
+    return NextResponse.json({ data: entregas });
   } catch (error) {
-    return handleApiError(error);
+    return NextResponse.json(
+      { data: [], error: error instanceof Error ? error.message : 'Error' },
+      { status: 500 }
+    );
   }
 }
