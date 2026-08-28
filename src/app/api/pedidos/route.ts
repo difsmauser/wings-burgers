@@ -272,8 +272,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If order was taken by a mesero (canal=MESERO), auto-assign that mesero
-    if (canalVenta === 'MESERO' && body.meseroNombre) {
+    // If order was taken by a mesero (canal=MESERO or DOMICILIO via mesero), auto-assign that mesero
+    if ((canalVenta === 'MESERO' || canalVenta === 'DOMICILIO') && body.meseroNombre) {
       try {
         const supabase = createServerClient();
         await supabase

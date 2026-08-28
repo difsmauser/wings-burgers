@@ -115,6 +115,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Enviar ticket por WhatsApp automáticamente al confirmar pago
+    // Se hace best-effort (no bloquea si falla)
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000';
+      for (const pedidoId of pedidoIds) {
+        fetch(`${baseUrl}/api/pedidos/${pedidoId}/ticket`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        }).catch(() => {}); // Fire and forget
+      }
+    } catch { /* best-effort */ }
+
     return NextResponse.json({
       data: {
         message: 'Pago confirmado',

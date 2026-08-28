@@ -92,7 +92,7 @@ export default function DomicilioCaptura() {
         nombre: nombreCliente.trim(),
         telefono: telefono.trim(),
         modalidad: 'domicilio',
-        canal: 'QR_REDES',
+        canal: 'DOMICILIO',
         meseroNombre: meseroNombre || undefined,
         observaciones,
         items: items.map(i => ({
@@ -176,7 +176,7 @@ export default function DomicilioCaptura() {
     </div>
   );
 
-  // Success — auto-redirect al panel después de mostrar confirmación
+  // Success — redirigir al panel
   if (exito) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
@@ -187,16 +187,8 @@ export default function DomicilioCaptura() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-white mb-1">¡Pedido #{exito.numero} creado!</h2>
-          <p className="text-sm text-gray-400 mb-6">Enviado a cocina. Lo verás en tu panel.</p>
-
-          <a
-            href={exito.whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full py-4 rounded-2xl font-bold text-base text-white bg-[#25D366] hover:bg-[#20BA5C] shadow-lg shadow-[#25D366]/30 transition-all active:scale-[0.97] mb-4"
-          >
-            📱 Enviar Ticket al Cliente
-          </a>
+          <p className="text-sm text-gray-400 mb-2">Enviado a cocina. Lo verás en tu panel.</p>
+          <p className="text-[10px] text-gray-600 mb-6">El ticket se enviará al cliente cuando caja confirme el pago.</p>
 
           <button
             onClick={() => router.push('/mesero')}
