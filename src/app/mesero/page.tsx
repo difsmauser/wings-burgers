@@ -861,7 +861,9 @@ function MeseroPedidoCard({ pedido, procesandoId, onMarcarServido, onConfirmarDi
   const getEstadoBadge = () => {
     // Domicilio: pagado + no entregado = en ruta
     if (esDomicilio && pedido.estadoPago === 'pagado' && pedido.estado !== 'entregado') {
-      return { text: '🛵 En ruta — pagado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
+      const repMatch = pedido.observaciones?.match(/\[REPARTIDOR\]\s*(\S+)/);
+      const repNombre = repMatch ? repMatch[1] : '';
+      return { text: `🛵 En ruta${repNombre ? ` — ${repNombre}` : ''} (pagado)`, color: 'bg-green-500/10 text-green-400 border-green-500/20' };
     }
     if (pedido.estado === 'entregado') return { text: '✅ Entregado', color: 'bg-green-500/10 text-green-400 border-green-500/20' };
     if (pedido.estado === 'en_camino') {

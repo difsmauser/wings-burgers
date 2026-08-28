@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     // Fetch active pedidos with their items + product category
-    const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido'];
+    // Incluye en_camino y entregado para que pedidos domicilio se mantengan visibles
+    const estados = ['recibido', 'en_preparacion', 'empacado', 'listo_para_servir', 'servido', 'en_camino', 'entregado'];
     const allPedidos: Array<Record<string, unknown>> = [];
 
     for (const estado of estados) {
