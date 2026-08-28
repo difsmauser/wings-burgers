@@ -66,8 +66,8 @@ export async function GET(_request: NextRequest) {
       const repMatch = obs.match(/\[REPARTIDOR\]\s*(\S+)/);
       const repartidorNombre = repMatch ? repMatch[1] : '';
 
-      // Extraer dirección
-      const dirMatch = obs.match(/Dirección:\s*([^|[\n]+)/);
+      // Extraer dirección de observaciones (puede tener varios formatos)
+      const dirMatch = obs.match(/Direcci[oó]n:\s*(.+?)(?:\s*\||$|\s*\[)/i);
       const direccionObs = dirMatch ? dirMatch[1].trim() : '';
 
       return {

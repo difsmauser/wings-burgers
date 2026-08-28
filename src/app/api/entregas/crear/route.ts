@@ -42,22 +42,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Buscar un repartidor disponible para asignar
-    const repartidorRes = await fetch(
-      `${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id,nombre&limit=1`,
-      {
-        headers: { apikey: key, Authorization: `Bearer ${key}` },
-        cache: 'no-store',
-      }
+    // Buscar repartidor con menos entregas activas (round-robin)
+    const repartidoresRes = await fetch(
+      `${supabaseUrl}/rest/v1/repartidor?activo=eq.true&select=id,nombre`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' }
     );
 
     let repartidorId: string | null = null;
     let repartidorNombre: string = '';
-    if (repartidorRes.ok) {
-      const repartidores = await repartidorRes.json();
+    if (repartidoresRes.ok) {
+      const repartidores = await repartidoresRes.json();
       if (repartidores && repartidores.length > 0) {
-        repartidorId = repartidores[0].id;
-        repartidorNombre = repartidores[0].nombre || '';
+        // Contar entregas activas (en_camino) por repartidor
+        const activasRes = await fetch(
+          `${supabaseUrl}/rest/v1/entrega?estado=eq.en_camino&select=repartidor_id`,
+          { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: 'no-store' }
+        );
+        const activasData = activasRes.ok ? await activasRes.json() : [];
+        const conteo: Record<string, number> = {};
+        for (const r of repartidores) conteo[r.id] = 0;
+        for (const a of activasData) {
+          if (conteo[a.repartidor_id] !== undefined) conteo[a.repartidor_id]++;
+        }
+        // Elegir el que tiene menos entregas activas
+        const sorted = repartidores.sort((a: { id: string }, b: { id: string }) =>
+          (conteo[a.id] || 0) - (conteo[b.id] || 0)
+        );
+        repartidorId = sorted[0].id;
+        repartidorNombre = sorted[0].nombre || '';
       }
     }
 
